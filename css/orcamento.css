@@ -1,0 +1,83 @@
+:root {
+  --roxo-escuro: #5d3a8c;
+  --roxo-medio: #8a5ebf;
+  --roxo-claro: #c9a7e8;
+  --roxo-background: #f5f0fa;
+  --branco: #ffffff;
+  --cinza-texto: #444;
+  --verde: #4caf50;
+  --amarelo: #ff9800;
+  --vermelho: #f44336;
+}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Segoe UI;
+}
+body {
+  background: var(--roxo-background);
+  color: var(--cinza-texto);
+}
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+}
+h1 {
+  color: var(--roxo-escuro);
+  margin: 24px 0;
+}
+.btn-add {
+  background: var(--roxo-medio);
+  color: white;
+  text-decoration: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  margin-bottom: 24px;
+  display: inline-block;
+}
+.btn-add:hover {
+  background: var(--roxo-escuro);
+}
+table {
+  width: 100%;
+  background: white;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(93, 58, 140, 0.12);
+}
+th {
+  background: var(--roxo-medio);
+  color: white;
+  padding: 14px;
+  text-align: left;
+}
+td {
+  padding: 14px;
+  border-bottom: 1px solid #eee;
+}
+tr:last-child td {
+  border-bottom: none;
+}
+.status-pendente {
+  color: var(--amarelo);
+  font-weight: 600;
+}
+.status-aceito {
+  color: var(--verde);
+  font-weight: 600;
+}
+.status-recusado {
+  color: var(--vermelho);
+  font-weight: 600;
+}
+.acoes a {
+  margin-right: 12px;
+  text-decoration: none;
+  font-weight: 600;
+}
+.acoes a:hover {
+  text-decoration: underline;
+}

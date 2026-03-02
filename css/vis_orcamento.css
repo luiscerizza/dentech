@@ -1,0 +1,171 @@
+:root {
+  --roxo-escuro: #5d3a8c;
+  --roxo-medio: #8a5ebf;
+  --roxo-background: #f5f0fa;
+  --branco: #ffffff;
+  --cinza-texto: #444;
+}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Segoe UI;
+}
+body {
+  background: var(--roxo-background);
+}
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+.card {
+  background: white;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(93, 58, 140, 0.15);
+  margin-bottom: 24px;
+}
+h1 {
+  color: var(--roxo-escuro);
+  margin-bottom: 24px;
+  text-align: center;
+}
+.info {
+  margin-bottom: 24px;
+}
+.info p {
+  margin: 8px 0;
+  font-size: 16px;
+}
+.info strong {
+  color: var(--roxo-medio);
+}
+table {
+  width: 100%;
+  margin: 20px 0;
+}
+th,
+td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+th {
+  background: var(--roxo-claro);
+  color: var(--roxo-escuro);
+}
+.total {
+  text-align: right;
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--roxo-escuro);
+  margin-top: 16px;
+}
+.acoes {
+  text-align: center;
+  margin-top: 24px;
+}
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  margin: 0 8px;
+}
+.btn-aceitar {
+  background: #4caf50;
+  color: white;
+}
+.btn-recusar {
+  background: #f44336;
+  color: white;
+}
+.btn-voltar {
+  background: #f0f0f0;
+  color: #555;
+}
+.status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+.status-pendente {
+  background: #fff8e1;
+  color: #ff8f00;
+}
+.status-aceito {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+.status-recusado {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.btn-imprimir {
+  background: #e0e0e0;
+  color: #555;
+}
+
+.btn-imprimir:hover {
+  background: #d0d0d0;
+}
+
+/* Estilos para impressão */
+@media print {
+  body,
+  .container {
+    background: white !important;
+    color: black !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #000 !important;
+    padding: 20mm !important; /* margens internas */
+  }
+
+  .acoes,
+  nav,
+  .btn,
+  .status {
+    display: none !important;
+  }
+
+  h1 {
+    text-align: center !important;
+    font-size: 24px !important;
+    margin-bottom: 20px !important;
+    color: #5d3a8c !important;
+  }
+
+  .info p {
+    font-size: 14px !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 15px 0 !important;
+  }
+
+  th,
+  td {
+    border: 1px solid #000 !important;
+    padding: 8px !important;
+    font-size: 12px !important;
+  }
+
+  .total {
+    font-size: 16px !important;
+    font-weight: bold !important;
+    text-align: right !important;
+    margin-top: 10px !important;
+  }
+}

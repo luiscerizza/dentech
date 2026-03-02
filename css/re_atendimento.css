@@ -1,0 +1,148 @@
+:root {
+  --roxo-escuro: #5d3a8c;
+  --roxo-medio: #8a5ebf;
+  --roxo-claro: #c9a7e8;
+  --roxo-background: #f5f0fa;
+  --branco: #ffffff;
+  --cinza-texto: #444;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+body {
+  background-color: var(--roxo-background);
+  color: var(--cinza-texto);
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+h1 {
+  color: var(--roxo-escuro);
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.card {
+  background: var(--branco);
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 4px 16px rgba(93, 58, 140, 0.12);
+  margin-bottom: 28px;
+}
+
+.info-paciente {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px dashed #eee;
+}
+
+.info-paciente strong {
+  color: var(--roxo-medio);
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--roxo-escuro);
+}
+
+textarea,
+input[type="number"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.material-item {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.material-item select,
+.material-item input {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.material-item input[type="number"] {
+  width: 100px;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-back {
+  background: #f0f0f0;
+  color: #555;
+  text-decoration: none;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.btn-back:hover {
+  background: #e0e0e0;
+}
+
+.btn-save {
+  background: var(--roxo-medio);
+  color: white;
+  width: 100%;
+}
+
+.btn-save:hover {
+  background: var(--roxo-escuro);
+}
+
+.erro {
+  background: #fce8e6;
+  color: #c5221f;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.aviso {
+  background: #e8f0fe;
+  color: #1a73e8;
+  padding: 12px;
+  border-radius: 8px;
+  margin: 16px 0;
+  font-size: 14px;
+}
+
+.secao-estoque {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px dashed #eee;
+}

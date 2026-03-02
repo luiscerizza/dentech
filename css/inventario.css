@@ -1,0 +1,143 @@
+:root {
+            --roxo-escuro: #5d3a8c;
+            --roxo-medio: #8a5ebf;
+            --roxo-claro: #c9a7e8;
+            --roxo-background: #f5f0fa;
+            --branco: #ffffff;
+            --cinza-texto: #444;
+            --verde-estoque: #4caf50;
+            --vermelho-estoque: #f44336;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        body {
+            background-color: var(--roxo-background);
+            color: var(--cinza-texto);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            color: var(--roxo-escuro);
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .btn-add {
+            display: inline-block;
+            background: var(--roxo-medio);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+
+        .btn-add:hover {
+            background: var(--roxo-escuro);
+        }
+
+        .tabela-estoque {
+            background: var(--branco);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(93, 58, 140, 0.12);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: var(--roxo-medio);
+            color: white;
+            padding: 14px 16px;
+            text-align: left;
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .estoque-baixo {
+            background-color: #ffebee;
+            border-left: 4px solid var(--vermelho-estoque);
+        }
+
+        .quantidade {
+            font-weight: 600;
+        }
+
+        .estoque-baixo .quantidade {
+            color: var(--vermelho-estoque);
+        }
+
+        .acoes {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-acao {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-entrada {
+            background: var(--verde-estoque);
+            color: white;
+        }
+
+        .btn-saida {
+            background: var(--roxo-claro);
+            color: var(--roxo-escuro);
+        }
+
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+            font-style: italic;
+        }
+
+        @media (max-width: 600px) {
+            body { padding-top: 70px; }
+            .container { padding: 15px; }
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+            td {
+                text-align: right;
+                padding-left: 50%;
+                position: relative;
+            }
+            td:before {
+                content: attr(data-label) ": ";
+                position: absolute;
+                left: 16px;
+                width: 45%;
+                font-weight: bold;
+                text-align: left;
+            }
+        }
