@@ -20,17 +20,16 @@ try {
 /**
  * Registra uma ação no sistema de Logs
  * 
- * @param PDO $pdo Conexão com o banco
- * @param string $acao Tipo de ação (ex: 'Login', 'Excluir')
- * @param string $tabela Tabela afetada (ex: 'prontuarios')
- * @param int|null $id ID do registro afetado
- * @param string $detalhes Detalhes adicionais (opcional)
+ * @param PDO 
+ * @param string 
+ * @param string 
+ * @param int|null 
+ * @param string 
  */
 function registrarLog($pdo, $acao, $tabela = null, $id = null, $detalhes = '')
 {
     try {
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'Desconhecido';
-        // Tenta pegar usuário da sessão restrita, ou 'Visitante'
         $usuario = $_SESSION['restricted_access'] ? 'Admin' : 'Visitante';
 
         $stmt = $pdo->prepare("
@@ -39,7 +38,6 @@ function registrarLog($pdo, $acao, $tabela = null, $id = null, $detalhes = '')
         ");
         $stmt->execute([$usuario, $acao, $tabela, $id, $detalhes, $ip]);
     } catch (Exception $e) {
-        // Falha silenciosa para não quebrar o sistema se o log der erro
         error_log("Erro ao registrar Log: " . $e->getMessage());
     }
 }

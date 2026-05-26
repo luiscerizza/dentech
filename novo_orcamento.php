@@ -3,7 +3,7 @@ require_once 'conexao/conexao.php';
 
 $pacientes = $pdo->query("SELECT id, paciente FROM prontuarios ORDER BY paciente")->fetchAll();
 
-$erro = null; // ← Inicializa a variável de erro
+$erro = null; 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -13,7 +13,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $validade = $_POST['validade'] ?? '';
         $observacoes = trim($_POST['observacoes'] ?? '');
 
-        // Validações básicas
         if ($paciente_id <= 0) {
             throw new Exception("Selecione um paciente válido.");
         }
@@ -21,7 +20,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("A data de validade é obrigatória.");
         }
 
-        // Inserir orçamento
         $stmt = $pdo->prepare("
             INSERT INTO orcamentos (paciente_id, data_criacao, validade, observacoes)
             VALUES (?, ?, ?, ?)
@@ -29,12 +27,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$paciente_id, date('Y-m-d'), $validade, $observacoes]);
         $orcamento_id = $pdo->lastInsertId();
 
-        // Inserir itens e calcular total
         $descricoes = $_POST['descricao'] ?? [];
         $quantidades = $_POST['quantidade'] ?? [];
         $valores = $_POST['valor'] ?? [];
 
-        $total_itens = 0; // ← Variável que faltava!
+        $total_itens = 0; 
         $itens_salvos = 0;
 
         foreach ($descricoes as $i => $desc) {
@@ -44,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!empty($desc) && $valor > 0) {
                 $qtd = (int)($quantidades[$i] ?? 1);
                 $subtotal = $qtd * $valor;
-                $total_itens += $subtotal; // ← Acumula o total
+                $total_itens += $subtotal; 
 
                 $stmt = $pdo->prepare("
                     INSERT INTO orcamentos_itens (orcamento_id, descricao, quantidade, valor_unitario)
@@ -59,7 +56,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("Adicione pelo menos 1 item válido ao orçamento.");
         }
 
-        // 🔽 GERAR PARCELAS (dentro da mesma transação)
         $num_parcelas = (int)($_POST['num_parcelas'] ?? 1);
         
         if ($num_parcelas > 0 && $total_itens > 0) {
@@ -70,24 +66,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
 
             for ($i = 1; $i <= $num_parcelas; $i++) {
-                // Ajusta centavos na última parcela para fechar o total exato
                 $valor_final = ($i === $num_parcelas) 
                     ? round($total_itens - ($valor_parcela_base * ($num_parcelas - 1)), 2)
                     : $valor_parcela_base;
 
-                // Vencimento: mês atual + número da parcela
                 $vencimento = date('Y-m-d', strtotime("+{$i} month"));
                 
                 $stmt_par->execute([$orcamento_id, $i, $valor_final, $vencimento]);
             }
         }
-        // 🔼 FIM DA GERAÇÃO DE PARCELAS
 
-        $pdo->commit(); // ← Único commit, após TUDO estar salvo
         header("Location: visualizar_orcamento.php?id=" . $orcamento_id);
         exit;
 
-    } catch (Exception $e) { // ← Captura QUALQUER Exception, não só PDO
+    } catch (Exception $e) { 
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
@@ -141,7 +133,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <input type="date" name="validade" value="<?= date('Y-m-d', strtotime('+30 days')) ?>" required>
             </div>
 
-            <!-- ITENS DO ORÇAMENTO -->
             <div class="form-group">
                 <label>Itens do orçamento</label>
                 <div id="itens-container">
@@ -154,7 +145,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <button type="button" class="btn-add-item" onclick="adicionarItem()">+ Adicionar Item</button>
             </div>
 
-            <!-- PARCELAMENTO (FORA do container de itens) -->
             <div class="form-group" style="border-top:1px solid #eee; padding-top:20px; margin-top:20px;">
                 <label>Parcelamento</label>
                 <select name="num_parcelas" id="num_parcelas">
@@ -190,7 +180,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             `;
             container.appendChild(div);
             
-            // Adiciona listener no novo campo de valor
             div.querySelector('.item-valor').addEventListener('input', calcularPreviewParcelas);
         }
 
@@ -198,7 +187,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const qtdParcelas = parseInt(document.getElementById('num_parcelas').value) || 1;
             let total = 0;
             
-            // Soma todos os itens: quantidade × valor
             document.querySelectorAll('.item-row').forEach(row => {
                 const qtdInput = row.querySelector('[name="quantidade[]"]');
                 const valInput = row.querySelector('[name="valor[]"]');
@@ -222,10 +210,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Listener no select de parcelas
         document.getElementById('num_parcelas').addEventListener('change', calcularPreviewParcelas);
         
-        // Listeners nos campos existentes ao carregar a página
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.item-valor').forEach(input => {
                 input.addEventListener('input', calcularPreviewParcelas);
@@ -233,7 +219,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             document.querySelectorAll('[name="quantidade[]"]').forEach(input => {
                 input.addEventListener('input', calcularPreviewParcelas);
             });
-            // Calcula preview inicial
             calcularPreviewParcelas();
         });
     </script>

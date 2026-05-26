@@ -1,8 +1,3 @@
--- --------------------------------------------------------
--- Banco de dados: dentech
--- Versão: 2.1 (com anamnese completa, estoque, orçamentos e LGPD)
--- --------------------------------------------------------
-
 CREATE DATABASE IF NOT EXISTS dentech;
 USE dentech;
 
@@ -128,11 +123,11 @@ CREATE TABLE IF NOT EXISTS parcelas (
 -- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    usuario VARCHAR(100) DEFAULT 'Sistema', -- Quem fez a ação
-    acao VARCHAR(50) NOT NULL,              -- Tipo: Login, Criar, Editar, Excluir
-    tabela VARCHAR(50),                     -- Onde: prontuarios, orcamentos
-    registro_id INT,                        -- ID do item afetado
-    detalhes TEXT,                          -- Texto extra (ex: "Deletou paciente João")
-    ip VARCHAR(45),                         -- IP do usuário (::1 no localhost)
+    usuario VARCHAR(100) DEFAULT 'Sistema', 
+    acao VARCHAR(50) NOT NULL,              
+    tabela VARCHAR(50),                    
+    registro_id INT,                        
+    detalhes TEXT,                          
+    ip VARCHAR(45),                         
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

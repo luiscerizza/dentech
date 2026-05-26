@@ -1,8 +1,6 @@
 <?php
-// login_restrito.php - Tela de login EXCLUSIVA da Área Restrita
 require_once 'config/auth.config_area_restrita.php';
 
-// Se já tem acesso, volta para o dashboard
 if (temAcessoRestrito()) {
     header('Location: index.php');
     exit;
@@ -10,12 +8,10 @@ if (temAcessoRestrito()) {
 
 $erro = '';
 
-// ✅ Verifica timeout PRIMEIRO (antes do POST)
 if (isset($_GET['timeout'])) {
     $erro = 'Sessão expirada por inatividade. Faça login novamente.';
 }
 
-// Processa login apenas se não houver erro de timeout
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($erro)) {
     $usuario = trim($_POST['usuario'] ?? '');
     $senha   = $_POST['senha'] ?? '';
@@ -30,7 +26,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($erro)) {
         header('Location: index.php');
         exit;
     }
-    // Só define erro de credencial se não houver erro de timeout
     if (empty($erro)) {
         $erro = 'Usuário ou senha restrita incorretos.';
     }

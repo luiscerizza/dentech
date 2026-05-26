@@ -7,7 +7,6 @@ if ($id > 0) {
     $stmt->execute([$id]);
 }
 
-// Voltar para a página anterior ou para agendamentos
 $referer = $_SERVER['HTTP_REFERER'] ?? 'agendamentos.php';
 header("Location: " . $referer);
 exit;

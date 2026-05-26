@@ -83,7 +83,6 @@ h1 {
   background-color: var(--roxo-escuro);
 }
 
-/* Agrupamento por data */
 .dia-secao {
   margin-bottom: 32px;
 }
@@ -149,7 +148,6 @@ tr:last-child td {
   font-style: italic;
 }
 
-/* Responsivo */
 @media (max-width: 600px) {
   body {
     padding-top: 70px;

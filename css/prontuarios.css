@@ -117,9 +117,8 @@ main h1 {
   grid-column: 1 / -1;
 }
 
-/* Botão de exclusão em prontuários */
 .delete {
-  background: #ff6b6b; /* Vermelho suave (não agressivo) */
+  background: #ff6b6b;
   color: white;
   border: none;
   padding: 6px 12px;
@@ -134,7 +133,7 @@ main h1 {
 }
 
 .delete:hover {
-  background: #e55a5a; /* Vermelho mais escuro no hover */
+  background: #e55a5a;
   transform: translateY(-1px);
   box-shadow: 0 3px 6px rgba(255, 107, 107, 0.3);
 }
@@ -158,7 +157,89 @@ main h1 {
   background: var(--roxo-escuro);
 }
 
-/* Responsivo */
+.badge-acao {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.bg-login {
+  background: #2196f3;
+}
+
+.bg-criar {
+  background: #4caf50;
+}
+
+.bg-editar {
+  background: #ff9800;
+}
+
+.bg-excluir {
+  background: #f44336;
+}
+
+.bg-restrito {
+  background: #9c27b0;
+}
+
+.detalhes-text {
+  font-size: 12px;
+  color: #666;
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Estilo Filtros (Padrão Dentech) */
+.filter-bar {
+  background: #fff;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  margin-bottom: 20px;
+}
+
+.filter-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.filter-form input,
+.filter-form select {
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  min-width: 160px;
+}
+
+.btn-filter {
+  background: #7b3ff2;
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-reset {
+  background: #f4f7f6;
+  color: #4a5568;
+  text-decoration: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  border: 1px solid #e2e8f0;
+}
+
 @media (max-width: 600px) {
   body {
     padding-top: 70px;

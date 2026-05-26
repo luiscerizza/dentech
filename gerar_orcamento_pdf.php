@@ -1,8 +1,6 @@
 <?php
-// gerar_orcamento_pdf.php - Versão com Parcelas Corrigida
-require_once 'conexao/conexao.php';
 
-// 1. Carregar Dompdf
+require_once 'conexao/conexao.php';
 require_once 'dompdf/autoload.inc.php';
 
 use Dompdf\Dompdf;
@@ -14,7 +12,6 @@ $options->set('isHtml5ParserEnabled', true);
 $options->set('isRemoteEnabled', true);
 $dompdf = new Dompdf($options);
 
-// 2. Receber ID
 $id_orc = $_GET['id'] ?? ($_POST['id'] ?? 0);
 if (!$id_orc) die("ID do orçamento não informado.");
 
@@ -29,17 +26,14 @@ $stmt->execute([$id_orc]);
 $orc = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$orc) die("Orçamento não encontrado.");
 
-// 4. Buscar itens
 $stmt_itens = $pdo->prepare("SELECT * FROM orcamentos_itens WHERE orcamento_id = ? ORDER BY id ASC");
 $stmt_itens->execute([$id_orc]);
 $itens = $stmt_itens->fetchAll();
 
-// 5. 🔽 BUSCAR PARCELAS (ANTES de montar o HTML)
 $stmt_par = $pdo->prepare("SELECT * FROM parcelas WHERE orcamento_id = ? ORDER BY numero_parcela ASC");
 $stmt_par->execute([$id_orc]);
 $parcelas = $stmt_par->fetchAll();
 
-// Montar HTML das parcelas (compatível com PHP 7+)
 $html_parcelas = '';
 if (!empty($parcelas)) {
     $html_parcelas = "
@@ -57,7 +51,6 @@ if (!empty($parcelas)) {
     ";
 
     foreach ($parcelas as $p) {
-        // Compatível com PHP 7.x (sem match())
         if ($p['status'] === 'paga') {
             $cor_status = '#43a047';
         } elseif ($p['status'] === 'atrasada') {
@@ -84,9 +77,7 @@ if (!empty($parcelas)) {
     <br>
     ";
 }
-// 🔼 FIM DA MONTAGEM DAS PARCELAS
 
-// 6. Logo em Base64
 $logo_path = 'img/logo.jpg';
 $logo_base64 = '';
 if (file_exists($logo_path)) {
@@ -94,7 +85,6 @@ if (file_exists($logo_path)) {
     $logo_base64 = 'data:image/jpeg;base64,' . $imageData;
 }
 
-// 7. Calcular totais e montar linhas da tabela de itens
 $total = 0;
 $linhas_itens = '';
 foreach ($itens as $item) {
@@ -110,7 +100,6 @@ foreach ($itens as $item) {
     ";
 }
 
-// 8. HTML Profissional (agora com $html_parcelas já pronto)
 $html = "
 <!DOCTYPE html>
 <html lang='pt-BR'>
@@ -227,7 +216,6 @@ $html = "
 </html>
 ";
 
-// 9. Renderizar e Baixar
 $dompdf->loadHtml($html);
 $dompdf->setPaper('A4', 'portrait');
 $dompdf->render();

@@ -1,5 +1,5 @@
 <?php
-require_once 'conexao/conexao.php'; // Corrigido caminho
+require_once 'conexao/conexao.php'; 
 
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     die("Prontuário não encontrado.");
@@ -7,10 +7,8 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 
 $id = (int)$_GET['id'];
 
-// Verificar modo impressão
 $isPrint = isset($_GET['print']) && $_GET['print'] == '1';
 
-// Buscar prontuário
 $stmt = $pdo->prepare("SELECT * FROM prontuarios WHERE id = ?");
 $stmt->execute([$id]);
 $prontuario = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -19,12 +17,10 @@ if (!$prontuario) {
     die("Prontuário não encontrado.");
 }
 
-// Calcular idade
 $dataNasc = new DateTime($prontuario['nascimento']);
 $hoje = new DateTime();
 $idade = $hoje->diff($dataNasc)->y;
 
-// Buscar procedimentos
 $stmtProc = $pdo->prepare("SELECT * FROM procedimentos WHERE paciente_id = ? ORDER BY data_procedimento DESC");
 $stmtProc->execute([$id]);
 $procedimentos = $stmtProc->fetchAll();
@@ -49,7 +45,6 @@ $procedimentos = $stmtProc->fetchAll();
     <div class="container">
         <h1>Prontuário de <?= htmlspecialchars($prontuario['paciente']) ?></h1>
 
-        <!-- Dados do paciente -->
         <div class="card">
             <p><strong>Nome:</strong> <?= htmlspecialchars($prontuario['paciente']) ?></p>
             <p><strong>Data de nascimento:</strong> <?= date('d/m/Y', strtotime($prontuario['nascimento'])) ?> (<?= $idade ?> anos)</p>
@@ -58,7 +53,6 @@ $procedimentos = $stmtProc->fetchAll();
         </div>
 
         <?php if (!$isPrint): ?>
-            <!-- Botões de ação -->
             <div class="acoes" style="text-align: center; margin: 24px 0; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
                 <button class="btn btn-imprimir"
                     onclick="window.open('termo_conscentimento.php?id=<?= $id ?>', '_blank')">
@@ -71,7 +65,6 @@ $procedimentos = $stmtProc->fetchAll();
             </div>
         <?php endif; ?>
 
-        <!-- Lista de procedimentos -->
         <h2>Procedimentos</h2>
         <?php if (empty($procedimentos)): ?>
             <p class="empty">Nenhum procedimento registrado.</p>
@@ -106,7 +99,6 @@ $procedimentos = $stmtProc->fetchAll();
     </div>
 
     <?php if (!$isPrint): ?>
-        <!-- Modal -->
         <div id="modal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
@@ -121,7 +113,6 @@ $procedimentos = $stmtProc->fetchAll();
         </div>
 
         <script>
-            // Adicionar evento a todos os botões "Visualizar"
             document.querySelectorAll('.btn-visualizar').forEach(button => {
                 button.addEventListener('click', function() {
                     const titulo = this.dataset.titulo;

@@ -1,15 +1,12 @@
 <?php
 require_once 'conexao/conexao.php';
 
-// 🔍 Captura filtros da URL
 $busca    = trim($_GET['busca'] ?? '');
-$estoque  = $_GET['estoque'] ?? ''; // 'baixo' ou 'normal'
+$estoque  = $_GET['estoque'] ?? ''; 
 
-// 🛡️ Monta WHERE dinâmico seguro
 $where = [];
 $params = [];
 
-// Filtro de busca (nome ou código do material)
 if ($busca !== '') {
     $where[] = "(nome LIKE ? OR codigo LIKE ?)";
     $busca_like = "%{$busca}%";
@@ -17,14 +14,12 @@ if ($busca !== '') {
     $params[] = $busca_like;
 }
 
-// Filtro de estoque (baixo ou normal)
 if ($estoque === 'baixo') {
     $where[] = "quantidade <= estoque_minimo";
 } elseif ($estoque === 'normal') {
     $where[] = "quantidade > estoque_minimo";
 }
 
-// 🔽 Query principal COM filtros aplicados
 $sql = "
     SELECT *, 
            (quantidade <= estoque_minimo) AS estoque_baixo
@@ -35,14 +30,11 @@ if (!empty($where)) {
     $sql .= " WHERE " . implode(" AND ", $where);
 }
 
-// Mantém a ordenação original: estoque baixo primeiro, depois por nome
 $sql .= " ORDER BY estoque_baixo DESC, nome ASC";
 
-// Executa com prepared statement
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $materiais = $stmt->fetchAll();
-// 🔼 Fim da query filtrada
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -62,7 +54,6 @@ $materiais = $stmt->fetchAll();
     <div class="container">
         <h1>Inventário</h1>
 
-        <!-- 🔽 BARRA DE FILTROS -->
         <div class="filter-bar">
             <form method="GET" class="filter-form">
                 <input type="text" name="busca" placeholder="Material ou código..." value="<?= htmlspecialchars($busca) ?>">
@@ -87,7 +78,6 @@ $materiais = $stmt->fetchAll();
                 </div>
             <?php endif; ?>
         </div>
-        <!-- 🔼 FIM DA BARRA DE FILTROS -->
 
         <a href="adicionar_material" class="btn-add">+ Adicionar Material</a>
 

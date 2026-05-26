@@ -32,7 +32,6 @@ main h1 {
     text-align: center;
 }
 
-/* === SEÇÕES DO FORMULÁRIO === */
 .section {
     background: var(--branco);
     border-radius: 14px;
@@ -50,7 +49,6 @@ main h1 {
     font-weight: 600;
 }
 
-/* === FORMULÁRIO === */
 .form-row {
     display: flex;
     gap: 20px;
@@ -90,7 +88,6 @@ textarea {
     resize: vertical;
 }
 
-/* === CHECKBOXES E RADIO BUTTONS === */
 .checkbox-group {
     display: flex;
     gap: 16px;
@@ -113,7 +110,6 @@ textarea {
     padding-left: 24px;
 }
 
-/* === BOTÕES === */
 .actions {
     display: flex;
     gap: 12px;
@@ -159,7 +155,6 @@ textarea {
     background: var(--roxo-escuro);
 }
 
-/* === RESPONSIVO === */
 @media (max-width: 768px) {
     body {
         padding-top: 70px;

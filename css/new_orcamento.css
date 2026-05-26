@@ -91,3 +91,61 @@ textarea {
   border-radius: 6px;
   margin-bottom: 16px;
 }
+
+.parcelas-existentes {
+  margin-top: 20px;
+  padding: 15px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.parcelas-existentes h4 {
+  margin: 0 0 12px 0;
+  color: #2d3748;
+  font-size: 14px;
+}
+
+.parcela-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 13px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.parcela-item:last-child {
+  border-bottom: none;
+}
+
+.badge-paga {
+  background: #43a047;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+.badge-pendente {
+  background: #ef6c00;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+.aviso-parcelas {
+  background: #fff3e0;
+  color: #ef6c00;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 15px;
+}
+
+.preview-parcelas {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #7b3ff2;
+}

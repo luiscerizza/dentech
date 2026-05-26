@@ -7,6 +7,7 @@ try {
     $prontuario_id = (int)($_POST['prontuario_id'] ?? 0);
     $titulo = trim($_POST['titulo'] ?? '');
     $data_procedimento = $_POST['data_procedimento'] ?? '';
+    $medicamentos = trim($_POST['medicamentos'] ?? '');
     $descricao = trim($_POST['descricao'] ?? '');
 
     if (!$prontuario_id) {

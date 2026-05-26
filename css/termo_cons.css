@@ -84,7 +84,6 @@ h1 {
   margin-bottom: 8pt;
 }
 
-/* === ASSINATURAS === */
 .assinatura {
   margin-top: 40pt;
   display: flex;
@@ -100,7 +99,6 @@ h1 {
   font-size: 11pt;
 }
 
-/* === RODAPÉ === */
 .pagina-rodape {
   margin-top: 30pt;
   text-align: center;
@@ -109,7 +107,6 @@ h1 {
   page-break-inside: avoid;
 }
 
-/* === BOTÕES (apenas em tela) === */
 @media screen {
   .btn-imprimir {
     padding: 8px 20px;
@@ -126,7 +123,6 @@ h1 {
   }
 }
 
-/* === IMPRESSÃO === */
 @media print {
   body {
     padding: 15mm;

@@ -24,10 +24,9 @@ body {
   min-height: 100vh;
 }
 
-/* === SIDEBAR === */
 .sidebar {
   width: 220px;
-  background: #ACC89F;
+  background: #acc89f;
   padding: 20px 0;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
   display: flex;
@@ -85,7 +84,6 @@ body {
   background: #d32f2f;
 }
 
-/* === CONTEÚDO PRINCIPAL === */
 .content {
   flex: 1;
   padding: 32px;
@@ -97,7 +95,6 @@ body {
   font-size: 28px;
 }
 
-/* === GRID DE CARDS === */
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -153,7 +150,6 @@ body {
   margin-bottom: 0;
 }
 
-/* === LISTAS (Orçamentos + Agendamentos) === */
 .table-card {
   background: var(--branco);
   border-radius: 14px;
@@ -186,7 +182,6 @@ body {
   font-style: italic;
 }
 
-/* === LINKS E STATUS === */
 .link-orcamento {
   color: var(--roxo-medio);
   text-decoration: none;
@@ -227,7 +222,6 @@ small {
   margin-left: 6px;
 }
 
-/* === RESPONSIVO === */
 @media (max-width: 900px) {
   .sidebar {
     width: 70px;
@@ -254,6 +248,43 @@ small {
     width: 50px;
     border-radius: 50%;
   }
+}
+
+.card-alerta {
+  border-left: 4px solid #ff9800;
+}
+
+.status-orcamento {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+.status-pendente {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+
+.status-aceito {
+  background: #e8f5e9;
+  color: #43a047;
+}
+
+.status-recusado {
+  background: #ffebee;
+  color: #e53935;
+}
+
+.link-orcamento {
+  color: var(--roxo-medio, #7b3ff2);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.link-orcamento:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 600px) {

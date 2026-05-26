@@ -1,16 +1,12 @@
 <?php
 
-// Limpa qualquer saída anterior
 if (ob_get_level()) ob_end_clean();
 
-// Corrige o caminho da conexão
 require_once 'conexao/conexao.php';
 
-// Garante que NADA seja enviado antes do JSON
 header('Content-Type: application/json');
 
 try {
-    // Validação básica
     $paciente = trim($_POST['paciente'] ?? '');
     $nascimento = $_POST['nascimento'] ?? '';
 
@@ -23,7 +19,6 @@ try {
         throw new Exception("Data de nascimento inválida.");
     }
 
-    // Processar problemas de saúde (com fallback seguro)
     $problemas_saude = [];
     if (!empty($_POST['problemas_saude']) && is_array($_POST['problemas_saude'])) {
         $problemas_saude = array_filter($_POST['problemas_saude']);
@@ -33,7 +28,6 @@ try {
     }
     $problemas_saude_str = implode(', ', $problemas_saude);
 
-    // Processar doenças transmissíveis
     $doencas = [];
     if (!empty($_POST['doencas_lista']) && is_array($_POST['doencas_lista'])) {
         $doencas = array_filter($_POST['doencas_lista']);
@@ -43,7 +37,6 @@ try {
     }
     $doencas_str = implode(', ', $doencas);
 
-    // Processar campos SIM/NÃO
     $tratamento_odonto = (!empty($_POST['tratamento_odonto_sim']) && $_POST['tratamento_odonto_sim'] == '1') ? ($_POST['tratamento_odonto'] ?? '') : '';
     $tratamento_medico = (!empty($_POST['tratamento_medico_sim']) && $_POST['tratamento_medico_sim'] == '1') ? ($_POST['tratamento_medico'] ?? '') : '';
     $medicamento_continuo = (!empty($_POST['medicamento_continuo_sim']) && $_POST['medicamento_continuo_sim'] == '1') ? ($_POST['medicamento_continuo'] ?? '') : '';
@@ -58,7 +51,6 @@ try {
     $tratamento_cancer = (!empty($_POST['tratamento_cancer_sim']) && $_POST['tratamento_cancer_sim'] == '1') ? ($_POST['tratamento_cancer'] ?? '') : '';
 
     if (isset($_POST['id']) && !empty($_POST['id'])) {
-        // EDITAR
         $stmt = $pdo->prepare("
             UPDATE prontuarios SET
                 paciente = ?, nascimento = ?, sexo = ?, estado_civil = ?, profissao = ?,
@@ -155,7 +147,7 @@ try {
         echo json_encode(['success' => true, 'redirect' => 'termo_conscentimento.php?id=' . $novo_id]);
     }
 
-    exit; // ← Importante: evita saída adicional
+    exit; 
 
 } catch (Exception $e) {
     http_response_code(400);
