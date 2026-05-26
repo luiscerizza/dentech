@@ -1,0 +1,14 @@
+RewriteEngine On
+RewriteBase /Dentech/
+
+# 1. Permite acessar arquivos/pastas reais (CSS, JS, IMG, etc.)
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# 2. Redireciona URLs antigas (.php) para limpas (ex: prontuarios.php → prontuarios)
+RewriteCond %{THE_REQUEST} \s/+(.+?)\.php[\s?] [NC]
+RewriteRule ^ /Dentech/%1 [R=301,L]
+
+# 3. Reescreve URLs limpas para o arquivo PHP correspondente
+RewriteRule ^([^.]+)$ $1.php [L,QSA]

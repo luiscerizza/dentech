@@ -30,13 +30,14 @@ $mes_formatado = ucfirst(strftime('%B de %Y', strtotime($data_inicio))); // ex: 
     <title>Agendamentos do Mês - Dentech</title>
     <link rel="stylesheet" href="css/navbar.css">
     <link rel="stylesheet" href="css/listar_mes.css">
+    <link rel="icon" type="image/png" href="img/icon.PNG">
 </head>
 
 <body>
     <?php include 'navbar.php'; ?>
 
     <div class="container">
-        <a href="agendamentos.php" class="voltar">&larr; Voltar para o dia</a>
+        <a href="agendamentos" class="voltar">&larr; Voltar para o dia</a>
 
         <h1>Agendamentos de <?= $mes_formatado ?></h1>
 

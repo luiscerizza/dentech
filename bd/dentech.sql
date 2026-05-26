@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS estoque (
 CREATE TABLE IF NOT EXISTS orcamentos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     paciente_id INT NOT NULL,
-    data_criacao DATE NOT NULL DEFAULT (CURRENT_DATE),
+    data_criacao DATE NOT NULL,
     validade DATE NOT NULL,
     status ENUM('pendente', 'aceito', 'recusado') DEFAULT 'pendente',
     observacoes TEXT,
@@ -107,3 +107,32 @@ CREATE TABLE IF NOT EXISTS orcamentos_itens (
     valor_unitario DECIMAL(10,2) NOT NULL,
     FOREIGN KEY (orcamento_id) REFERENCES orcamentos(id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+
+-- --------------------------------------------------------
+-- Tabela: parcelas (parcelas do orcamento)
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS parcelas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    orcamento_id INT NOT NULL,
+    numero_parcela TINYINT NOT NULL,
+    valor DECIMAL(10,2) NOT NULL,
+    vencimento DATE NOT NULL,
+    status ENUM('pendente','paga','atrasada') DEFAULT 'pendente',
+    data_pagamento DATE NULL,
+    INDEX idx_orcamento (orcamento_id),
+    FOREIGN KEY (orcamento_id) REFERENCES orcamentos(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- Tabela: logs (tabela de logs)
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario VARCHAR(100) DEFAULT 'Sistema', -- Quem fez a ação
+    acao VARCHAR(50) NOT NULL,              -- Tipo: Login, Criar, Editar, Excluir
+    tabela VARCHAR(50),                     -- Onde: prontuarios, orcamentos
+    registro_id INT,                        -- ID do item afetado
+    detalhes TEXT,                          -- Texto extra (ex: "Deletou paciente João")
+    ip VARCHAR(45),                         -- IP do usuário (::1 no localhost)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

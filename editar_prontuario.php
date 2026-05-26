@@ -1,5 +1,5 @@
 <?php
-require_once 'conexao/conexao.php'; // ← Corrigido
+require_once 'conexao/conexao.php';
 
 $prontuario = null;
 $is_new = !isset($_GET['id']) || empty($_GET['id']);
@@ -13,6 +13,21 @@ if (!$is_new) {
         die("Prontuário não encontrado.");
     }
 }
+
+function calcularIdade($dataNascimento)
+{
+    if (empty($dataNascimento)) return '';
+    $nascimento = new DateTime($dataNascimento);
+    $hoje = new DateTime();
+    $idade = $hoje->diff($nascimento)->y;
+    return $idade >= 0 ? "{$idade} anos" : '';
+}
+
+$idade_exibicao = '';
+if (!$is_new && !empty($prontuario['nascimento'])) {
+    $idade_exibicao = calcularIdade($prontuario['nascimento']);
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -23,6 +38,7 @@ if (!$is_new) {
     <title><?= $is_new ? 'Novo Prontuário' : 'Editar Prontuário' ?> - Dentech</title>
     <link rel="stylesheet" href="css/navbar.css">
     <link rel="stylesheet" href="css/edt_prontuario.css">
+    <link rel="icon" type="image/png" href="img/icon.PNG">
 </head>
 
 <body>
@@ -51,7 +67,7 @@ if (!$is_new) {
                         </div>
                         <div class="form-group">
                             <label>Idade</label>
-                            <input type="text" name="idade" value="" readonly placeholder="Calculada automaticamente">
+                            <input type="text" name="idade" value="<?= htmlspecialchars($idade_exibicao) ?>" readonly placeholder="Calculada automaticamente">
                         </div>
                     </div>
 
@@ -404,6 +420,15 @@ if (!$is_new) {
                     </div>
                 </div>
 
+                <!-- OBSERVAÇÕES GERAIS -->
+                <div class="section">
+                    <h2 class="section-title">Observações</h2>
+                    <div class="form-group">
+                        <label>Observações adicionais</label>
+                        <textarea name="observacoes" rows="4" placeholder="Informações complementares sobre o paciente..."><?= htmlspecialchars($is_new ? '' : ($prontuario['observacoes'] ?? '')) ?></textarea>
+                    </div>
+                </div>
+
                 <!-- Ações -->
                 <div class="actions">
                     <button type="button" class="btn cancel" onclick="window.location='prontuarios.php'">Cancelar</button>
@@ -417,16 +442,34 @@ if (!$is_new) {
     </div>
 
     <script>
-        // Calcular idade
-        document.querySelector('input[name="nascimento"]').addEventListener('change', function() {
-            const birthDate = new Date(this.value);
-            const today = new Date();
-            let age = today.getFullYear() - birthDate.getFullYear();
-            const monthDiff = today.getMonth() - birthDate.getMonth();
-            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-                age--;
-            }
-            document.querySelector('input[name="idade"]').value = age >= 0 ? age + ' anos' : '';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const nascimentoInput = document.querySelector('input[name="nascimento"]');
+            const idadeInput = document.querySelector('input[name="idade"]');
+
+            // Segurança: só executa se os campos existirem no DOM
+            if (!nascimentoInput || !idadeInput) return;
+
+            nascimentoInput.addEventListener('input', function() {
+                if (!this.value) {
+                    idadeInput.value = '';
+                    return;
+                }
+
+                // Evita problemas de fuso horário e horário de verão
+                const [y, m, d] = this.value.split('-').map(Number);
+                const birthDate = new Date(y, m - 1, d);
+                const today = new Date();
+
+                let age = today.getFullYear() - birthDate.getFullYear();
+                const monthDiff = today.getMonth() - birthDate.getMonth();
+
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                    age--;
+                }
+
+                idadeInput.value = age >= 0 ? `${age} anos` : '';
+            });
         });
 
         // Salvar com AJAX
@@ -446,7 +489,7 @@ if (!$is_new) {
                         window.location.href = result.redirect;
                     } else {
                         alert("Prontuário salvo com sucesso!");
-                        window.location.href = 'prontuarios.php';
+                        window.location.href = 'prontuarios';
                     }
                 } else {
                     alert("Erro ao salvar:\n" + (result.error || "Erro desconhecido."));
@@ -477,7 +520,7 @@ if (!$is_new) {
                 .then(data => {
                     if (data.success) {
                         alert('Prontuário excluído com sucesso!');
-                        window.location.href = 'prontuarios.php';
+                        window.location.href = 'prontuarios';
                     } else {
                         alert('Erro: ' + data.error);
                     }

@@ -2,7 +2,7 @@
 $host = "localhost";
 $db   = "dentech";
 $user = "root";
-$pass = "";
+$pass = "usbw";
 $charset = "utf8mb4";
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
@@ -16,4 +16,30 @@ try {
 } catch (PDOException $e) {
     die("Erro ao conectar: " . $e->getMessage());
 }
-?>
+
+/**
+ * Registra uma ação no sistema de Logs
+ * 
+ * @param PDO $pdo Conexão com o banco
+ * @param string $acao Tipo de ação (ex: 'Login', 'Excluir')
+ * @param string $tabela Tabela afetada (ex: 'prontuarios')
+ * @param int|null $id ID do registro afetado
+ * @param string $detalhes Detalhes adicionais (opcional)
+ */
+function registrarLog($pdo, $acao, $tabela = null, $id = null, $detalhes = '')
+{
+    try {
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'Desconhecido';
+        // Tenta pegar usuário da sessão restrita, ou 'Visitante'
+        $usuario = $_SESSION['restricted_access'] ? 'Admin' : 'Visitante';
+
+        $stmt = $pdo->prepare("
+            INSERT INTO logs (usuario, acao, tabela, registro_id, detalhes, ip)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ");
+        $stmt->execute([$usuario, $acao, $tabela, $id, $detalhes, $ip]);
+    } catch (Exception $e) {
+        // Falha silenciosa para não quebrar o sistema se o log der erro
+        error_log("Erro ao registrar Log: " . $e->getMessage());
+    }
+}

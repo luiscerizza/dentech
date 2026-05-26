@@ -1,5 +1,4 @@
 <?php
-// NADA antes de <?php
 
 // Limpa qualquer saída anterior
 if (ob_get_level()) ob_end_clean();

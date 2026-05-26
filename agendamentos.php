@@ -36,6 +36,7 @@ $agendamentos = $stmt_agendamentos->fetchAll();
     <title>Agendamentos - Dentech</title>
     <link rel="stylesheet" href="css/navbar.css">
     <link rel="stylesheet" href="css/agendamento.css">
+    <link rel="icon" type="image/png" href="img/icon.PNG">
 </head>
 
 <body>
