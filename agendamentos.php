@@ -1,10 +1,15 @@
 <?php
-require_once 'conexao/conexao.php'; 
+// agendamentos.php
+require_once 'conexao/conexao.php'; // ajustado para o caminho correto
 
+// Buscar prontuários
 $stmt_pacientes = $pdo->query("SELECT id, paciente FROM prontuarios ORDER BY paciente");
 $prontuarios = $stmt_pacientes->fetchAll();
+
+// Data do filtro
 $data_filtro = $_GET['data'] ?? date('Y-m-d');
 
+// Buscar agendamentos do dia
 $stmt_agendamentos = $pdo->prepare("
     SELECT 
         a.id,
@@ -40,8 +45,10 @@ $agendamentos = $stmt_agendamentos->fetchAll();
     <div class="container" id="container">
         <h1>Agendamentos</h1>
 
+        <!-- Mensagem de feedback -->
         <div id="mensagem" style="display: none;"></div>
 
+        <!-- Formulário de novo agendamento -->
         <div class="form-agendamento">
             <form id="formAgendamento">
                 <div class="form-row">
@@ -82,6 +89,7 @@ $agendamentos = $stmt_agendamentos->fetchAll();
             </form>
         </div>
 
+        <!-- Filtro por data -->
         <div class="filtro-data">
             <form id="formFiltro" method="GET">
                 <label for="data">Filtrar por </label>
@@ -91,6 +99,7 @@ $agendamentos = $stmt_agendamentos->fetchAll();
             <a href="listar_mes.php?mes=<?= date('Y-m') ?>">Ver mês</a>
         </div>
 
+        <!-- Lista de agendamentos -->
         <h2>Agendamentos em <?= date('d/m/Y', strtotime($data_filtro)) ?></h2>
         <div id="lista-agendamentos">
             <?php if (empty($agendamentos)): ?>
@@ -138,6 +147,7 @@ $agendamentos = $stmt_agendamentos->fetchAll();
     </div>
 
     <script>
+        // Salvar novo agendamento via AJAX
         document.getElementById('formAgendamento').addEventListener('submit', async function(e) {
             e.preventDefault();
             const formData = new FormData(this);
@@ -157,6 +167,7 @@ $agendamentos = $stmt_agendamentos->fetchAll();
                     msgDiv.style.display = 'block';
                     this.reset();
 
+                    // Atualiza a lista após 1s
                     setTimeout(() => {
                         const data = formData.get('data') || '<?= date('Y-m-d') ?>';
                         window.location.search = 'data=' + encodeURIComponent(data);
@@ -177,6 +188,7 @@ $agendamentos = $stmt_agendamentos->fetchAll();
             }
         });
 
+        // Filtro de data
         document.getElementById('formFiltro').addEventListener('submit', function(e) {
             e.preventDefault();
             const data = this.querySelector('input[name="data"]').value;

@@ -1,5 +1,5 @@
 <?php
-require_once 'conexao/conexao.php';
+require_once 'conexao/conexao.php'; // ← Importante!
 
 header('Content-Type: application/json');
 

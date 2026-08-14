@@ -12,6 +12,7 @@ try {
         throw new Exception("Dados inválidos.");
     }
 
+    // Buscar material atual
     $stmt = $pdo->prepare("SELECT quantidade FROM estoque WHERE id = ?");
     $stmt->execute([$id]);
     $atual = $stmt->fetchColumn();

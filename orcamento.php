@@ -1,24 +1,29 @@
 <?php
 require_once 'conexao/conexao.php';
 
+// 🔍 Captura filtros da URL
 $busca    = trim($_GET['busca'] ?? '');
 $status   = $_GET['status'] ?? '';
 $data_ini = $_GET['data_ini'] ?? '';
 $data_fim = $_GET['data_fim'] ?? '';
 
+// 🛡️ Monta WHERE dinâmico seguro
 $where = [];
 $params = [];
 
+// Filtro de busca (nome do paciente)
 if ($busca !== '') {
     $where[] = "(p.paciente LIKE ?)";
     $params[] = "%{$busca}%";
 }
 
+// Filtro de status
 if ($status !== '' && in_array($status, ['pendente', 'aceito', 'recusado'])) {
     $where[] = "o.status = ?";
     $params[] = $status;
 }
 
+// Filtro de período (data de criação)
 if ($data_ini !== '') {
     $where[] = "o.data_criacao >= ?";
     $params[] = $data_ini;
@@ -28,6 +33,7 @@ if ($data_fim !== '') {
     $params[] = $data_fim;
 }
 
+// 🔽 Query principal COM filtros aplicados
 $sql = "
     SELECT 
         o.id,
@@ -53,9 +59,11 @@ if (!empty($where)) {
 
 $sql .= " ORDER BY o.data_criacao DESC";
 
+// Executa com prepared statement
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $orcamentos = $stmt->fetchAll();
+// 🔼 Fim da query filtrada
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -79,6 +87,7 @@ $orcamentos = $stmt->fetchAll();
     <div class="container">
         <h1>Orçamentos</h1>
 
+        <!-- 🔽 BARRA DE FILTROS -->
         <div class="filter-bar">
             <form method="GET" class="filter-form">
                 <input type="text" name="busca" placeholder="Nome do paciente..." value="<?= htmlspecialchars($busca) ?>">
@@ -106,6 +115,7 @@ $orcamentos = $stmt->fetchAll();
                 </div>
             <?php endif; ?>
         </div>
+        <!-- 🔼 FIM DA BARRA DE FILTROS -->
 
         <a href="novo_orcamento" class="btn-add">+ Novo Orçamento</a>
 

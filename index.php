@@ -1,15 +1,24 @@
 <?php
+// index.php
 require_once 'conexao/conexao.php';
 require_once 'config/auth.php';
 
+// 🔒 Exige login do SISTEMA NORMAL (não o restrito)
 exigirLogin();
 
+// =============================================================================
+// DADOS DO DASHBOARD (consultas otimizadas - executadas apenas uma vez)
+// =============================================================================
+
+// Total de pacientes
 $total_pacientes = $pdo->query("SELECT COUNT(*) FROM prontuarios")->fetchColumn();
 
+// Total de agendamentos RECENTES (hoje + passados) - conforme solicitado
 $total_agendamentos = $pdo->query("
     SELECT COUNT(*) FROM agendamentos WHERE data <= CURDATE()
 ")->fetchColumn();
 
+// Últimos agendamentos RECENTES (não futuros) + APENAS MANUAIS (orcamento_id IS NULL)
 $stmt_proximos = $pdo->prepare("
     SELECT 
         COALESCE(p.paciente, a.paciente_nome) AS paciente,
@@ -25,6 +34,7 @@ $stmt_proximos = $pdo->prepare("
 $stmt_proximos->execute();
 $proximos_agendamentos = $stmt_proximos->fetchAll();
 
+// Últimos orçamentos (todos os status para listagem)
 $stmt_orc = $pdo->prepare("
     SELECT 
         o.id,
@@ -39,6 +49,7 @@ $stmt_orc = $pdo->prepare("
 $stmt_orc->execute();
 $ultimos_orcamentos = $stmt_orc->fetchAll();
 
+// Materiais com estoque baixo
 $stmt_estoque_baixo = $pdo->query("
     SELECT nome, quantidade, estoque_minimo, unidade
     FROM estoque
@@ -48,6 +59,7 @@ $stmt_estoque_baixo = $pdo->query("
 $materiais_baixo = $stmt_estoque_baixo->fetchAll();
 $tem_estoque_baixo = !empty($materiais_baixo);
 
+// Relatório de orçamentos do mês atual
 $mes_atual = date('Y-m');
 $stmt_rel_orc = $pdo->prepare("
     SELECT 
@@ -70,7 +82,7 @@ $rel_orc = $stmt_rel_orc->fetch();
 $total_orc = $rel_orc['total'] ?? 0;
 $aceitos = $rel_orc['aceitos'] ?? 0;
 $recusados = $rel_orc['recusados'] ?? 0;
-$valor_total_aceitos = $rel_orc['valor_total_aceitos'] ?? 0; 
+$valor_total_aceitos = $rel_orc['valor_total_aceitos'] ?? 0; // ← Apenas aceitos
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -81,9 +93,49 @@ $valor_total_aceitos = $rel_orc['valor_total_aceitos'] ?? 0;
     <link rel="stylesheet" href="css/index.css">
     <link rel="icon" type="image/png" href="img/icon.PNG">
     <title>Dentech Dashboard</title>
+    <style>
+        /* Ajustes visuais para os novos filtros */
+        .card-alerta {
+            border-left: 4px solid #ff9800;
+        }
+
+        .status-orcamento {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 6px;
+        }
+
+        .status-pendente {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .status-aceito {
+            background: #e8f5e9;
+            color: #43a047;
+        }
+
+        .status-recusado {
+            background: #ffebee;
+            color: #e53935;
+        }
+
+        .link-orcamento {
+            color: var(--roxo-medio, #7b3ff2);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .link-orcamento:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 
 <body>
+    <!-- MENU LATERAL -->
     <aside class="sidebar">
         <div class="logo">
             <img src="img/logo.jpg" alt="Dentech">
@@ -112,21 +164,25 @@ $valor_total_aceitos = $rel_orc['valor_total_aceitos'] ?? 0;
         <button class="logout" onclick="location.href='logout.php'">Sair</button>
     </aside>
 
+    <!-- CONTEÚDO PRINCIPAL -->
     <main class="content">
         <h1>Dashboard</h1>
 
         <div class="card-grid">
+            <!-- Card: Pacientes -->
             <div class="card">
                 <p class="card-title">Pacientes cadastrados</p>
                 <p class="card-value"><?= (int)$total_pacientes ?></p>
             </div>
 
+            <!-- Card: Agendamentos (ajustado para RECENTES) -->
             <div class="card">
                 <p class="card-title">Agendamentos recentes</p>
                 <p class="card-value"><?= (int)$total_agendamentos ?></p>
                 <small style="color:#666; font-size:12px;">Hoje e anteriores</small>
             </div>
 
+            <!-- Card: Estoque -->
             <div class="card <?= $tem_estoque_baixo ? 'card-alerta' : '' ?>">
                 <p class="card-title">Estoque de materiais</p>
                 <?php if ($tem_estoque_baixo): ?>
@@ -151,6 +207,7 @@ $valor_total_aceitos = $rel_orc['valor_total_aceitos'] ?? 0;
                 <?php endif; ?>
             </div>
 
+            <!-- Card: Orçamentos (VALOR APENAS DOS ACEITOS) -->
             <div class="card">
                 <p class="card-title">Orçamentos (<?= date('M/Y') ?>)</p>
                 <p class="card-value" style="font-size: 20px; color: #43a047;">
@@ -175,6 +232,7 @@ $valor_total_aceitos = $rel_orc['valor_total_aceitos'] ?? 0;
             </div>
         </div>
 
+        <!-- LISTA: Últimos orçamentos -->
         <div class="table-card">
             <h3>Últimos orçamentos</h3>
             <?php if (empty($ultimos_orcamentos)): ?>
@@ -201,6 +259,7 @@ $valor_total_aceitos = $rel_orc['valor_total_aceitos'] ?? 0;
             <?php endif; ?>
         </div>
 
+        <!-- LISTA: Agendamentos recentes (APENAS MANUAIS) -->
         <div class="table-card">
             <h3>Agendamentos recentes</h3>
             <small style="color:#666; display:block; margin-bottom:12px;">

@@ -85,6 +85,7 @@ h1 {
   font-size: 14px;
 }
 
+/* TABELAS */
 
 table,
 .parcelas-table {
@@ -118,6 +119,7 @@ td {
   border-bottom: 1px solid #eee;
 }
 
+/* TOTAL */
 
 .total {
   text-align: right;
@@ -149,6 +151,7 @@ td {
   margin-top: 4px;
 }
 
+/* AÇÕES */
 
 .acoes {
   text-align: center;
@@ -169,6 +172,7 @@ td {
   gap: 10px;
 }
 
+/* BOTÕES */
 
 .btn {
   padding: 8px 16px;
@@ -251,6 +255,7 @@ td {
   font-size: 12px;
 }
 
+/* STATUS */
 
 .status,
 .status-badge,
@@ -281,6 +286,7 @@ td {
   color: #e53935;
 }
 
+/* PARCELAS */
 
 .parcelas-section {
   margin-top: 30px;
@@ -299,6 +305,7 @@ td {
   gap: 8px;
 }
 
+/* PROGRESSO */
 
 .progress-bar {
   height: 6px;
@@ -320,6 +327,7 @@ td {
   text-align: right;
 }
 
+/* RODAPÉ */
 
 .footer-note {
   margin-top: 30px;
@@ -330,6 +338,7 @@ td {
   padding-top: 15px;
 }
 
+/* IMPRESSÃO */
 
 @media print {
   body,

@@ -7,6 +7,7 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 
 $agendamento_id = (int)$_GET['id'];
 
+// Buscar agendamento com dados do paciente
 $stmt = $pdo->prepare("
     SELECT 
         a.id,
@@ -29,6 +30,7 @@ if (!$agendamento['paciente_id']) {
     die("Não é possível registrar atendimento para agendamento avulso.");
 }
 
+// Buscar todos os materiais (para o select)
 $stmt = $pdo->query("SELECT id, nome, unidade FROM estoque ORDER BY nome");
 $materiais = $stmt->fetchAll();
 
@@ -38,6 +40,7 @@ if ($_POST) {
     try {
         $pdo->beginTransaction();
 
+        // 1. Criar procedimento
         $descricao = trim($_POST['descricao'] ?? '');
         $medicamentos = trim($_POST['medicamentos'] ?? '');
 
@@ -49,10 +52,11 @@ if ($_POST) {
             $agendamento['paciente_id'],
             $agendamento['procedimento'],
             $descricao ?: null,
-            $medicamentos ?: null, 
+            $medicamentos ?: null, // ← novo campo!
             $agendamento['data']
         ]);
 
+        // 2. Atualizar estoque (se houver itens selecionados)
         if (!empty($_POST['materiais'])) {
             foreach ($_POST['materiais'] as $material_id => $qtd) {
                 $qtd = floatval($qtd);
@@ -75,6 +79,7 @@ if ($_POST) {
             }
         }
 
+        // 3. Excluir agendamento
         $stmt = $pdo->prepare("DELETE FROM agendamentos WHERE id = ?");
         $stmt->execute([$agendamento_id]);
 
@@ -121,6 +126,7 @@ if ($_POST) {
 
             <form method="POST" id="formAtendimento">
 
+                <!-- Descrição do procedimento -->
                 <div class="form-group">
                     <label for="descricao">Descrição do procedimento (opcional)</label>
                     <textarea name="descricao" id="descricao"
@@ -134,6 +140,7 @@ if ($_POST) {
                         placeholder="Ex: Amoxicilina 500mg – 1 comprimido de 8/8h por 7 dias&#10;Paracetamol 750mg – 1 comprimido se dor"></textarea>
                 </div>
 
+                <!-- Materiais do estoque -->
                 <div class="secao-estoque">
                     <div class="aviso">
                         Selecione os materiais utilizados durante o atendimento. Deixe em branco se nenhum foi usado.

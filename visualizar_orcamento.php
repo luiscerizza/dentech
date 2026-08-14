@@ -1,19 +1,23 @@
 <?php
 require_once 'conexao/conexao.php';
 
+// 🔍 ID do orçamento
 $id = $_GET['id'] ?? 0;
 if (!$id) die("ID do orçamento não informado.");
 
+// 💰 Processar confirmação de pagamento (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['marcar_paga'])) {
     $parcela_id = (int)($_POST['parcela_id'] ?? 0);
     if ($parcela_id > 0) {
         $pdo->prepare("UPDATE parcelas SET status = 'paga', data_pagamento = CURDATE() WHERE id = ? AND orcamento_id = ?")
             ->execute([$parcela_id, $id]);
+        // Redireciona para evitar reenvio do formulário
         header("Location: " . $_SERVER['PHP_SELF'] . "?id=" . $id);
         exit;
     }
 }
 
+// 📄 Buscar orçamento + dados do paciente
 $stmt = $pdo->prepare("
     SELECT o.*, p.paciente, p.cpf, p.telefone, p.email 
     FROM orcamentos o 
@@ -24,17 +28,21 @@ $stmt->execute([$id]);
 $orc = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$orc) die("Orçamento não encontrado.");
 
+// 📦 Buscar itens
 $stmt_itens = $pdo->prepare("SELECT * FROM orcamentos_itens WHERE orcamento_id = ? ORDER BY id ASC");
 $stmt_itens->execute([$id]);
 $itens = $stmt_itens->fetchAll();
 
+// ⏰ Auto-atualizar parcelas vencidas como "atrasada"
 $pdo->prepare("UPDATE parcelas SET status = 'atrasada' WHERE orcamento_id = ? AND status = 'pendente' AND vencimento < CURDATE()")
     ->execute([$id]);
 
+// 💳 Buscar parcelas
 $stmt_par = $pdo->prepare("SELECT * FROM parcelas WHERE orcamento_id = ? ORDER BY numero_parcela ASC");
 $stmt_par->execute([$id]);
 $parcelas = $stmt_par->fetchAll();
 
+// 📊 Cálculos
 $total_itens = 0;
 foreach ($itens as $item) {
     $total_itens += $item['quantidade'] * $item['valor_unitario'];
@@ -56,7 +64,9 @@ $progresso = $qtd_total > 0 ? round(($qtd_pagas / $qtd_total) * 100) : 0;
     <link rel="stylesheet" href="css/navbar.css">
     <link rel="stylesheet" href="css/vis_orcamento.css">
     <link rel="icon" type="image/png" href="img/icon.PNG">
+    <style>
 
+    </style>
 </head>
 
 <body>
@@ -64,6 +74,7 @@ $progresso = $qtd_total > 0 ? round(($qtd_pagas / $qtd_total) * 100) : 0;
 
     <main class="content" style="padding: 20px;">
         <div class="orc-container">
+            <!-- Header -->
             <div class="header-actions">
                 <h1 style="margin:0; font-size:20px; color:#2d3748;">Orçamento #<?= $id ?> <span class="status-badge status-<?= htmlspecialchars($orc['status']) ?>"><?= ucfirst(htmlspecialchars($orc['status'])) ?></span></h1>
                 <div class="btn-group">
@@ -73,6 +84,7 @@ $progresso = $qtd_total > 0 ? round(($qtd_pagas / $qtd_total) * 100) : 0;
                 </div>
             </div>
 
+            <!-- Dados do Paciente -->
             <h2 style="font-size:16px; color:#2d3748; margin-top:20px;">👤 Dados do Paciente</h2>
             <div class="info-grid">
                 <div class="info-item"><label>Nome</label><span><?= htmlspecialchars($orc['paciente']) ?></span></div>
@@ -81,6 +93,7 @@ $progresso = $qtd_total > 0 ? round(($qtd_pagas / $qtd_total) * 100) : 0;
                 <div class="info-item"><label>Validade</label><span><?= date('d/m/Y', strtotime($orc['validade'])) ?></span></div>
             </div>
 
+            <!-- Itens -->
             <h2 style="font-size:16px; color:#2d3748;">🦷 Procedimentos</h2>
             <?php if (empty($itens)): ?>
                 <p style="color:#666; padding:10px 0;">Nenhum item registrado.</p>
@@ -108,16 +121,19 @@ $progresso = $qtd_total > 0 ? round(($qtd_pagas / $qtd_total) * 100) : 0;
                 </table>
             <?php endif; ?>
 
+            <!-- Total -->
             <div class="total-box">
                 <div class="total-label">Valor Total do Orçamento</div>
                 <div class="total-value">R$ <?= number_format($total_itens, 2, ',', '.') ?></div>
             </div>
 
+            <!-- Observações -->
             <?php if (!empty($orc['observacoes'])): ?>
                 <h2 style="font-size:16px; color:#2d3748; margin-top:20px;">📝 Observações</h2>
                 <div style="background:#fff; padding:12px; border-radius:8px; border:1px solid #e2e8f0; font-size:13px; color:#4a5568; white-space:pre-line;"><?= nl2br(htmlspecialchars($orc['observacoes'])) ?></div>
             <?php endif; ?>
 
+            <!-- Parcelas -->
             <?php if (!empty($parcelas)): ?>
                 <div class="parcelas-section">
                     <h3>💰 Controle de Parcelas <span style="font-size:12px; font-weight:normal; color:#718096; margin-left:auto;">(<?= $qtd_pagas ?>/<?= $qtd_total ?> pagas)</span></h3>
@@ -161,6 +177,7 @@ $progresso = $qtd_total > 0 ? round(($qtd_pagas / $qtd_total) * 100) : 0;
                         </tbody>
                     </table>
 
+                    <!-- Barra de Progresso -->
                     <div class="progress-bar">
                         <div class="progress-fill" style="width: <?= $progresso ?>%;"></div>
                     </div>

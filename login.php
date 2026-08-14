@@ -1,6 +1,8 @@
 <?php
+// login.php - Tela de login do SISTEMA NORMAL
 require_once 'config/auth.php';
 
+// Se já está logado, vai direto para o dashboard
 if (estaLogado()) {
     header('Location: index.php');
     exit;
@@ -34,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Mensagem de timeout (opcional)
 if (isset($_GET['timeout'])) {
     $erro = 'Sessão expirada. Faça login novamente.';
 }

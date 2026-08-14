@@ -3,7 +3,7 @@ require_once 'conexao/conexao.php';
 
 $mes = $_GET['mes'] ?? date('Y-m');
 $data_inicio = $mes . '-01';
-$data_fim = date('Y-m-t', strtotime($data_inicio)); 
+$data_fim = date('Y-m-t', strtotime($data_inicio)); // último dia do mês
 
 $stmt = $pdo->prepare("
     SELECT 
@@ -17,8 +17,9 @@ $stmt = $pdo->prepare("
 $stmt->execute([$data_inicio, $data_fim]);
 $agendamentos = $stmt->fetchAll();
 
+// Formatar mês para exibição
 $mes_formatado = date('F Y', strtotime($data_inicio));
-$mes_formatado = ucfirst(strftime('%B de %Y', strtotime($data_inicio))); 
+$mes_formatado = ucfirst(strftime('%B de %Y', strtotime($data_inicio))); // ex: Dezembro de 2025
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -63,6 +64,7 @@ $mes_formatado = ucfirst(strftime('%B de %Y', strtotime($data_inicio)));
             foreach ($agendamentos_por_data as $data => $lista):
                 $data_formatada = date('d/m/Y', strtotime($data));
                 $dia_semana = ucfirst(strftime('%A', strtotime($data)));
+                // Traduzir dias da semana para português (opcional, mas elegante)
                 $dias = [
                     'Monday' => 'Segunda-feira',
                     'Tuesday' => 'Terça-feira',

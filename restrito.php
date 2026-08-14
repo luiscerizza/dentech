@@ -1,8 +1,13 @@
 <?php
+// restrito.php - Com Logs de Auditoria Integrados
 
+// 1. Configurações de Sessão e Auth
 require_once 'config/auth.config_area_restrita.php';
+
+// 2. Conexão com o Banco (Obrigatório para o backup e para o Log funcionar)
 require_once 'conexao/conexao.php';
 
+// Verifica se a função de bloqueio existe
 if (!function_exists('exigeAcessoRestrito')) {
     die("❌ Erro crítico: Função 'requireRestrictedAccess' não encontrada.<br>
          Verifique se o arquivo <code>config/auth.config_area_restrita.php</code> existe e contém a função correta.");
@@ -10,6 +15,8 @@ if (!function_exists('exigeAcessoRestrito')) {
 
 exigeAcessoRestrito();
 
+//  LOG 1: Registrar entrada na área restrita
+// Verificamos se a função existe para não dar erro se ainda não tiver criado
 if (function_exists('registrarLog')) {
     registrarLog($pdo, 'Acesso', 'Area_Restrita', null, 'Usuário acessou o painel administrativo');
 }
@@ -17,8 +24,10 @@ if (function_exists('registrarLog')) {
 $mensagem = '';
 $tipo_msg = '';
 
+// 4. Processar Download do Backup
 if (isset($_POST['gerar_backup'])) {
     try {
+        // Limpa buffers
         while (ob_get_level()) ob_end_clean();
 
         if (!isset($pdo) || !$pdo instanceof PDO) {
@@ -27,6 +36,7 @@ if (isset($_POST['gerar_backup'])) {
 
         $nome_arquivo = 'backup_dentech_' . date('Y-m-d_H-i-s') . '.sql';
 
+        // Headers de download
         header('Content-Type: application/octet-stream');
         header('Content-Disposition: attachment; filename="' . $nome_arquivo . '"');
         header('Pragma: no-cache');
@@ -48,11 +58,13 @@ if (isset($_POST['gerar_backup'])) {
         foreach ($tables as $table) {
             echo "\n-- Tabela: `{$table}`\n";
 
+            // Estrutura
             $create = $pdo->query("SHOW CREATE TABLE `{$table}`")->fetch(PDO::FETCH_NUM);
             if ($create) {
                 echo $create[1] . ";\n\n";
             }
 
+            // Dados
             $stmt = $pdo->query("SELECT * FROM `{$table}`");
             $cols = [];
             for ($i = 0; $i < $stmt->columnCount(); $i++) {
@@ -83,11 +95,13 @@ if (isset($_POST['gerar_backup'])) {
 
         echo "\nCOMMIT;\nSET FOREIGN_KEY_CHECKS=1;\n";
 
+        // 📝 LOG 2: Registrar que o backup foi gerado com sucesso
+        // Colocamos antes do exit para garantir que o log seja salvo
         if (function_exists('registrarLog')) {
             registrarLog($pdo, 'Backup', 'Sistema', null, 'Download do arquivo de backup realizado');
         }
 
-        exit; 
+        exit; // Encerra após enviar o arquivo
 
     } catch (Exception $e) {
         if (!headers_sent()) {

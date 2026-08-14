@@ -1,13 +1,16 @@
 <?php
 require_once 'conexao/conexao.php';
 
+// 🔍 Captura filtros da URL
 $busca    = trim($_GET['busca'] ?? '');
 $data_ini = $_GET['data_ini'] ?? '';
 $data_fim = $_GET['data_fim'] ?? '';
 
+// 🛡️ Monta WHERE dinâmico seguro
 $where = [];
 $params = [];
 
+// Filtro de busca (nome, CPF ou telefone)
 if ($busca !== '') {
     $where[] = "(p.paciente LIKE ? OR p.cpf LIKE ? OR p.telefone LIKE ?)";
     $busca_like = "%{$busca}%";
@@ -16,6 +19,7 @@ if ($busca !== '') {
     $params[] = $busca_like;
 }
 
+// Filtro de período (nascimento)
 if ($data_ini !== '') {
     $where[] = "p.nascimento >= ?";
     $params[] = $data_ini;
@@ -25,6 +29,7 @@ if ($data_fim !== '') {
     $params[] = $data_fim;
 }
 
+// 🔽 Query principal COM filtros aplicados
 $sql = "
     SELECT 
         p.*,
@@ -37,9 +42,11 @@ $sql = "
     ) proc_count ON p.id = proc_count.paciente_id
 ";
 
+// 🔽 Lógica de Exportação CSV
 if (isset($_GET['exportar']) && $_GET['exportar'] === '1') {
     require_once 'funcoes_export.php';
 
+    // Reutiliza exatamente a mesma query dos filtros
     $sql_exp = "
         SELECT p.id, p.paciente, p.cpf, p.telefone, p.nascimento, p.observacoes, 
                COALESCE(proc_count.total, 0) as total_procedimentos
@@ -62,9 +69,11 @@ if (!empty($where)) {
 
 $sql .= " ORDER BY p.paciente ASC";
 
+// Executa com prepared statement
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $prontuarios = $stmt->fetchAll();
+// 🔼 Fim da query filtrada
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -85,6 +94,7 @@ $prontuarios = $stmt->fetchAll();
         <main>
             <h1>Prontuários</h1>
 
+            <!-- 🔽 BARRA DE FILTROS -->
             <div class="filter-bar">
                 <form method="GET" class="filter-form">
                     <input type="text" name="busca" placeholder="Nome, CPF ou telefone..." value="<?= htmlspecialchars($busca) ?>">
@@ -106,9 +116,11 @@ $prontuarios = $stmt->fetchAll();
                     </div>
                 <?php endif; ?>
             </div>
+            <!-- 🔼 FIM DA BARRA DE FILTROS -->
 
             <a href="editar_prontuario" class="add-btn">+ Adicionar Prontuário</a>
             <?php
+            // Gera link preservando TODOS os filtros atuais automaticamente
             $export_url = '?' . http_build_query(array_merge($_GET, ['exportar' => '1']));
             ?>
             <a href="<?= $export_url ?>" class="btn-exportar">📥 Exportar CSV</a>

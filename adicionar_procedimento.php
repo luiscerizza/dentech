@@ -7,6 +7,7 @@ if (!isset($_GET['prontuario_id']) || !is_numeric($_GET['prontuario_id'])) {
 
 $prontuario_id = (int)$_GET['prontuario_id'];
 
+// Buscar nome do paciente para exibir
 $stmt = $pdo->prepare("SELECT paciente FROM prontuarios WHERE id = ?");
 $stmt->execute([$prontuario_id]);
 $paciente = $stmt->fetchColumn();

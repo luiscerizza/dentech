@@ -41,6 +41,7 @@
   background-color: rgba(255, 255, 255, 0.15);
 }
 
+/* 🔽 BARRA DE FILTROS - LAYOUT PROFISSIONAL */
 .filter-bar {
   background: #fff;
   padding: 20px;
@@ -57,6 +58,7 @@
   align-items: end;
 }
 
+/* Inputs e Selects */
 .filter-form input,
 .filter-form select {
   padding: 11px 14px;
@@ -65,7 +67,7 @@
   font-size: 13px;
   background: #fff;
   transition: all 0.2s ease;
-  height: 46px; 
+  height: 46px; /* Altura fixa para alinhamento perfeito */
   box-sizing: border-box;
 }
 
@@ -81,6 +83,7 @@
   color: #94a3b8;
 }
 
+/* Botões */
 .btn-filter,
 .btn-reset {
   padding: 11px 20px;
@@ -89,7 +92,7 @@
   font-weight: 600;
   cursor: pointer;
   border: none;
-  height: 46px; 
+  height: 46px; /* Mesma altura dos inputs */
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -127,6 +130,7 @@
   color: #1e293b;
 }
 
+/* Info de filtros ativos */
 .filter-info {
   margin-top: 12px;
   padding: 10px 14px;
@@ -141,13 +145,14 @@
   gap: 6px;
 }
 
+/* 🔽 RESPONSIVIDADE */
 @media (max-width: 768px) {
   .filter-bar {
     padding: 16px;
   }
 
   .filter-form {
-    grid-template-columns: 1fr; 
+    grid-template-columns: 1fr; /* Uma coluna em mobile */
     gap: 10px;
   }
 
@@ -155,33 +160,35 @@
   .filter-form select,
   .btn-filter,
   .btn-reset {
-    width: 100%; 
+    width: 100%; /* Largura total em mobile */
   }
 
   .btn-filter,
   .btn-reset {
-    order: 2; 
+    order: 2; /* Botões depois dos inputs */
   }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
   .filter-form {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, 1fr); /* 2 colunas em tablets */
   }
 
   .btn-filter,
   .btn-reset {
-    grid-column: span 2;
+    grid-column: span 2; /* Botões ocupam largura total */
     max-width: 200px;
   }
 }
 
+/* Ajuste para telas grandes */
 @media (min-width: 1200px) {
   .filter-form {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   }
 }
 
+/* Ícones nos botões */
 .btn-filter::before,
 .btn-reset::before {
   font-size: 14px;

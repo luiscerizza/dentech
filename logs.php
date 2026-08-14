@@ -2,13 +2,16 @@
 require_once 'conexao/conexao.php';
 require_once 'config/auth.config_area_restrita.php';
 
+// Protege a tela (só admin vê logs)
 exigeAcessoRestrito();
 
+// 🔍 Captura Filtros
 $busca_usuario = trim($_GET['busca_usuario'] ?? '');
 $filtro_acao   = $_GET['filtro_acao'] ?? '';
 $data_ini      = $_GET['data_ini'] ?? '';
 $data_fim      = $_GET['data_fim'] ?? '';
 
+// 🛡️ Monta Query Dinâmica
 $where = [];
 $params = [];
 
@@ -33,7 +36,7 @@ $sql = "SELECT * FROM logs";
 if (!empty($where)) {
     $sql .= " WHERE " . implode(" AND ", $where);
 }
-$sql .= " ORDER BY id DESC LIMIT 100"; 
+$sql .= " ORDER BY id DESC LIMIT 100"; // Últimos 100 registros
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
@@ -47,9 +50,93 @@ $logs = $stmt->fetchAll();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Logs de Auditoria - Dentech</title>
     <link rel="stylesheet" href="css/navbar.css">
-    <link rel="stylesheet" href="css/prontuarios.css">
+    <link rel="stylesheet" href="css/prontuarios.css"> <!-- Reusa estilos gerais -->
     <link rel="icon" type="image/png" href="img/icon.PNG">
+    <style>
+        /* Badge de Ações */
+        .badge-acao {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #fff;
+        }
 
+        .bg-login {
+            background: #2196f3;
+        }
+
+        .bg-criar {
+            background: #4caf50;
+        }
+
+        .bg-editar {
+            background: #ff9800;
+        }
+
+        .bg-excluir {
+            background: #f44336;
+        }
+
+        .bg-restrito {
+            background: #9c27b0;
+        }
+
+        .detalhes-text {
+            font-size: 12px;
+            color: #666;
+            max-width: 250px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Estilo Filtros (Padrão Dentech) */
+        .filter-bar {
+            background: #fff;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            margin-bottom: 20px;
+        }
+
+        .filter-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .filter-form input,
+        .filter-form select {
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 13px;
+            min-width: 160px;
+        }
+
+        .btn-filter {
+            background: #7b3ff2;
+            color: #fff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-reset {
+            background: #f4f7f6;
+            color: #4a5568;
+            text-decoration: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            border: 1px solid #e2e8f0;
+        }
+    </style>
 </head>
 
 <body>
@@ -58,6 +145,7 @@ $logs = $stmt->fetchAll();
     <div class="container">
         <h1> Logs de Auditoria</h1>
 
+        <!-- Barra de Filtros -->
         <div class="filter-bar">
             <form method="GET" class="filter-form">
                 <input type="text" name="busca_usuario" placeholder="Usuário..." value="<?= htmlspecialchars($busca_usuario) ?>">
@@ -76,6 +164,7 @@ $logs = $stmt->fetchAll();
             </form>
         </div>
 
+        <!-- Tabela de Logs -->
         <div class="tabela-estoque" style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px;">
                 <thead>

@@ -1,9 +1,11 @@
 <?php
 require_once 'conexao/conexao.php';
 
+// Verifica ID do orçamento
 $id_orc = $_GET['id'] ?? 0;
 if (!$id_orc) die("ID do orçamento não informado.");
 
+// Busca orçamento + paciente
 $stmt = $pdo->prepare("
     SELECT o.*, p.paciente, p.cpf, p.telefone, p.email 
     FROM orcamentos o 
@@ -14,19 +16,23 @@ $stmt->execute([$id_orc]);
 $orc = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$orc) die("Orçamento não encontrado.");
 
+// Busca itens existentes
 $stmt_itens = $pdo->prepare("SELECT * FROM orcamentos_itens WHERE orcamento_id = ? ORDER BY id ASC");
 $stmt_itens->execute([$id_orc]);
 $itens_existentes = $stmt_itens->fetchAll();
 
+// Busca parcelas existentes
 $stmt_par = $pdo->prepare("SELECT * FROM parcelas WHERE orcamento_id = ? ORDER BY numero_parcela ASC");
 $stmt_par->execute([$id_orc]);
 $parcelas_existentes = $stmt_par->fetchAll();
 
+// Calcula total atual
 $total_atual = 0;
 foreach ($itens_existentes as $item) {
     $total_atual += $item['quantidade'] * $item['valor_unitario'];
 }
 
+// Detecta se há parcelas já pagas (para bloquear edição)
 $tem_parcela_paga = false;
 foreach ($parcelas_existentes as $p) {
     if ($p['status'] === 'paga') {
@@ -49,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("A data de validade é obrigatória.");
         }
 
+        // Atualizar orçamento
         $stmt = $pdo->prepare("
             UPDATE orcamentos 
             SET validade = ?, observacoes = ?
@@ -56,6 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ");
         $stmt->execute([$validade, $observacoes, $id_orc]);
 
+        // Atualizar itens: primeiro deleta todos, depois insere os novos
         $pdo->prepare("DELETE FROM orcamentos_itens WHERE orcamento_id = ?")->execute([$id_orc]);
 
         $descricoes = $_POST['descricao'] ?? [];
@@ -87,12 +95,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("Adicione pelo menos 1 item válido ao orçamento.");
         }
 
+        // 🔽 ATUALIZAR PARCELAS (apenas se não houver parcelas pagas)
         $num_parcelas = (int)($_POST['num_parcelas'] ?? 1);
 
         if (!$tem_parcela_paga && $num_parcelas > 0 && $total_novo > 0) {
+            // Deleta parcelas antigas (pendentes)
             $pdo->prepare("DELETE FROM parcelas WHERE orcamento_id = ? AND status = 'pendente'")
                 ->execute([$id_orc]);
 
+            // Cria novas parcelas
             $valor_parcela_base = round($total_novo / $num_parcelas, 2);
             $stmt_par = $pdo->prepare("
                 INSERT INTO parcelas (orcamento_id, numero_parcela, valor, vencimento, status)
@@ -108,10 +119,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt_par->execute([$id_orc, $i, $valor_final, $vencimento]);
             }
         }
+        // 🔼 FIM DA ATUALIZAÇÃO DE PARCELAS
 
         $pdo->commit();
         $sucesso = "Orçamento atualizado com sucesso!";
 
+        // Recarrega dados para exibir atualizações
         header("Refresh: 2; URL=visualizar_orcamento.php?id={$id_orc}");
     } catch (Exception $e) {
         if ($pdo->inTransaction()) {
@@ -122,9 +135,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Busca pacientes para o select
 $pacientes = $pdo->query("SELECT id, paciente FROM prontuarios ORDER BY paciente")->fetchAll();
 ?>
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 
@@ -135,6 +148,65 @@ $pacientes = $pdo->query("SELECT id, paciente FROM prontuarios ORDER BY paciente
     <link rel="stylesheet" href="css/navbar.css">
     <link rel="stylesheet" href="css/new_orcamento.css">
     <link rel="icon" type="image/png" href="img/icon.PNG">
+    <style>
+        .parcelas-existentes {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .parcelas-existentes h4 {
+            margin: 0 0 12px 0;
+            color: #2d3748;
+            font-size: 14px;
+        }
+
+        .parcela-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 13px;
+            border-bottom: 1px solid #edf2f7;
+        }
+
+        .parcela-item:last-child {
+            border-bottom: none;
+        }
+
+        .badge-paga {
+            background: #43a047;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+        }
+
+        .badge-pendente {
+            background: #ef6c00;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+        }
+
+        .aviso-parcelas {
+            background: #fff3e0;
+            color: #ef6c00;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+
+        .preview-parcelas {
+            margin-top: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #7b3ff2;
+        }
+    </style>
 </head>
 
 <body>
@@ -155,17 +227,20 @@ $pacientes = $pdo->query("SELECT id, paciente FROM prontuarios ORDER BY paciente
         <?php endif; ?>
 
         <form method="POST" id="formEditarOrcamento">
+            <!-- Paciente (somente leitura) -->
             <div class="form-group">
                 <label>Paciente</label>
                 <input type="text" value="<?= htmlspecialchars($orc['paciente']) ?>" readonly style="background:#f4f7f6; cursor:not-allowed;">
                 <input type="hidden" name="paciente_id" value="<?= $orc['paciente_id'] ?>">
             </div>
 
+            <!-- Validade -->
             <div class="form-group">
                 <label>Data de Validade</label>
                 <input type="date" name="validade" value="<?= htmlspecialchars($orc['validade']) ?>" required>
             </div>
 
+            <!-- Itens -->
             <div class="form-group">
                 <label>Itens do orçamento</label>
                 <div id="itens-container">
@@ -180,6 +255,7 @@ $pacientes = $pdo->query("SELECT id, paciente FROM prontuarios ORDER BY paciente
                 <button type="button" class="btn-add-item" onclick="adicionarItem()">+ Adicionar Item</button>
             </div>
 
+            <!-- Parcelamento -->
             <div class="form-group" style="border-top:1px solid #eee; padding-top:20px; margin-top:20px;">
                 <label>Parcelamento</label>
 
@@ -192,7 +268,7 @@ $pacientes = $pdo->query("SELECT id, paciente FROM prontuarios ORDER BY paciente
                     </select>
                 <?php else: ?>
                     <select name="num_parcelas" id="num_parcelas">
-                        <?php for ($i = 1; $i <= 12; $i++): ?>
+                        <?php for ($i = 1; $i <= 24; $i++): ?>
                             <option value="<?= $i ?>" <?= $i === count($parcelas_existentes) ? 'selected' : '' ?>>
                                 <?= $i ?>x sem juros
                             </option>
@@ -208,6 +284,7 @@ $pacientes = $pdo->query("SELECT id, paciente FROM prontuarios ORDER BY paciente
                 </div>
             </div>
 
+            <!-- Parcelas Existentes (visualização) -->
             <?php if (!empty($parcelas_existentes)): ?>
                 <div class="parcelas-existentes">
                     <h4>💰 Parcelas Atuais</h4>
@@ -225,11 +302,13 @@ $pacientes = $pdo->query("SELECT id, paciente FROM prontuarios ORDER BY paciente
                 </div>
             <?php endif; ?>
 
+            <!-- Observações -->
             <div class="form-group">
                 <label>Observações (opcional)</label>
                 <textarea name="observacoes" rows="3" placeholder="Condições, descontos, etc..."><?= htmlspecialchars($orc['observacoes']) ?></textarea>
             </div>
 
+            <!-- Ações -->
             <button type="submit" class="btn">💾 Salvar Alterações</button>
             <a href="visualizar_orcamento.php?id=<?= $id_orc ?>" style="display:inline-block; margin-left:12px; color:var(--roxo-medio);">Cancelar</a>
         </form>
@@ -280,6 +359,7 @@ $pacientes = $pdo->query("SELECT id, paciente FROM prontuarios ORDER BY paciente
             }
         }
 
+        // Event listeners
         document.getElementById('num_parcelas')?.addEventListener('change', calcularPreviewParcelas);
 
         document.addEventListener('DOMContentLoaded', () => {

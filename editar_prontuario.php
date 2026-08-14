@@ -53,6 +53,7 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
                     <input type="hidden" name="id" value="<?= $prontuario['id'] ?>">
                 <?php endif; ?>
 
+                <!-- DADOS DO PACIENTE -->
                 <div class="section">
                     <h2 class="section-title">Dados do Paciente</h2>
                     <div class="form-row">
@@ -122,6 +123,7 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
                     </div>
                 </div>
 
+                <!-- ANAMNESE -->
                 <div class="section">
                     <h2 class="section-title">Anamnese Odontológica</h2>
 
@@ -445,6 +447,7 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
             const nascimentoInput = document.querySelector('input[name="nascimento"]');
             const idadeInput = document.querySelector('input[name="idade"]');
 
+            // Segurança: só executa se os campos existirem no DOM
             if (!nascimentoInput || !idadeInput) return;
 
             nascimentoInput.addEventListener('input', function() {
@@ -453,6 +456,7 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
                     return;
                 }
 
+                // Evita problemas de fuso horário e horário de verão
                 const [y, m, d] = this.value.split('-').map(Number);
                 const birthDate = new Date(y, m - 1, d);
                 const today = new Date();
@@ -468,6 +472,7 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
             });
         });
 
+        // Salvar com AJAX
         document.getElementById('prontuarioForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const formData = new FormData(this);
@@ -495,6 +500,7 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
             }
         });
 
+        // Excluir com AJAX
         function deleteProntuario() {
             if (!confirm("⚠️ ATENÇÃO:\nExcluir este prontuário removerá agendamentos, procedimentos e orçamentos vinculados.\n\nDeseja continuar?")) {
                 return;

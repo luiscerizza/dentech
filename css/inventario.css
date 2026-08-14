@@ -110,8 +110,13 @@ tr:last-child td {
 }
 
 .btn-saida {
-  background: var(--roxo-claro);
-  color: var(--roxo-escuro);
+  background: rgb(223, 73, 73);
+  color: white;
+}
+
+.btn-editar {
+  background-color: rgb(233, 233, 101);
+  color: white;
 }
 
 .empty {
@@ -119,6 +124,32 @@ tr:last-child td {
   padding: 40px;
   color: #888;
   font-style: italic;
+}
+
+.col-excluir {
+  width: 40px;
+  text-align: center;
+  padding: 0 !important;
+}
+
+.btn-excluir {
+  border: none;
+  background: transparent;
+  color: #e53e3e;
+  font-size: 25px;
+  font-weight: bold;
+  line-height: 1;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  transition: 0.2s;
+}
+
+.btn-excluir:hover {
+  background: #fee2e2;
+  color: #c53030;
+  transform: scale(1.1);
 }
 
 @media (max-width: 600px) {
