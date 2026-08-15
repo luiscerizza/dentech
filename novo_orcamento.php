@@ -1,11 +1,21 @@
 <?php
+require_once 'config/auth.php';
+exigirLogin();
 require_once 'conexao/conexao.php';
 
 $pacientes = $pdo->query("SELECT id, paciente FROM prontuarios ORDER BY paciente")->fetchAll();
 
-$erro = null; 
+$erro = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (
+        empty($_POST['csrf_token']) ||
+        empty($_SESSION['csrf_token']) ||
+        !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
+    ) {
+        throw new Exception("Token de segurança inválido.");
+    }
+
     try {
         $pdo->beginTransaction();
 
@@ -61,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         //  GERAR PARCELAS (dentro da mesma transação)
         $num_parcelas = (int)($_POST['num_parcelas'] ?? 1);
-        
+
         if ($num_parcelas > 0 && $total_itens > 0) {
             $valor_parcela_base = round($total_itens / $num_parcelas, 2);
             $stmt_par = $pdo->prepare("
@@ -71,13 +81,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             for ($i = 1; $i <= $num_parcelas; $i++) {
                 // Ajusta centavos na última parcela para fechar o total exato
-                $valor_final = ($i === $num_parcelas) 
+                $valor_final = ($i === $num_parcelas)
                     ? round($total_itens - ($valor_parcela_base * ($num_parcelas - 1)), 2)
                     : $valor_parcela_base;
 
                 // Vencimento: mês atual + número da parcela
                 $vencimento = date('Y-m-d', strtotime("+{$i} month"));
-                
+
                 $stmt_par->execute([$orcamento_id, $i, $valor_final, $vencimento]);
             }
         }
@@ -86,13 +96,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->commit(); // ← Único commit, após TUDO estar salvo
         header("Location: visualizar_orcamento.php?id=" . $orcamento_id);
         exit;
-
     } catch (Exception $e) { // ← Captura QUALQUER Exception, não só PDO
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
         $msg = $e->getMessage();
-        
+
         if (strpos($msg, '1146') !== false) {
             preg_match("/Table '[^.]+\\.([^']+)' doesn't exist/", $msg, $matches);
             $tabela = $matches[1] ?? 'desconhecida';
@@ -106,6 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -114,11 +124,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="css/new_orcamento.css">
     <link rel="icon" type="image/png" href="img/icon.PNG">
 </head>
+
 <body>
     <?php include 'navbar.php'; ?>
     <div class="container">
         <h1>Novo Orçamento</h1>
-        
+
         <?php if (!empty($erro)): ?>
             <div class="erro" style="background:#ffebee; color:#c62828; padding:12px; border-radius:6px; margin-bottom:20px;">
                 <?= htmlspecialchars($erro) ?>
@@ -126,6 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <form method="POST" id="formOrcamento">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
             <div class="form-group">
                 <label>Paciente</label>
                 <select name="paciente_id" required>
@@ -207,7 +219,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div><input type="number" name="valor[]" step="0.01" min="0" placeholder="0.00" required class="item-valor"></div>
             `;
             container.appendChild(div);
-            
+
             // Adiciona listener no novo campo de valor
             div.querySelector('.item-valor').addEventListener('input', calcularPreviewParcelas);
         }
@@ -215,7 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         function calcularPreviewParcelas() {
             const qtdParcelas = parseInt(document.getElementById('num_parcelas').value) || 1;
             let total = 0;
-            
+
             // Soma todos os itens: quantidade × valor
             document.querySelectorAll('.item-row').forEach(row => {
                 const qtdInput = row.querySelector('[name="quantidade[]"]');
@@ -227,7 +239,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             const valorParcela = total / qtdParcelas;
             const preview = document.getElementById('preview_parcelas');
-            
+
             if (total === 0) {
                 preview.textContent = 'Adicione itens para calcular parcelas';
                 preview.style.color = '#999';
@@ -242,7 +254,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Listener no select de parcelas
         document.getElementById('num_parcelas').addEventListener('change', calcularPreviewParcelas);
-        
+
         // Listeners nos campos existentes ao carregar a página
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.item-valor').forEach(input => {
@@ -255,23 +267,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             calcularPreviewParcelas();
         });
 
-         // Força a recriação das opções depois que a página carregar totalmente
-    window.addEventListener('load', function() {
-        const select = document.getElementById('num_parcelas');
-        
-        // Se por algum motivo o select tiver menos de 24 opções, recria tudo
-        if (select.options.length < 24) {
-            select.innerHTML = ''; // Limpa o que estiver errado
-            
-            for (let i = 1; i <= 24; i++) {
-                const opt = document.createElement('option');
-                opt.value = i;
-                opt.textContent = (i === 1) ? 'À vista (1x)' : `${i}x sem juros`;
-                select.appendChild(opt);
+        // Força a recriação das opções depois que a página carregar totalmente
+        window.addEventListener('load', function() {
+            const select = document.getElementById('num_parcelas');
+
+            // Se por algum motivo o select tiver menos de 24 opções, recria tudo
+            if (select.options.length < 24) {
+                select.innerHTML = ''; // Limpa o que estiver errado
+
+                for (let i = 1; i <= 24; i++) {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.textContent = (i === 1) ? 'À vista (1x)' : `${i}x sem juros`;
+                    select.appendChild(opt);
+                }
+                console.log('Parcelas recriadas com sucesso via JS!');
             }
-            console.log('Parcelas recriadas com sucesso via JS!');
-        }
-    });
+        });
     </script>
 </body>
+
 </html>

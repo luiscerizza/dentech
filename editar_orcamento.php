@@ -1,4 +1,6 @@
 <?php
+require_once 'config/auth.php';
+exigirLogin();
 require_once 'conexao/conexao.php';
 
 // Verifica ID do orçamento
@@ -45,6 +47,14 @@ $erro = null;
 $sucesso = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (
+        empty($_POST['csrf_token']) ||
+        empty($_SESSION['csrf_token']) ||
+        !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
+    ) {
+        throw new Exception("Token de segurança inválido.");
+    }
+
     try {
         $pdo->beginTransaction();
 
@@ -227,6 +237,7 @@ $pacientes = $pdo->query("SELECT id, paciente FROM prontuarios ORDER BY paciente
         <?php endif; ?>
 
         <form method="POST" id="formEditarOrcamento">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
             <!-- Paciente (somente leitura) -->
             <div class="form-group">
                 <label>Paciente</label>
