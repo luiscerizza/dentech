@@ -1,4 +1,6 @@
 <?php
+require_once 'config/auth.php';
+exigirLogin();
 require_once 'conexao/conexao.php';
 
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
