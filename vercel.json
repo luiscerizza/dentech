@@ -5,7 +5,13 @@
     }
   },
   "routes": [
-    { "source": "/", "destination": "/login.php" },
-    { "source": "/(.*)", "destination": "$1" }
+    {
+      "source": "/",
+      "destination": "/login.php"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "$1"
+    }
   ]
 }
