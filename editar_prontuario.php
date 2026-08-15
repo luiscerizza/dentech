@@ -1,4 +1,6 @@
 <?php
+require_once 'config/auth.php';
+exigirLogin();
 require_once 'conexao/conexao.php';
 
 $prontuario = null;
@@ -442,7 +444,6 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
     </div>
 
     <script>
-
         document.addEventListener('DOMContentLoaded', () => {
             const nascimentoInput = document.querySelector('input[name="nascimento"]');
             const idadeInput = document.querySelector('input[name="idade"]');
@@ -514,7 +515,8 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: 'id=' + encodeURIComponent(id)
+                    body: 'id=' + encodeURIComponent(id) +
+                        '&csrf_token=' + encodeURIComponent('<?= $_SESSION['csrf_token'] ?>')
                 })
                 .then(response => response.json())
                 .then(data => {

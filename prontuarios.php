@@ -1,4 +1,6 @@
 <?php
+require_once 'config/auth.php';
+exigirLogin();
 require_once 'conexao/conexao.php';
 
 // 🔍 Captura filtros da URL
@@ -164,7 +166,8 @@ $prontuarios = $stmt->fetchAll();
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: 'id=' + encodeURIComponent(id)
+                    body: 'id=' + encodeURIComponent(id) +
+                        '&csrf_token=' + encodeURIComponent('<?= $_SESSION['csrf_token'] ?>')
                 })
                 .then(response => response.json())
                 .then(data => {

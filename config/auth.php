@@ -8,6 +8,10 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // 🔑 CREDENCIAIS DO LOGIN NORMAL (ALTERE PARA SUAS)
 define('NORMAL_USER', getenv('NORMAL_USER') ?: '');
 define('USER_MASTER', getenv('USER_MASTER') ?: '');
