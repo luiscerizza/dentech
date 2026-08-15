@@ -1,80 +1,56 @@
 <?php
 
-// Ponto de entrada do Dentech no Vercel
+// Roteador central do Dentech para o Vercel
 
 $root = dirname(__DIR__);
 
-$path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
-$path = '/' . ltrim($path, '/');
+if (!is_dir($root)) {
+    http_response_code(500);
+    exit('Erro interno: diretório do sistema não encontrado.');
+}
 
-// Segurança
+// Mantém os caminhos relativos das páginas funcionando
+chdir($root);
+
+// Caminho solicitado
+$requestUri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+$requestUri = urldecode($requestUri);
+
+// Remove barras extras
+$requestUri = trim($requestUri, '/');
+
+// Página inicial
+if ($requestUri === '') {
+    $requestUri = 'login';
+}
+
+// Remove .php se o usuário colocar
+$requestUri = preg_replace('/\.php$/i', '', $requestUri);
+
+// Impede tentativa de acessar diretórios/arquivos fora do projeto
 if (
-    str_contains($path, '..') ||
-    str_contains($path, "\0")
+    strpos($requestUri, '..') !== false ||
+    strpos($requestUri, '\\') !== false
 ) {
     http_response_code(400);
     exit('Requisição inválida.');
 }
 
-// ---------------------------------------------------------
-// ARQUIVOS ESTÁTICOS
-// ---------------------------------------------------------
+// Converte:
+// prontuarios
+// novo-orcamento
+// novo_orcamento
+// etc.
+$pagina = $requestUri . '.php';
 
-$staticExtensions = [
-    'css'   => 'text/css',
-    'js'    => 'application/javascript',
-    'png'   => 'image/png',
-    'jpg'   => 'image/jpeg',
-    'jpeg'  => 'image/jpeg',
-    'gif'   => 'image/gif',
-    'webp'  => 'image/webp',
-    'svg'   => 'image/svg+xml',
-    'ico'   => 'image/x-icon',
-    'woff'  => 'font/woff',
-    'woff2' => 'font/woff2',
-    'ttf'   => 'font/ttf',
-];
+// Verifica se a página existe
+$arquivo = $root . DIRECTORY_SEPARATOR . $pagina;
 
-$extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-
-if (isset($staticExtensions[$extension])) {
-    $arquivo = $root . $path;
-
-    if (is_file($arquivo)) {
-        header('Content-Type: ' . $staticExtensions[$extension]);
-        readfile($arquivo);
-        exit;
-    }
-
+if (!is_file($arquivo)) {
     http_response_code(404);
-    exit('Arquivo não encontrado.');
+    echo '404 - Página não encontrada';
+    exit;
 }
-
-// ---------------------------------------------------------
-// PÁGINA PHP
-// ---------------------------------------------------------
-
-if ($path === '/') {
-    $arquivo = 'login.php';
-} else {
-    $arquivo = ltrim($path, '/');
-}
-
-$caminho = $root . '/' . $arquivo;
-
-// Só permite PHP
-if (strtolower(pathinfo($caminho, PATHINFO_EXTENSION)) !== 'php') {
-    http_response_code(404);
-    exit('Página não encontrada.');
-}
-
-if (!is_file($caminho)) {
-    http_response_code(404);
-    exit('Página não encontrada.');
-}
-
-// Faz os caminhos relativos funcionarem
-chdir($root);
 
 // Executa a página PHP
-require $caminho;
+require $arquivo;
