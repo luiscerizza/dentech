@@ -4,18 +4,10 @@
       "runtime": "vercel-php@0.7.2"
     }
   },
-  "rewrites": [
+  "routes": [
     {
-      "source": "/css/:path*",
-      "destination": "/css/:path*"
-    },
-    {
-      "source": "/img/:path*",
-      "destination": "/img/:path*"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/api/index.php"
+      "src": "/(.*)",
+      "dest": "/api/index.php"
     }
   ]
 }

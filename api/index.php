@@ -1,47 +1,80 @@
 <?php
 
-// Ponto de entrada PHP do Dentech para o Vercel
+// Ponto de entrada do Dentech no Vercel
 
-// Caminho absoluto da raiz do projeto
 $root = dirname(__DIR__);
 
-// Pega o caminho solicitado
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+$path = '/' . ltrim($path, '/');
 
-// Remove barras extras
-$path = '/' . trim($path, '/');
+// Segurança
+if (
+    str_contains($path, '..') ||
+    str_contains($path, "\0")
+) {
+    http_response_code(400);
+    exit('Requisição inválida.');
+}
 
-// Página inicial
+// ---------------------------------------------------------
+// ARQUIVOS ESTÁTICOS
+// ---------------------------------------------------------
+
+$staticExtensions = [
+    'css'   => 'text/css',
+    'js'    => 'application/javascript',
+    'png'   => 'image/png',
+    'jpg'   => 'image/jpeg',
+    'jpeg'  => 'image/jpeg',
+    'gif'   => 'image/gif',
+    'webp'  => 'image/webp',
+    'svg'   => 'image/svg+xml',
+    'ico'   => 'image/x-icon',
+    'woff'  => 'font/woff',
+    'woff2' => 'font/woff2',
+    'ttf'   => 'font/ttf',
+];
+
+$extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+if (isset($staticExtensions[$extension])) {
+    $arquivo = $root . $path;
+
+    if (is_file($arquivo)) {
+        header('Content-Type: ' . $staticExtensions[$extension]);
+        readfile($arquivo);
+        exit;
+    }
+
+    http_response_code(404);
+    exit('Arquivo não encontrado.');
+}
+
+// ---------------------------------------------------------
+// PÁGINA PHP
+// ---------------------------------------------------------
+
 if ($path === '/') {
     $arquivo = 'login.php';
 } else {
-    // Remove a barra inicial
     $arquivo = ltrim($path, '/');
-
-    // Segurança: impede acesso a arquivos/diretórios fora do projeto
-    if (
-        str_contains($arquivo, '..') ||
-        str_contains($arquivo, "\0")
-    ) {
-        http_response_code(400);
-        exit('Requisição inválida.');
-    }
 }
 
-// Só permite arquivos PHP existentes na raiz do projeto
 $caminho = $root . '/' . $arquivo;
+
+// Só permite PHP
+if (strtolower(pathinfo($caminho, PATHINFO_EXTENSION)) !== 'php') {
+    http_response_code(404);
+    exit('Página não encontrada.');
+}
 
 if (!is_file($caminho)) {
     http_response_code(404);
     exit('Página não encontrada.');
 }
 
-// Só executa PHP
-if (strtolower(pathinfo($caminho, PATHINFO_EXTENSION)) !== 'php') {
-    http_response_code(404);
-    exit('Página não encontrada.');
-}
-
-// Executa o arquivo solicitado
+// Faz os caminhos relativos funcionarem
 chdir($root);
+
+// Executa a página PHP
 require $caminho;
