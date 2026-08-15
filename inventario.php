@@ -1,4 +1,6 @@
 <?php
+require_once 'config/auth.php';
+exigirLogin();
 require_once 'conexao/conexao.php';
 
 // 🔍 Captura filtros da URL
@@ -159,6 +161,7 @@ $materiais = $stmt->fetchAll();
         }
 
         const formData = new FormData();
+        formData.append('csrf_token', '<?= htmlspecialchars($_SESSION['csrf_token']) ?>');
         formData.append('id', materialId);
         formData.append('tipo', tipo);
         formData.append('quantidade', quantidade);

@@ -1,7 +1,19 @@
 <?php
+require_once 'config/auth.php';
+exigirLogin();
+
 require_once 'conexao/conexao.php';
 
-if ($_POST) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (
+        empty($_POST['csrf_token']) ||
+        empty($_SESSION['csrf_token']) ||
+        !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
+    ) {
+        http_response_code(403);
+        die('Token de segurança inválido.');
+    }
+
     try {
         $nome = trim($_POST['nome'] ?? '');
         $unidade = trim($_POST['unidade'] ?? 'unidade');
@@ -25,6 +37,7 @@ if ($_POST) {
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -33,6 +46,7 @@ if ($_POST) {
     <link rel="stylesheet" href="css/add_material.css">
     <link rel="icon" type="image/png" href="img/icon.PNG">
 </head>
+
 <body>
     <?php include 'navbar.php'; ?>
     <div class="container">
@@ -41,6 +55,7 @@ if ($_POST) {
             <div class="erro"><?= htmlspecialchars($erro) ?></div>
         <?php endif; ?>
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
             <div class="form-group">
                 <label>Nome do material</label>
                 <input type="text" name="nome" required placeholder="Ex: Anestésico, Luvas...">
@@ -68,4 +83,5 @@ if ($_POST) {
         </form>
     </div>
 </body>
+
 </html>
