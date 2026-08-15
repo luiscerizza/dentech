@@ -36,11 +36,6 @@ if (!$id) die("ID do orçamento não informado.");
         exit;
     }
 }
-        $pdo->prepare("UPDATE parcelas SET status = 'paga', data_pagamento = CURDATE() WHERE id = ? AND orcamento_id = ?")
-            ->execute([$parcela_id, $id]);
-        // Redireciona para evitar reenvio do formulário
-        header("Location: " . $_SERVER['PHP_SELF'] . "?id=" . $id);
-        exit;
     
 // 📄 Buscar orçamento + dados do paciente
 $stmt = $pdo->prepare("
