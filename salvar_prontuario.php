@@ -177,8 +177,27 @@ try {
 
     exit; // ← Importante: evita saída adicional
 
+} catch (PDOException $e) {
+    if ($e->errorInfo[1] == 1062) {
+        http_response_code(409);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Este CPF já está cadastrado para outro paciente.'
+        ]);
+    } else {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+
+    exit;
 } catch (Exception $e) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    echo json_encode([
+        'success' => false,
+        'error' => $e->getMessage()
+    ]);
     exit;
 }
