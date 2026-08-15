@@ -6,6 +6,10 @@
   },
   "routes": [
     {
+      "src": "^/(css|img|js|fonts)/(.*)$",
+      "dest": "/$1/$2"
+    },
+    {
       "src": "^/$",
       "dest": "/api/index.php"
     },
