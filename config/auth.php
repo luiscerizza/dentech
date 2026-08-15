@@ -9,10 +9,10 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // 🔑 CREDENCIAIS DO LOGIN NORMAL (ALTERE PARA SUAS)
-define('NORMAL_USER', 'user');
-define('USER_MASTER', 'user_master');
-define('NORMAL_HASH', '$2y$10$YOXNdOPiUVqcY6WshENXi.B3GnNB2GUKuJu5E8i8/4KxOoJheAV0e'); 
-define('MASTER_HASH', '$2y$10$erBUtqhkGfHr5HfgMe1GQ.LLX1p31csuxRtUGG7Zi7FmZ4bQ0uZ0O');
+define('NORMAL_USER', getenv('NORMAL_USER') ?: '');
+define('USER_MASTER', getenv('USER_MASTER') ?: '');
+define('NORMAL_HASH', getenv('NORMAL_HASH') ?: '');
+define('MASTER_HASH', getenv('MASTER_HASH') ?: '');
 
 // ✅ Verifica se está logado no sistema normal
 function estaLogado(): bool {

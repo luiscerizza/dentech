@@ -21,8 +21,8 @@ if (isset($_SESSION['restricted_login_time']) && (time() - $_SESSION['restricted
 $_SESSION['restricted_login_time'] = time();
 
 // 🔑 CREDENCIAIS DA ÁREA RESTRITA (ALTERE O HASH!)
-define('RESTRICTED_USER', 'admin');
-define('RESTRICTED_HASH', '$2y$10$aq.KVo76eUfvYV7K796aDOnPAbUT0LfHVjmlf78k9cvIFvwjjEXca'); // ← Substitua pelo hash gerado
+define('RESTRICTED_USER', getenv('RESTRICTED_USER') ?: '');
+define('RESTRICTED_HASH', getenv('RESTRICTED_HASH') ?: ''); // ← Substitua pelo hash gerado
 
 // ✅ Verifica se já tem acesso à área restrita
 function temAcessoRestrito(): bool {
