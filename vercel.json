@@ -6,7 +6,15 @@
   },
   "routes": [
     {
-      "src": "/(.*)",
+      "src": "/(css|img)/(.*)",
+      "dest": "/$1/$2"
+    },
+    {
+      "src": "/(.*\\.php)",
+      "dest": "/api/index.php"
+    },
+    {
+      "src": "/",
       "dest": "/api/index.php"
     }
   ]
