@@ -1,4 +1,6 @@
 <?php
+require_once 'config/auth.php';
+exigirLogin();
 
 // Limpa qualquer saída anterior
 if (ob_get_level()) ob_end_clean();
@@ -57,6 +59,24 @@ try {
     $cancer_familiar = (!empty($_POST['cancer_familiar_sim']) && $_POST['cancer_familiar_sim'] == '1') ? ($_POST['cancer_familiar'] ?? '') : '';
     $tratamento_cancer = (!empty($_POST['tratamento_cancer_sim']) && $_POST['tratamento_cancer_sim'] == '1') ? ($_POST['tratamento_cancer'] ?? '') : '';
 
+    // Normalizar CPF
+    $cpf = trim($_POST['cpf'] ?? '');
+    $cpf = preg_replace('/\D/', '', $cpf);
+
+    // CPF não informado
+    if ($cpf === '') {
+        $cpf = null;
+    }
+
+    // CPF informado deve ter 11 dígitos
+    if ($cpf !== null && strlen($cpf) !== 11) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'CPF inválido. Informe os 11 dígitos do CPF ou deixe o campo vazio.'
+        ]);
+        exit;
+    }
+
     if (isset($_POST['id']) && !empty($_POST['id'])) {
         // EDITAR
         $stmt = $pdo->prepare("
@@ -77,7 +97,7 @@ try {
             $_POST['estado_civil'] ?? null,
             $_POST['profissao'] ?? null,
             $_POST['rg'] ?? null,
-            $_POST['cpf'] ?? null,
+            $cpf,
             $_POST['endereco'] ?? null,
             $_POST['cep'] ?? null,
             $_POST['telefone'] ?? null,
@@ -129,7 +149,7 @@ try {
             $_POST['estado_civil'] ?? null,
             $_POST['profissao'] ?? null,
             $_POST['rg'] ?? null,
-            $_POST['cpf'] ?? null,
+            $cpf,
             $_POST['endereco'] ?? null,
             $_POST['cep'] ?? null,
             $_POST['telefone'] ?? null,

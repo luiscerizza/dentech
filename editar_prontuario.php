@@ -51,6 +51,8 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
             <h1><?= $is_new ? 'Novo Prontuário' : 'Editar Prontuário' ?></h1>
 
             <form id="prontuarioForm">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+
                 <?php if (!$is_new): ?>
                     <input type="hidden" name="id" value="<?= $prontuario['id'] ?>">
                 <?php endif; ?>
