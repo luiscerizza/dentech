@@ -224,6 +224,7 @@ $materiais = $stmt->fetchAll();
 
     const formData = new FormData();
     formData.append('id', materialId);
+    formData.append('csrf_token', '<?= htmlspecialchars($_SESSION["csrf_token"]) ?>');
 
     try {
 
