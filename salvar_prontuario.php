@@ -1,6 +1,8 @@
 <?php
 require_once 'config/auth.php';
+require_once 'config/csrf.php';
 exigirLogin();
+require_once 'conexao/conexao.php';
 
 // Limpa qualquer saída anterior
 if (ob_get_level()) ob_end_clean();
@@ -12,6 +14,8 @@ require_once 'conexao/conexao.php';
 header('Content-Type: application/json');
 
 try {
+
+    validar_csrf();
     // Validação básica
     $paciente = trim($_POST['paciente'] ?? '');
     $nascimento = $_POST['nascimento'] ?? '';
@@ -172,6 +176,13 @@ try {
         ]);
 
         $novo_id = $pdo->lastInsertId();
+        registrarLog(
+            $pdo,
+            'Criou prontuário',
+            'prontuarios',
+            $novo_id,
+            'Novo paciente cadastrado no prontuário'
+        );
         echo json_encode(['success' => true, 'redirect' => 'termo_conscentimento.php?id=' . $novo_id]);
     }
 

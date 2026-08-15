@@ -1,25 +1,15 @@
 <?php
 require_once 'config/auth.php';
+require_once 'config/csrf.php';
 exigirLogin();
 
 require_once 'conexao/conexao.php';
 
 header('Content-Type: application/json');
 
-if (
-    empty($_POST['csrf_token']) ||
-    empty($_SESSION['csrf_token']) ||
-    !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
-) {
-    http_response_code(403);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Token de segurança inválido.'
-    ]);
-    exit;
-}
-
 try {
+    validar_csrf();
+
     $prontuario_id = (int)($_POST['prontuario_id'] ?? 0);
     $titulo = trim($_POST['titulo'] ?? '');
     $data_procedimento = $_POST['data_procedimento'] ?? '';
@@ -58,6 +48,17 @@ try {
         $medicamentos ?: null,
         $data_procedimento
     ]);
+
+    $id_criado = $pdo->lastInsertId();
+
+    registrarLog(
+    $pdo,
+    'Criou procedimento',
+    'procedimentos',
+    $id_criado,
+    'Novo procedimento registrado no prontuário'
+);
+
     echo json_encode(['success' => true]);
 } catch (Exception $e) {
     http_response_code(400);

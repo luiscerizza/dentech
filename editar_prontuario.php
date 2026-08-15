@@ -479,7 +479,7 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
         document.getElementById('prontuarioForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const formData = new FormData(this);
-
+            formData.append('csrf_token', '<?= $_SESSION['csrf_token'] ?>');
             try {
                 const response = await fetch('salvar_prontuario.php', {
                     method: 'POST',

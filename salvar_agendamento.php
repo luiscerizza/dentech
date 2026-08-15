@@ -1,24 +1,15 @@
 <?php
 require_once 'config/auth.php';
+require_once 'config/csrf.php';
 exigirLogin();
 require_once 'conexao/conexao.php';
 
 header('Content-Type: application/json');
 
-if (
-    empty($_POST['csrf_token']) ||
-    empty($_SESSION['csrf_token']) ||
-    !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
-) {
-    http_response_code(403);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Token de segurança inválido.'
-    ]);
-    exit;
-}
-
 try {
+
+    validar_csrf();
+
     $paciente_id = !empty($_POST['paciente_id']) ? (int)$_POST['paciente_id'] : null;
     $paciente_nome = trim($_POST['paciente_nome'] ?? '');
     $procedimento = trim($_POST['procedimento'] ?? '');
@@ -51,6 +42,14 @@ try {
         $data,
         $horario
     ]);
+
+    registrarLog(
+    $pdo,
+    'Criou agendamento',
+    'agendamentos',
+    $pdo->lastInsertId(),
+    'Novo agendamento criado'
+);
 
     echo json_encode(['success' => true]);
 } catch (Exception $e) {

@@ -76,7 +76,7 @@ if (!$paciente) {
             e.preventDefault();
 
             const formData = new FormData();
-            formData.append('csrf_token', '<?= htmlspecialchars($_SESSION['csrf_token']) ?>');
+            formData.append('csrf_token', '<?= $_SESSION['csrf_token'] ?>');
             
             formData.append('prontuario_id', document.getElementById('prontuarioId').value);
             formData.append('titulo', document.getElementById('titulo').value);

@@ -1,6 +1,6 @@
 <?php
 // config/auth.php - Configuração do LOGIN NORMAL (sistema principal)
-
+session_start();
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_httponly', 1);
     ini_set('session.cookie_samesite', 'Lax');
@@ -37,3 +37,5 @@ function fazerLogout(): void {
     unset($_SESSION['id_usuario']);
     // Mantém $_SESSION['restricted_access'] intacto se existir
 }
+
+require_once __DIR__ . '/csrf.php';

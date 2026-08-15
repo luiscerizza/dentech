@@ -33,7 +33,9 @@ function registrarLog($pdo, $acao, $tabela = null, $id = null, $detalhes = '')
     try {
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'Desconhecido';
         // Tenta pegar usuário da sessão restrita, ou 'Visitante'
-        $usuario = $_SESSION['restricted_access'] ? 'Admin' : 'Visitante';
+        $usuario = !empty($_SESSION['restricted_access'])
+            ? 'Admin'
+            : (!empty($_SESSION['user_logado']) ? 'Usuario' : 'Visitante');
 
         $stmt = $pdo->prepare("
             INSERT INTO logs (usuario, acao, tabela, registro_id, detalhes, ip)

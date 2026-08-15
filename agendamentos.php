@@ -127,19 +127,29 @@ $agendamentos = $stmt_agendamentos->fetchAll();
                                     <td><?= htmlspecialchars($ag['procedimento']) ?></td>
                                     <td class="acoes">
                                         <?php if (!empty($ag['paciente_id'])): ?>
-                                            <a href="registrar_atendimento.php?id=<?= $ag['id'] ?>"
-                                                class="btn-confirmar"
-                                                onclick="return confirm('Confirmar atendimento e registrar procedimento?')">
-                                                ✅
-                                            </a>
+                                            <form method="POST" action="registrar_atendimento.php" style="display:inline;"
+                                                onsubmit="return confirm('Confirmar atendimento e registrar procedimento?')">
+
+                                                <?= csrf_field() ?>
+
+                                                <input type="hidden" name="id" value="<?= $ag['id'] ?>">
+                                                <button type="submit" class="btn-confirmar">
+                                                    ✅
+                                                </button>
+                                            </form>
                                         <?php else: ?>
                                             <span class="avulso">(avulso)</span>
                                         <?php endif; ?>
-                                        <a href="excluir_agendamento.php?id=<?= $ag['id'] ?>"
-                                            class="btn-excluir"
-                                            onclick="return confirm('Excluir este agendamento?')">
-                                            ❌
-                                        </a>
+                                        <form method="POST" action="excluir_agendamento.php" style="display:inline;"
+                                            onsubmit="return confirm('Excluir este agendamento?')">
+
+                                            <?= csrf_field() ?>
+
+                                            <input type="hidden" name="id" value="<?= $ag['id'] ?>">
+                                            <button type="submit" class="btn-excluir">
+                                                ❌
+                                            </button>
+                                        </form>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -155,7 +165,7 @@ $agendamentos = $stmt_agendamentos->fetchAll();
         document.getElementById('formAgendamento').addEventListener('submit', async function(e) {
             e.preventDefault();
             const formData = new FormData(this);
-
+            formData.append('csrf_token', '<?= $_SESSION['csrf_token'] ?>');
             try {
                 const response = await fetch('salvar_agendamento.php', {
                     method: 'POST',

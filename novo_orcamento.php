@@ -1,5 +1,6 @@
 <?php
 require_once 'config/auth.php';
+require_once 'config/csrf.php';
 exigirLogin();
 require_once 'conexao/conexao.php';
 
@@ -8,13 +9,7 @@ $pacientes = $pdo->query("SELECT id, paciente FROM prontuarios ORDER BY paciente
 $erro = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (
-        empty($_POST['csrf_token']) ||
-        empty($_SESSION['csrf_token']) ||
-        !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
-    ) {
-        throw new Exception("Token de segurança inválido.");
-    }
+    validar_csrf();
 
     try {
         $pdo->beginTransaction();
@@ -137,6 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <form method="POST" id="formOrcamento">
+            <?= csrf_field() ?>
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
             <div class="form-group">
                 <label>Paciente</label>

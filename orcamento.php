@@ -152,8 +152,34 @@ $orcamentos = $stmt->fetchAll();
                                 <a href="visualizar_orcamento.php?id=<?= $o['id'] ?>">Visualizar</a>
                                 <?php if ($o['status'] == 'pendente'): ?>
                                     <a href="editar_orcamento.php?id=<?= $o['id'] ?>" style="color:var(--roxo-medio);">Editar</a>
-                                    <a href="aceitar_orcamento.php?id=<?= $o['id'] ?>" style="color:var(--verde);" onclick="return confirm('Aceitar este orçamento?')">Aceitar</a>
-                                    <a href="recusar_orcamento.php?id=<?= $o['id'] ?>" style="color:var(--vermelho);" onclick="return confirm('Recusar este orçamento?')">Recusar</a>
+                                    <form method="POST" action="aceitar_orcamento.php" style="display:inline;"
+                                        onsubmit="return confirm('Aceitar este orçamento?')">
+
+                                        <?= csrf_field() ?>
+
+                                        <input type="hidden" name="id" value="<?= $o['id'] ?>">
+
+                                        <button type="submit"
+                                            style="color:var(--verde); background:none; border:0; cursor:pointer;">
+                                            Aceitar
+                                        </button>
+
+                                    </form>
+
+
+                                    <form method="POST" action="recusar_orcamento.php" style="display:inline;"
+                                        onsubmit="return confirm('Recusar este orçamento?')">
+
+                                        <?= csrf_field() ?>
+
+                                        <input type="hidden" name="id" value="<?= $o['id'] ?>">
+
+                                        <button type="submit"
+                                            style="color:var(--vermelho); background:none; border:0; cursor:pointer;">
+                                            Recusar
+                                        </button>
+
+                                    </form>
                                 <?php endif; ?>
                             </td>
                         </tr>

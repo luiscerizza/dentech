@@ -1,13 +1,20 @@
 <?php
 require_once 'config/auth.php';
+require_once 'config/csrf.php';
 exigirLogin();
 require_once 'conexao/conexao.php';
 
-if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-    die("Agendamento não especificado.");
+if (
+    $_SERVER['REQUEST_METHOD'] !== 'POST' ||
+    !isset($_POST['id']) ||
+    !is_numeric($_POST['id'])
+) {
+    die("Agendamento inválido.");
 }
 
-$agendamento_id = (int)$_GET['id'];
+validar_csrf();
+
+$agendamento_id = (int)$_POST['id'];
 
 // Buscar agendamento com dados do paciente
 $stmt = $pdo->prepare("

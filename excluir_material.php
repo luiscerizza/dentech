@@ -1,22 +1,12 @@
 <?php
 require_once 'config/auth.php';
+require_once 'config/csrf.php';
 exigirLogin();
 require_once 'conexao/conexao.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-if (
-    empty($_POST['csrf_token']) ||
-    empty($_SESSION['csrf_token']) ||
-    !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
-) {
-    http_response_code(403);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Token de segurança inválido.'
-    ]);
-    exit;
-}
+validar_csrf();
 
 try {
 
@@ -29,6 +19,14 @@ try {
     // Verifica se o material existe
     $stmt = $pdo->prepare("SELECT id FROM estoque WHERE id = ?");
     $stmt->execute([$id]);
+
+    registrarLog(
+    $pdo,
+    'Excluiu material',
+    'estoque',
+    $id,
+    'Material removido do estoque'
+);
 
     if (!$stmt->fetch()) {
         throw new Exception('Material não encontrado.');
