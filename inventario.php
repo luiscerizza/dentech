@@ -192,6 +192,7 @@ $materiais = $stmt->fetchAll();
         const formData = new FormData();
         formData.append('id', materialId);
         formData.append('estoque_minimo', novoMinimo);
+        formData.append('csrf_token', '<?= htmlspecialchars($_SESSION["csrf_token"]) ?>');
 
         try {
             const response = await fetch('atualizar_estoque_minimo.php', {
