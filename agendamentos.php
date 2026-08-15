@@ -1,5 +1,7 @@
 <?php
 // agendamentos.php
+require_once 'config/auth.php';
+exigirLogin();
 require_once 'conexao/conexao.php'; // ajustado para o caminho correto
 
 // Buscar prontuários
@@ -51,6 +53,8 @@ $agendamentos = $stmt_agendamentos->fetchAll();
         <!-- Formulário de novo agendamento -->
         <div class="form-agendamento">
             <form id="formAgendamento">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+
                 <div class="form-row">
                     <div class="form-group">
                         <label for="paciente_id">Paciente cadastrado</label>
@@ -126,7 +130,7 @@ $agendamentos = $stmt_agendamentos->fetchAll();
                                             <a href="registrar_atendimento.php?id=<?= $ag['id'] ?>"
                                                 class="btn-confirmar"
                                                 onclick="return confirm('Confirmar atendimento e registrar procedimento?')">
-                                                ✅ 
+                                                ✅
                                             </a>
                                         <?php else: ?>
                                             <span class="avulso">(avulso)</span>
