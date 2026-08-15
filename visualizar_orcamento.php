@@ -1,4 +1,6 @@
 <?php
+require_once 'config/auth.php';
+exigirLogin();
 require_once 'conexao/conexao.php';
 
 // 🔍 ID do orçamento
@@ -6,7 +8,15 @@ $id = $_GET['id'] ?? 0;
 if (!$id) die("ID do orçamento não informado.");
 
 // 💰 Processar confirmação de pagamento (POST)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['marcar_paga'])) {
+
+    if (
+        empty($_POST['csrf_token']) ||
+        empty($_SESSION['csrf_token']) ||
+        !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
+    ) {
+        http_response_code(403);
+        die("Token de segurança inválido.");
+    }
     $parcela_id = (int)($_POST['parcela_id'] ?? 0);
     if ($parcela_id > 0) {
         $pdo->prepare("UPDATE parcelas SET status = 'paga', data_pagamento = CURDATE() WHERE id = ? AND orcamento_id = ?")
@@ -15,7 +25,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['marcar_paga'])) {
         header("Location: " . $_SERVER['PHP_SELF'] . "?id=" . $id);
         exit;
     }
-}
 
 // 📄 Buscar orçamento + dados do paciente
 $stmt = $pdo->prepare("
@@ -165,6 +174,7 @@ $progresso = $qtd_total > 0 ? round(($qtd_pagas / $qtd_total) * 100) : 0;
                                     <td style="text-align:center;">
                                         <?php if ($p['status'] === 'pendente'): ?>
                                             <form method="POST" style="display:inline;" onsubmit="return confirm('Confirmar pagamento desta parcela?');">
+                                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                                                 <input type="hidden" name="parcela_id" value="<?= $p['id'] ?>">
                                                 <button type="submit" name="marcar_paga" class="btn-pagar">✅ Confirmar</button>
                                             </form>
