@@ -1,4 +1,6 @@
 <?php
+require_once 'config/auth.php';
+exigirLogin();
 require_once 'conexao/conexao.php';
 
 if (!isset($_GET['prontuario_id']) || !is_numeric($_GET['prontuario_id'])) {
@@ -74,6 +76,8 @@ if (!$paciente) {
             e.preventDefault();
 
             const formData = new FormData();
+            formData.append('csrf_token', '<?= htmlspecialchars($_SESSION['csrf_token']) ?>');
+            
             formData.append('prontuario_id', document.getElementById('prontuarioId').value);
             formData.append('titulo', document.getElementById('titulo').value);
             formData.append('data_procedimento', document.getElementById('data_procedimento').value);
