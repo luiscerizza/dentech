@@ -1,5 +1,7 @@
 <?php
 // gerar_orcamento_pdf.php - Versão com Parcelas Corrigida
+require_once 'config/auth.php';
+exigirLogin();
 require_once 'conexao/conexao.php';
 
 // 1. Carregar Dompdf
