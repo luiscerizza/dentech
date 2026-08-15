@@ -1,4 +1,8 @@
 <?php
+require_once 'config/auth.php';
+require_once 'config/csrf.php';
+exigirLogin();
+
 require_once 'conexao/conexao.php';
 
 // 🔍 Captura filtros da URL

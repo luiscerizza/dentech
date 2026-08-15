@@ -1,6 +1,8 @@
 <?php
 require_once 'config/auth.php';
+require_once 'config/csrf.php';
 exigirLogin();
+
 require_once 'conexao/conexao.php';
 
 // 🔍 ID do orçamento
@@ -8,6 +10,8 @@ $id = $_GET['id'] ?? 0;
 if (!$id) die("ID do orçamento não informado.");
 
 // 💰 Processar confirmação de pagamento (POST)
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (
         empty($_POST['csrf_token']) ||
@@ -17,15 +21,27 @@ if (!$id) die("ID do orçamento não informado.");
         http_response_code(403);
         die("Token de segurança inválido.");
     }
+
     $parcela_id = (int)($_POST['parcela_id'] ?? 0);
+
     if ($parcela_id > 0) {
+
+        $pdo->prepare("
+            UPDATE parcelas 
+            SET status = 'paga', data_pagamento = CURDATE()
+            WHERE id = ? AND orcamento_id = ?
+        ")->execute([$parcela_id, $id]);
+
+        header("Location: " . $_SERVER['PHP_SELF'] . "?id=" . $id);
+        exit;
+    }
+}
         $pdo->prepare("UPDATE parcelas SET status = 'paga', data_pagamento = CURDATE() WHERE id = ? AND orcamento_id = ?")
             ->execute([$parcela_id, $id]);
         // Redireciona para evitar reenvio do formulário
         header("Location: " . $_SERVER['PHP_SELF'] . "?id=" . $id);
         exit;
-    }
-
+    
 // 📄 Buscar orçamento + dados do paciente
 $stmt = $pdo->prepare("
     SELECT o.*, p.paciente, p.cpf, p.telefone, p.email 

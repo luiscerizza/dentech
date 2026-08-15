@@ -12,6 +12,10 @@ function csrf_token(): string
 
 function csrf_field(): string
 {
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    
     return '<input type="hidden" name="csrf_token" value="' 
         . htmlspecialchars(csrf_token()) . '">';
 }
