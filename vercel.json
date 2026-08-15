@@ -1,6 +1,6 @@
 {
   "functions": {
-    "*.php": {
+    "api/index.php": {
       "runtime": "vercel-php@0.7.2"
     }
   },
@@ -10,8 +10,12 @@
       "destination": "/login.php"
     },
     {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
       "source": "/(.*)",
-      "destination": "$1"
+      "destination": "/$1"
     }
   ]
 }
