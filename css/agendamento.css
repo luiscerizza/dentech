@@ -32,6 +32,8 @@ h2 {
   margin: 24px 0 20px;
 }
 
+/* FORMULÁRIO */
+
 .form-agendamento {
   background: var(--branco);
   padding: 24px;
@@ -86,12 +88,15 @@ button {
   font-weight: 600;
   cursor: pointer;
   margin-top: 8px;
-  transition: background 0.2s;
+  transition: 0.2s;
 }
 
 button:hover {
   background: var(--roxo-escuro);
 }
+
+
+/* FILTRO */
 
 .filtro-data {
   display: flex;
@@ -119,13 +124,15 @@ button:hover {
   padding: 9px 18px;
   border-radius: 10px;
   font-weight: 600;
-  transition: all 0.2s;
 }
 
 .filtro-data a:hover {
   background: var(--roxo-medio);
   color: white;
 }
+
+
+/* TABELA */
 
 .tabela-agendamentos {
   background: var(--branco);
@@ -156,20 +163,81 @@ tr:last-child td {
   border-bottom: none;
 }
 
-.acoes a {
-  color: var(--roxo-escuro);
-  text-decoration: none;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 6px;
-  background: var(--roxo-claro);
-  transition: background 0.2s;
+
+/* AÇÕES */
+
+.acoes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
 }
 
-.acoes a:hover {
-  background: var(--roxo-medio);
-  color: white;
+.acoes a {
+  text-decoration: none;
 }
+
+
+/* BOTÃO CONFIRMAR */
+
+.btn-confirmar {
+  width: 90px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #4caf50;
+  color: white !important;
+
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+
+  transition: 0.2s;
+}
+
+.btn-confirmar:hover {
+  background: #388e3c;
+}
+
+
+/* BOTÃO EXCLUIR */
+
+.btn-excluir {
+  width: 90px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: var(--roxo-medio);
+  color: #ff5252 !important;
+
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+
+  transition: 0.2s;
+}
+
+.btn-excluir:hover {
+  background: var(--roxo-escuro);
+}
+
+
+/* AVULSO */
+
+.avulso {
+  color: #888;
+  font-size: 12px;
+}
+
+
+/* MENSAGENS */
 
 .empty {
   text-align: center;
@@ -196,7 +264,11 @@ tr:last-child td {
   color: #c5221f;
 }
 
+
+/* RESPONSIVO */
+
 @media (max-width: 650px) {
+
   .form-row,
   .filtro-data {
     flex-direction: column;
@@ -207,70 +279,12 @@ tr:last-child td {
     padding: 15px;
   }
 
+  table {
+    font-size: 14px;
+  }
 
-}
-
-.btn-confirmar {
-    background: #4caf50;
-    color: white;
-    text-decoration: none;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: 13px;
-    margin-right: 6px;
-}
-
-.btn-confirmar:hover {
-    background: #388e3c;
-}
-
-/* css/agendamento.css */
-.avulso {
-    color: #888;
-    font-size: 12px;
-}
-
-.btn-confirmar {
-    background: #4caf50;
-    color: white;
-    text-decoration: none;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-weight: 600;
-    font-size: 12px;
-    margin-right: 6px;
-}
-
-.btn-confirmar:hover {
-    background: #388e3c;
-}
-
-.btn-excluir {
-    color: #e53935;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 12px;
-}
-
-.btn-excluir:hover {
-    text-decoration: underline;
-}
-
-.mensagem {
-    padding: 12px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    text-align: center;
-    font-weight: 600;
-}
-
-.mensagem.sucesso {
-    background: #e6f4ea;
-    color: #137333;
-}
-
-.mensagem.erro {
-    background: #fce8e6;
-    color: #c5221f;
+  .btn-confirmar,
+  .btn-excluir {
+    width: 100%;
+  }
 }
