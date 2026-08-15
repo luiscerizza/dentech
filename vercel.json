@@ -6,16 +6,8 @@
   },
   "routes": [
     {
-      "source": "/",
-      "destination": "/login.php"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/$1"
+      "src": "/(.*)",
+      "dest": "/api/index.php"
     }
   ]
 }
