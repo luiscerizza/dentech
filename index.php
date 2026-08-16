@@ -90,78 +90,58 @@ $valor_total_aceitos = $rel_orc['valor_total_aceitos'] ?? 0; // ← Apenas aceit
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/variables.css">
     <link rel="stylesheet" href="css/index.css">
-    <link rel="icon" type="image/png" href="img/icon.PNG">
+    <link rel="icon" type="image/png" href="img/logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <title>Dentech Dashboard</title>
-    <style>
-        /* Ajustes visuais para os novos filtros */
-        .card-alerta {
-            border-left: 4px solid #ff9800;
-        }
-
-        .status-orcamento {
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-            margin-left: 6px;
-        }
-
-        .status-pendente {
-            background: #fff3e0;
-            color: #ef6c00;
-        }
-
-        .status-aceito {
-            background: #e8f5e9;
-            color: #43a047;
-        }
-
-        .status-recusado {
-            background: #ffebee;
-            color: #e53935;
-        }
-
-        .link-orcamento {
-            color: var(--roxo-medio, #7b3ff2);
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .link-orcamento:hover {
-            text-decoration: underline;
-        }
-    </style>
 </head>
 
 <body>
     <!-- MENU LATERAL -->
     <aside class="sidebar">
-        <div class="logo">
-            <img src="img/logo.jpg" alt="Dentech">
+        <div class="sidebar-logo">
+            <img src="img/logo.png" alt="Dentech">
         </div>
-        <a href="prontuarios" class="nav-link">
-            <div class="nav-dot"></div>
-            Prontuários
-        </a>
-        <a href="inventario" class="nav-link">
-            <div class="nav-dot"></div>
-            Inventário
-        </a>
-        <a href="orcamento" class="nav-link">
-            <div class="nav-dot"></div>
-            Orçamentos
-        </a>
-        <a href="agendamentos" class="nav-link">
-            <div class="nav-dot"></div>
-            Agendamentos
+        <a href="index" class="nav-link">
+            <i class="fa-solid fa-house"></i>
+            <span>Dashboard</span>
         </a>
 
-        <a href="restrito" class="nav-link" style="font-weight: 600; color: #1a2e1a; margin-top: 12px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 12px;">
-            <div class="nav-dot" style="background: #2c3e2c;"></div>
-            🔒 Área Restrita
+
+        <a href="prontuarios" class="nav-link">
+            <i class="fa-solid fa-users"></i>
+            <span>Prontuários</span>
         </a>
-        <button class="logout" onclick="location.href='logout.php'">Sair</button>
+
+
+        <a href="inventario" class="nav-link">
+            <i class="fa-solid fa-box"></i>
+            <span>Estoque</span>
+        </a>
+
+
+        <a href="orcamento" class="nav-link">
+            <i class="fa-solid fa-file-invoice-dollar"></i>
+            <span>Orçamentos</span>
+        </a>
+
+
+        <a href="agendamentos" class="nav-link">
+            <i class="fa-solid fa-calendar-check"></i>
+            <span>Agenda</span>
+        </a>
+
+
+        <a href="restrito" class="nav-link restricted">
+            <i class="fa-solid fa-lock"></i>
+            <span>Área Restrita</span>
+        </a>
+        <button class="logout" onclick="location.href='logout.php'">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Sair</span>
+        </button>
     </aside>
 
     <!-- CONTEÚDO PRINCIPAL -->
@@ -170,9 +150,19 @@ $valor_total_aceitos = $rel_orc['valor_total_aceitos'] ?? 0; // ← Apenas aceit
 
         <div class="card-grid">
             <!-- Card: Pacientes -->
-            <div class="card">
-                <p class="card-title">Pacientes cadastrados</p>
-                <p class="card-value"><?= (int)$total_pacientes ?></p>
+            <div class="dashboard-card">
+
+                <div class="card-icon">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+
+                <div>
+                    <span>Pacientes</span>
+                    <strong>
+                        <?= (int)$total_pacientes ?>
+                    </strong>
+                </div>
+
             </div>
 
             <!-- Card: Agendamentos (ajustado para RECENTES) -->

@@ -1,0 +1,361 @@
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1e40af;
+  --secondary: #16a34a;
+
+  --background: #f8fafc;
+  --surface: #ffffff;
+
+  --text: #0f172a;
+  --muted: #64748b;
+
+  --danger: #dc2626;
+  --warning: #f59e0b;
+
+  --border: #e2e8f0;
+}
+
+/* RESET */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+
+body {
+  display: flex;
+
+  min-height: 100vh;
+
+  background: var(--background);
+
+  color: var(--text);
+}
+
+/* =========================
+        SIDEBAR
+========================= */
+
+.sidebar {
+  width: 260px;
+
+  background: white;
+
+  padding: 25px 15px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  box-shadow: 4px 0 20px rgba(15, 23, 42, 0.08);
+}
+
+.sidebar-logo {
+  display: flex;
+
+  justify-content: center;
+
+  padding-bottom: 30px;
+}
+
+.sidebar-logo img {
+  width: 150px;
+
+  max-height: 90px;
+
+  object-fit: contain;
+}
+
+.nav-link {
+  display: flex;
+
+  align-items: center;
+
+  gap: 14px;
+
+  padding: 14px 18px;
+
+  margin-bottom: 8px;
+
+  border-radius: 12px;
+
+  color: #475569;
+
+  text-decoration: none;
+
+  font-weight: 600;
+
+  transition: 0.25s;
+}
+
+.nav-link i {
+  width: 22px;
+
+  text-align: center;
+
+  color: #2563eb;
+}
+
+.nav-link:hover {
+  background: #eff6ff;
+
+  color: #1d4ed8;
+}
+
+.nav-link.restricted {
+  margin-top: 15px;
+
+  border-top: 1px solid var(--border);
+
+  padding-top: 20px;
+}
+
+.nav-link.restricted i {
+  color: #64748b;
+}
+
+.nav-dot {
+  display: none;
+}
+
+.logout {
+  margin-top: auto;
+
+  background: #dc2626;
+
+  color: white;
+
+  border: none;
+
+  padding: 13px;
+
+  border-radius: 12px;
+
+  cursor: pointer;
+
+  font-weight: 600;
+
+  transition: 0.2s;
+}
+
+.logout:hover {
+  background: #b91c1c;
+}
+
+/* =========================
+        CONTEÚDO
+========================= */
+
+.content {
+  flex: 1;
+
+  padding: 35px;
+}
+
+.content h1 {
+  font-size: 32px;
+
+  margin-bottom: 30px;
+
+  color: #0f172a;
+}
+
+/* =========================
+        CARDS
+========================= */
+
+.card-grid {
+  display: grid;
+
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+
+  gap: 24px;
+
+  margin-bottom: 35px;
+}
+
+.card {
+  background: white;
+
+  border-radius: 18px;
+
+  padding: 25px;
+
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+
+  border: 1px solid var(--border);
+
+  transition: 0.25s;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+
+  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.12);
+}
+
+.card-title {
+  color: var(--muted);
+
+  font-size: 14px;
+
+  font-weight: 600;
+}
+
+.card-value {
+  margin-top: 10px;
+
+  font-size: 32px;
+
+  font-weight: 800;
+
+  color: var(--primary);
+}
+
+/* ALERTA ESTOQUE */
+
+.card-alerta {
+  border-left: 5px solid var(--danger);
+}
+
+.card-alerta .card-value {
+  color: var(--danger);
+}
+
+.card-alerta-detalhe {
+  margin-top: 15px;
+
+  padding-top: 15px;
+
+  border-top: 1px solid var(--border);
+}
+
+.alerta-item {
+  display: flex;
+
+  justify-content: space-between;
+
+  padding: 8px 0;
+
+  color: #dc2626;
+}
+
+/* =========================
+        LISTAS
+========================= */
+
+.table-card {
+  background: white;
+
+  padding: 25px;
+
+  border-radius: 18px;
+
+  border: 1px solid var(--border);
+
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+
+  margin-bottom: 25px;
+}
+
+.table-card h3 {
+  font-size: 20px;
+
+  margin-bottom: 18px;
+}
+
+.list-item {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  padding: 15px 0;
+
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.list-item:last-child {
+  border: none;
+}
+
+/* LINKS */
+
+.link-orcamento {
+  color: var(--primary);
+
+  font-weight: 600;
+
+  text-decoration: none;
+}
+
+/* STATUS */
+
+.status-orcamento {
+  padding: 5px 12px;
+
+  border-radius: 20px;
+
+  font-size: 12px;
+
+  font-weight: 700;
+}
+
+.status-pendente {
+  background: #fef3c7;
+
+  color: #b45309;
+}
+
+.status-aceito {
+  background: #dcfce7;
+
+  color: #15803d;
+}
+
+.status-recusado {
+  background: #fee2e2;
+
+  color: #b91c1c;
+}
+
+/* RESPONSIVO */
+
+@media (max-width: 900px) {
+  .sidebar {
+    width: 80px;
+  }
+
+  .sidebar-logo img {
+    width: 55px;
+  }
+
+  .nav-link span {
+    display: none;
+  }
+
+  .nav-link {
+    justify-content: center;
+  }
+
+  .content {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 600px) {
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .list-item {
+    flex-direction: column;
+
+    align-items: flex-start;
+
+    gap: 8px;
+  }
+}
