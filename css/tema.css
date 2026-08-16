@@ -1,0 +1,286 @@
+/* =====================================================
+   DENTECH - TEMA GLOBAL
+   Gestão Odontológica
+===================================================== */
+
+:root {
+  /* Cores principais */
+  --primary: #0f4c5c;
+  --primary-dark: #083642;
+  --secondary: #1976d2;
+  --accent: #00a6a6;
+
+  /* Estados */
+  --success: #2e7d32;
+  --warning: #f9a825;
+  --danger: #c62828;
+
+  /* Fundo */
+  --background: #f5f8fa;
+  --surface: #ffffff;
+
+  /* Textos */
+  --text: #263238;
+  --text-light: #64748b;
+  --border: #e2e8f0;
+
+  /* Sombras */
+  --shadow-sm: 0 2px 8px rgba(15, 76, 92, 0.08);
+
+  --shadow: 0 6px 20px rgba(15, 76, 92, 0.12);
+
+  --shadow-lg: 0 12px 35px rgba(15, 76, 92, 0.16);
+
+  /* Bordas */
+  --radius-sm: 8px;
+  --radius: 14px;
+  --radius-lg: 20px;
+
+  /* Transição */
+  --transition: 0.25s ease;
+
+  /* Fonte */
+  --font: "Inter", "Segoe UI", Arial, sans-serif;
+}
+
+/* Reset global */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--background);
+
+  color: var(--text);
+
+  font-family: var(--font);
+
+  line-height: 1.6;
+}
+
+/* Links */
+
+a {
+  color: var(--primary);
+
+  text-decoration: none;
+
+  transition: var(--transition);
+}
+
+a:hover {
+  color: var(--secondary);
+}
+
+/* Containers */
+
+.container {
+  width: min(1200px, 95%);
+
+  margin: 0 auto;
+
+  padding: 25px;
+}
+
+/* Títulos */
+
+h1 {
+  color: var(--primary);
+
+  font-size: 28px;
+
+  font-weight: 700;
+}
+
+h2 {
+  color: var(--primary);
+
+  font-size: 20px;
+}
+
+/* Cards padrão */
+
+.card {
+  background: var(--surface);
+
+  border-radius: var(--radius);
+
+  padding: 24px;
+
+  box-shadow: var(--shadow-sm);
+
+  border: 1px solid var(--border);
+
+  transition: var(--transition);
+}
+
+.card:hover {
+  box-shadow: var(--shadow);
+}
+
+/* Botões padrão */
+
+.btn {
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 8px;
+
+  padding: 10px 18px;
+
+  border-radius: var(--radius-sm);
+
+  border: none;
+
+  cursor: pointer;
+
+  font-weight: 600;
+
+  transition: var(--transition);
+}
+
+.btn-primary {
+  background: var(--primary);
+
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+.btn-success {
+  background: var(--success);
+
+  color: white;
+}
+
+.btn-danger {
+  background: var(--danger);
+
+  color: white;
+}
+
+.btn-outline {
+  background: white;
+
+  border: 1px solid var(--border);
+
+  color: var(--text);
+}
+
+/* Inputs */
+
+input,
+select,
+textarea {
+  width: 100%;
+
+  padding: 12px 14px;
+
+  border: 1px solid var(--border);
+
+  border-radius: var(--radius-sm);
+
+  background: white;
+
+  font-size: 14px;
+
+  transition: var(--transition);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+
+  border-color: var(--accent);
+
+  box-shadow: 0 0 0 4px rgba(0, 166, 166, 0.15);
+}
+
+/* Tabelas */
+
+table {
+  width: 100%;
+
+  border-collapse: collapse;
+
+  background: white;
+
+  border-radius: var(--radius);
+
+  overflow: hidden;
+
+  box-shadow: var(--shadow-sm);
+}
+
+th {
+  background: var(--primary);
+
+  color: white;
+
+  padding: 14px;
+
+  text-align: left;
+}
+
+td {
+  padding: 14px;
+
+  border-bottom: 1px solid var(--border);
+}
+
+tr:hover {
+  background: #f8fafc;
+}
+
+/* Badges */
+
+.badge {
+  display: inline-flex;
+
+  padding: 5px 12px;
+
+  border-radius: 20px;
+
+  font-size: 12px;
+
+  font-weight: 700;
+}
+
+.badge-success {
+  background: #dcfce7;
+
+  color: var(--success);
+}
+
+.badge-warning {
+  background: #fef3c7;
+
+  color: #92400e;
+}
+
+.badge-danger {
+  background: #fee2e2;
+
+  color: var(--danger);
+}
+
+/* Responsivo */
+
+@media (max-width: 768px) {
+  .container {
+    padding: 15px;
+  }
+
+  h1 {
+    font-size: 22px;
+  }
+}

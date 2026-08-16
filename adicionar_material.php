@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Novo Material - Dentech</title>
     <link rel="stylesheet" href="css/navbar.css">
     <link rel="stylesheet" href="css/add_material.css">
-    <link rel="icon" type="image/png" href="img/icon.PNG">
+    <link rel="icon" type="image/png" href="img/icon.png">
 </head>
 
 <body>
