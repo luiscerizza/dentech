@@ -8,9 +8,10 @@
 
 body {
   font-family: "Segoe UI", Arial, sans-serif;
-
+  display: flex;
   background: var(--background);
-
+  min-height: 100vh;
+  overflow-x: hidden;
   color: var(--text);
 }
 

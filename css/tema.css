@@ -273,6 +273,28 @@ tr:hover {
   color: var(--danger);
 }
 
+.sidebar {
+
+  height: 100vh;
+
+  position: sticky;
+
+  top: 0;
+
+}
+
+.content {
+
+  flex: 1;
+
+  padding: 35px;
+
+  height: 100vh;
+
+  overflow-y: auto;
+
+}
+
 /* Responsivo */
 
 @media (max-width: 768px) {
