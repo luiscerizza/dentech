@@ -451,28 +451,74 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
             const idadeInput = document.querySelector('input[name="idade"]');
 
             // Segurança: só executa se os campos existirem no DOM
-            if (!nascimentoInput || !idadeInput) return;
+            if (nascimentoInput && idadeInput) {
 
-            nascimentoInput.addEventListener('input', function() {
-                if (!this.value) {
-                    idadeInput.value = '';
-                    return;
-                }
+                nascimentoInput.addEventListener('input', function() {
 
-                // Evita problemas de fuso horário e horário de verão
-                const [y, m, d] = this.value.split('-').map(Number);
-                const birthDate = new Date(y, m - 1, d);
-                const today = new Date();
+                    if (!this.value) {
+                        idadeInput.value = '';
+                        return;
+                    }
 
-                let age = today.getFullYear() - birthDate.getFullYear();
-                const monthDiff = today.getMonth() - birthDate.getMonth();
+                    // Evita problemas de fuso horário
+                    const [y, m, d] = this.value.split('-').map(Number);
+                    const birthDate = new Date(y, m - 1, d);
+                    const today = new Date();
 
-                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-                    age--;
-                }
+                    let age = today.getFullYear() - birthDate.getFullYear();
 
-                idadeInput.value = age >= 0 ? `${age} anos` : '';
-            });
+                    const monthDiff =
+                        today.getMonth() - birthDate.getMonth();
+
+                    if (
+                        monthDiff < 0 ||
+                        (monthDiff === 0 && today.getDate() < birthDate.getDate())
+                    ) {
+                        age--;
+                    }
+
+                    idadeInput.value = age >= 0 ? `${age} anos` : '';
+                });
+            }
+
+            function configurarCampoCondicional(nomeRadio, valorSim) {
+                const radios = document.querySelectorAll(`input[name="${nomeRadio}"]`);
+
+                radios.forEach(radio => {
+                    radio.addEventListener('change', () => {
+                        const grupo = radio.closest('.form-group');
+                        const condicional = grupo?.querySelector('.condicional');
+
+                        if (!condicional) return;
+
+                        condicional.style.display =
+                            radio.checked && radio.value === valorSim ?
+                            'block' :
+                            'none';
+                    });
+                });
+            }
+
+            configurarCampoCondicional('tratamento_odonto_sim', '1');
+            configurarCampoCondicional('tratamento_medico_sim', '1');
+            configurarCampoCondicional('medicamento_continuo_sim', '1');
+            configurarCampoCondicional('alergia_medicamento_sim', '1');
+            configurarCampoCondicional('alergia_outras_sim', '1');
+
+            configurarCampoCondicional('gravida', '1');
+            configurarCampoCondicional('fuma', '1');
+            configurarCampoCondicional('bebida', '1');
+            configurarCampoCondicional('drogas_sim', '1');
+
+            configurarCampoCondicional('doencas_trans_sim', '1');
+            configurarCampoCondicional('cancer_familiar_sim', '1');
+            configurarCampoCondicional('tratamento_cancer_sim', '1');
+
+            document
+                .querySelectorAll('input[type="radio"]:checked')
+                .forEach(radio => {
+                    radio.dispatchEvent(new Event('change'));
+                });
         });
 
         // Salvar com AJAX
