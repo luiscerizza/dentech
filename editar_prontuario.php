@@ -48,7 +48,31 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
 
     <div class="container">
         <main>
-            <h1><?= $is_new ? 'Novo Prontuário' : 'Editar Prontuário' ?></h1>
+
+            <div class="page-header">
+
+                <div class="page-header-info">
+
+                    <div class="breadcrumb">
+                        <span>Prontuários</span>
+                        <span class="breadcrumb-separator">/</span>
+                        <span><?= $is_new ? 'Novo prontuário' : 'Editar prontuário' ?></span>
+                    </div>
+
+                    <h1>
+                        <?= $is_new ? 'Novo Prontuário' : 'Editar Prontuário' ?>
+                    </h1>
+
+                    <p>
+                        <?= $is_new
+                            ? 'Cadastre os dados e informações de saúde do paciente.'
+                            : 'Consulte e atualize os dados e informações de saúde do paciente.'
+                        ?>
+                    </p>
+
+                </div>
+
+            </div>
 
             <form id="prontuarioForm">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
@@ -615,33 +639,170 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
             if (telefoneInput) {
                 aplicarMascara(telefoneInput, 'telefone');
             }
+
+            // ========================================
+            // VALIDAÇÃO DO CPF
+            // ========================================
+
+            function cpfValido(cpf) {
+
+                cpf = cpf.replace(/\D/g, '');
+
+                if (cpf.length !== 11) {
+                    return false;
+                }
+
+                // Rejeita CPFs com todos os números iguais
+                if (/^(\d)\1{10}$/.test(cpf)) {
+                    return false;
+                }
+
+                let soma = 0;
+                let resto;
+
+                // Primeiro dígito
+                for (let i = 1; i <= 9; i++) {
+                    soma += parseInt(cpf.charAt(i - 1)) * (11 - i);
+                }
+
+                resto = (soma * 10) % 11;
+
+                if (resto === 10) {
+                    resto = 0;
+                }
+
+                if (resto !== parseInt(cpf.charAt(9))) {
+                    return false;
+                }
+
+                // Segundo dígito
+                soma = 0;
+
+                for (let i = 1; i <= 10; i++) {
+                    soma += parseInt(cpf.charAt(i - 1)) * (12 - i);
+                }
+
+                resto = (soma * 10) % 11;
+
+                if (resto === 10) {
+                    resto = 0;
+                }
+
+                return resto === parseInt(cpf.charAt(10));
+            }
+
+            // ========================================
+            // VALIDAÇÃO DA DATA
+            // ========================================
+
+            function dataNascimentoValida(data) {
+
+                if (!data) {
+                    return false;
+                }
+
+                const dataNascimento = new Date(data + 'T00:00:00');
+                const hoje = new Date();
+
+                hoje.setHours(0, 0, 0, 0);
+
+                return dataNascimento <= hoje;
+            }
         });
 
         // Salvar com AJAX
         document.getElementById('prontuarioForm').addEventListener('submit', async function(e) {
+
             e.preventDefault();
+
+            const cpf = document.querySelector('input[name="cpf"]');
+            const nascimento = document.querySelector('input[name="nascimento"]');
+            const email = document.querySelector('input[name="email"]');
+
+            // ========================================
+            // VALIDAR CPF
+            // ========================================
+
+            if (cpf && cpf.value.trim() !== '') {
+
+                if (!cpfValido(cpf.value)) {
+                    alert('CPF inválido. Verifique o número informado.');
+                    cpf.focus();
+                    return;
+                }
+            }
+
+            // ========================================
+            // VALIDAR DATA DE NASCIMENTO
+            // ========================================
+
+            if (nascimento && !dataNascimentoValida(nascimento.value)) {
+
+                alert('A data de nascimento é inválida.');
+                nascimento.focus();
+                return;
+            }
+
+            // ========================================
+            // VALIDAR E-MAIL
+            // ========================================
+
+            if (email && email.value.trim() !== '') {
+
+                if (!email.checkValidity()) {
+                    alert('Informe um e-mail válido.');
+                    email.focus();
+                    return;
+                }
+            }
+
+            // ========================================
+            // ENVIAR
+            // ========================================
+
             const formData = new FormData(this);
-            formData.append('csrf_token', '<?= $_SESSION['csrf_token'] ?>');
+
+            formData.append(
+                'csrf_token',
+                '<?= $_SESSION['csrf_token'] ?>'
+            );
+
             try {
-                const response = await fetch('salvar_prontuario.php', {
-                    method: 'POST',
-                    body: formData
-                });
+
+                const response = await fetch(
+                    'salvar_prontuario.php', {
+                        method: 'POST',
+                        body: formData
+                    }
+                );
+
                 const result = await response.json();
 
                 if (result.success) {
+
                     if (result.redirect) {
+
                         window.location.href = result.redirect;
+
                     } else {
-                        alert("Prontuário salvo com sucesso!");
+
+                        alert('Prontuário salvo com sucesso!');
                         window.location.href = 'prontuarios';
+
                     }
+
                 } else {
-                    alert("Erro ao salvar:\n" + (result.error || "Erro desconhecido."));
+
+                    alert(
+                        'Erro ao salvar:\n' +
+                        (result.error || 'Erro desconhecido.')
+                    );
                 }
+
             } catch (err) {
+
                 console.error(err);
-                alert("Erro de conexão. Tente novamente.");
+                alert('Erro de conexão. Tente novamente.');
             }
         });
 
