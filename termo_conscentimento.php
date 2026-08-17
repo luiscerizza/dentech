@@ -41,7 +41,6 @@ $data_hoje = date('d/m/Y');
         <div class="dados-identificacao">
             <strong>Paciente:</strong> <?= $nome ?><br>
             <strong>CPF:</strong> <?= htmlspecialchars($paciente['cpf'] ?? '__________') ?><br>
-            <strong>RG:</strong> <?= htmlspecialchars($paciente['rg'] ?? '__________') ?>
         </div>
 
         <!-- DECLARAÇÃO INICIAL -->
@@ -129,7 +128,7 @@ $data_hoje = date('d/m/Y');
         Endereço: Siqueira Campos 1100 sala 03 – São João – Araçatuba/SP<br>
         Telefone: (18) 98190-4484
     </div>
-    
+
     <!-- CONFIRMAÇÃO DO CONSENTIMENTO -->
     <?php if (!$isPrint): ?>
 
