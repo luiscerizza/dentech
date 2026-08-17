@@ -92,7 +92,7 @@ $prontuarios = $stmt->fetchAll();
 <body>
     <?php include 'navbar.php'; ?>
 
-    <div class="container">
+    <div class="content">
         <main>
             <h1>Prontuários</h1>
 
@@ -153,7 +153,6 @@ $prontuarios = $stmt->fetchAll();
                 <?php endif; ?>
             </div>
         </main>
-    </div>
 
     <script>
         function excluirProntuario(id) {

@@ -1,0 +1,193 @@
+/* =========================
+   LAYOUT PRINCIPAL
+========================= */
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 220px;
+  height: 100vh;
+
+  background: #ffffff;
+  border-right: 1px solid #e6edf1;
+
+  padding: 16px 12px 14px;
+
+  display: flex;
+  flex-direction: column;
+
+  z-index: 100;
+}
+
+/* LOGO */
+
+.sidebar-logo {
+  height: 58px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-bottom: 10px;
+}
+
+.sidebar-logo img {
+  width: 112px;
+  max-height: 62px;
+
+  object-fit: contain;
+}
+
+/* MENU */
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.nav-link {
+  min-height: 38px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 0 13px;
+
+  border-radius: 7px;
+
+  color: #4d6170;
+
+  text-decoration: none;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  transition: 0.18s ease;
+}
+
+.nav-link i {
+  width: 18px;
+
+  text-align: center;
+
+  color: #687b88;
+
+  font-size: 13px;
+}
+
+.nav-link:hover {
+  background: #f0f8fa;
+  color: #117e94;
+}
+
+.nav-link:hover i {
+  color: #1597b2;
+}
+
+/* ITEM ATIVO */
+
+.nav-link.active {
+  background: #dff3f6;
+  color: #117e94;
+}
+
+.nav-link.active i {
+  color: #1597b2;
+}
+
+/* ÁREA RESTRITA */
+
+.nav-link.restricted {
+  margin-top: 12px;
+
+  border-top: 1px solid #e6edf1;
+
+  border-radius: 0;
+
+  padding-top: 14px;
+
+  height: 56px;
+}
+
+/* BOTÃO SAIR */
+
+.logout {
+  margin-top: auto;
+
+  min-height: 38px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 9px;
+
+  background: #fff4f4;
+  color: #cf5057;
+
+  border: 1px solid #f6dfe1;
+  border-radius: 8px;
+
+  cursor: pointer;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  transition: 0.18s ease;
+}
+
+.logout:hover {
+  background: #ffe9eb;
+}
+
+/* CONTEÚDO */
+
+.content {
+  width: calc(100% - 220px);
+
+  margin-left: 220px;
+
+  min-height: 100vh;
+
+  padding: 24px 30px 28px;
+}
+
+/* RESPONSIVO */
+
+@media (max-width: 900px) {
+  .sidebar {
+    width: 70px;
+
+    padding: 16px 8px;
+  }
+
+  .sidebar-logo img {
+    width: 45px;
+  }
+
+  .nav-link {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .nav-link span,
+  .logout span {
+    display: none;
+  }
+
+  .nav-link i {
+    font-size: 16px;
+  }
+
+  .content {
+    width: calc(100% - 70px);
+
+    margin-left: 70px;
+
+    padding: 20px;
+  }
+}
