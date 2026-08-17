@@ -47,20 +47,27 @@ main > h1 {
   border-bottom: 1px solid #e5e7eb;
 }
 
+.section > .form-group {
+  width: 100%;
+  margin-bottom: 18px;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
+  margin-bottom: 18px;
 }
 
-.section .form-group + .form-group {
-  margin-top: 22px;
+.form-group {
+  min-width: 0;
+  margin: 0;
 }
 
-.form-group > label:first-child {
+.form-group > label {
   display: block;
 
-  margin-bottom: 8px;
+  margin-bottom: 7px;
 
   font-size: 14px;
   font-weight: 600;
@@ -68,22 +75,11 @@ main > h1 {
   color: #374151;
 }
 
-.form-group {
-  margin-bottom: 18px;
-}
-
-.form-group > label {
-  display: block;
-  margin-bottom: 7px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
 .form-group input,
 .form-group select,
 .form-group textarea {
   width: 100%;
-
+  min-width: 0;
   min-height: 42px;
 
   padding: 10px 12px;
@@ -108,12 +104,26 @@ main > h1 {
 .form-group select:focus,
 .form-group textarea:focus {
   border-color: #2563eb;
+
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: #9ca3af;
+}
+
+.form-group input[readonly] {
+  background: #f9fafb;
+  color: #6b7280;
+  cursor: default;
 }
 
 .form-group textarea {
   min-height: 100px;
+
   resize: vertical;
+
   line-height: 1.5;
 }
 
@@ -318,19 +328,28 @@ main > h1 {
   color: #6b7280;
 }
 
-@media (max-width: 1000px) {
+@media (max-width: 1100px) {
   .form-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 750px) {
   .container {
     padding: 20px;
   }
 
   .form-row {
     grid-template-columns: 1fr;
+    row-gap: 16px;
+  }
+
+  .section {
+    padding: 20px;
+  }
+
+  .form-group {
+    width: 100%;
   }
 
   .form-group .checkbox-group:has(input[type="checkbox"]) {
@@ -338,43 +357,28 @@ main > h1 {
   }
 }
 
-@media (max-width: 650px) {
-  .form-row {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
+@media (max-width: 500px) {
   .container {
     padding: 12px;
   }
 
   .section {
-    padding: 18px;
+    padding: 16px;
     margin-bottom: 16px;
     border-radius: 10px;
   }
 
-  .checkbox-group {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 12px 20px;
-  }
-
-  .form-group .checkbox-group:has(input[type="checkbox"]) {
+  .form-row {
     grid-template-columns: 1fr;
-  }
-
-  .page-header {
-    margin-bottom: 18px;
-  }
-
-  .page-header p {
-    font-size: 13px;
+    gap: 14px;
   }
 
   .page-header h1 {
     font-size: 24px;
+  }
+
+  .page-header p {
+    font-size: 13px;
   }
 
   .actions {
@@ -383,10 +387,6 @@ main > h1 {
   }
 
   .actions .btn {
-    width: 100%;
-  }
-
-  .btn {
     width: 100%;
   }
 }
