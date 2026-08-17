@@ -2,26 +2,30 @@
 
 require_once 'config/auth.php';
 require_once 'config/csrf.php';
-exigirLogin();
-
 require_once 'conexao/conexao.php';
+
+exigirLogin();
 
 try {
 
+    // Verificar CSRF
     validar_csrf();
 
+    // ID do prontuário
     $prontuario_id = (int)($_POST['prontuario_id'] ?? 0);
-    $aceito = isset($_POST['aceito']) && $_POST['aceito'] == '1';
+
+    // Verificar se o usuário realmente marcou o aceite
+    $aceito = isset($_POST['aceito']) && $_POST['aceito'] === '1';
 
     if ($prontuario_id <= 0) {
         throw new Exception('Prontuário inválido.');
     }
 
     if (!$aceito) {
-        throw new Exception('É necessário aceitar o termo de consentimento.');
+        throw new Exception('É necessário aceitar o Termo de Consentimento.');
     }
 
-    // Verifica se o prontuário realmente existe
+    // Verificar se o prontuário existe
     $stmt = $pdo->prepare("
         SELECT id
         FROM prontuarios
@@ -36,62 +40,46 @@ try {
         throw new Exception('Prontuário não encontrado.');
     }
 
-    // Verifica se já existe um consentimento para esse prontuário
+    // Registrar o consentimento
     $stmt = $pdo->prepare("
-        SELECT id
-        FROM consentimentos
-        WHERE prontuario_id = ?
-        LIMIT 1
+        UPDATE prontuarios
+        SET
+            termo_consentimento_aceito = 1,
+            termo_consentimento_aceito_em = NOW()
+        WHERE id = ?
     ");
 
     $stmt->execute([$prontuario_id]);
 
-    $consentimento = $stmt->fetch();
-
-    if ($consentimento) {
-
-        // Atualiza o consentimento existente
-        $stmt = $pdo->prepare("
-            UPDATE consentimentos
-            SET aceito = 1,
-                data_aceite = NOW()
-            WHERE prontuario_id = ?
-        ");
-
-        $stmt->execute([$prontuario_id]);
-    } else {
-
-        // Cria um novo consentimento
-        $stmt = $pdo->prepare("
-            INSERT INTO consentimentos (
-                prontuario_id,
-                aceito,
-                data_aceite
-            )
-            VALUES (?, 1, NOW())
-        ");
-
-        $stmt->execute([$prontuario_id]);
-    }
-
-    /*
-     * Aqui vamos decidir posteriormente para qual página
-     * o sistema deve ir depois do consentimento.
-     *
-     * Por enquanto, voltamos para o prontuário.
-     */
-
+    // Redirecionar para o prontuário
     header(
         'Location: visualizar_prontuario.php?id=' .
-            $prontuario_id
+            $prontuario_id .
+            '&consentimento=aceito'
     );
 
     exit;
-} catch (PDOException $e) {
-
-    die('Erro ao salvar o consentimento: ' .
-        htmlspecialchars($e->getMessage()));
 } catch (Exception $e) {
 
-    die(htmlspecialchars($e->getMessage()));
+    http_response_code(400);
+
+    echo '<!DOCTYPE html>';
+    echo '<html lang="pt-BR">';
+    echo '<head>';
+    echo '<meta charset="UTF-8">';
+    echo '<title>Erro</title>';
+    echo '</head>';
+    echo '<body>';
+
+    echo '<h2>Não foi possível registrar o consentimento.</h2>';
+    echo '<p>' . htmlspecialchars($e->getMessage()) . '</p>';
+
+    echo '<p>';
+    echo '<a href="javascript:history.back()">Voltar</a>';
+    echo '</p>';
+
+    echo '</body>';
+    echo '</html>';
+
+    exit;
 }
