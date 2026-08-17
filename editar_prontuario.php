@@ -98,7 +98,7 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
                     <div class="form-row">
                         <div class="form-group">
                             <label>RG</label>
-                            <input type="text" name="rg" value="<?= htmlspecialchars($is_new ? '' : ($prontuario['rg'] ?? '')) ?>">
+                            <input type="text" name="rg" value="<?= htmlspecialchars($is_new ? '' : ($prontuario['rg'] ?? '')) ?>" placeholder="00.000.000-00">
                         </div>
                         <div class="form-group">
                             <label>CPF</label>
@@ -519,6 +519,102 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
                 .forEach(radio => {
                     radio.dispatchEvent(new Event('change'));
                 });
+
+            // ========================================
+            // MÁSCARAS
+            // ========================================
+
+            function aplicarMascara(input, mascara) {
+
+                input.addEventListener('input', function() {
+
+                    let valor = this.value.replace(/\D/g, '');
+
+                    if (mascara === 'cpf') {
+
+                        valor = valor.substring(0, 11);
+
+                        if (valor.length > 9) {
+                            valor = valor.replace(
+                                /^(\d{3})(\d{3})(\d{3})(\d{0,2}).*/,
+                                '$1.$2.$3-$4'
+                            );
+
+                        } else if (valor.length > 6) {
+                            valor = valor.replace(
+                                /^(\d{3})(\d{3})(\d{0,3}).*/,
+                                '$1.$2.$3'
+                            );
+
+                        } else if (valor.length > 3) {
+                            valor = valor.replace(
+                                /^(\d{3})(\d{0,3}).*/,
+                                '$1.$2'
+                            );
+                        }
+
+                    } else if (mascara === 'cep') {
+
+                        valor = valor.substring(0, 8);
+
+                        if (valor.length > 5) {
+                            valor = valor.replace(
+                                /^(\d{5})(\d{0,3}).*/,
+                                '$1-$2'
+                            );
+                        }
+
+                    } else if (mascara === 'telefone') {
+
+                        valor = valor.substring(0, 11);
+
+                        if (valor.length > 10) {
+
+                            valor = valor.replace(
+                                /^(\d{2})(\d{5})(\d{0,4}).*/,
+                                '($1) $2-$3'
+                            );
+
+                        } else if (valor.length > 6) {
+
+                            valor = valor.replace(
+                                /^(\d{2})(\d{4})(\d{0,4}).*/,
+                                '($1) $2-$3'
+                            );
+
+                        } else if (valor.length > 2) {
+
+                            valor = valor.replace(
+                                /^(\d{2})(\d{0,5}).*/,
+                                '($1) $2'
+                            );
+                        }
+                    }
+
+                    this.value = valor;
+                });
+            }
+
+
+            // ========================================
+            // ATIVAR AS MÁSCARAS
+            // ========================================
+
+            const cpfInput = document.querySelector('input[name="cpf"]');
+            const cepInput = document.querySelector('input[name="cep"]');
+            const telefoneInput = document.querySelector('input[name="telefone"]');
+
+            if (cpfInput) {
+                aplicarMascara(cpfInput, 'cpf');
+            }
+
+            if (cepInput) {
+                aplicarMascara(cepInput, 'cep');
+            }
+
+            if (telefoneInput) {
+                aplicarMascara(telefoneInput, 'telefone');
+            }
         });
 
         // Salvar com AJAX
