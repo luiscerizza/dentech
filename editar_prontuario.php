@@ -768,41 +768,31 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
             );
 
             try {
+                const response = await fetch('salvar_prontuario.php', {
+                    method: 'POST',
+                    body: formData
+                });
 
-                const response = await fetch(
-                    'salvar_prontuario.php', {
-                        method: 'POST',
-                        body: formData
-                    }
-                );
+                const texto = await response.text();
 
-                const result = await response.json();
+                console.log('Resposta do servidor:', texto);
+
+                const result = JSON.parse(texto);
 
                 if (result.success) {
-
                     if (result.redirect) {
-
                         window.location.href = result.redirect;
-
                     } else {
-
-                        alert('Prontuário salvo com sucesso!');
-                        window.location.href = 'prontuarios';
-
+                        alert("Prontuário salvo com sucesso!");
+                        window.location.href = 'prontuarios.php';
                     }
-
                 } else {
-
-                    alert(
-                        'Erro ao salvar:\n' +
-                        (result.error || 'Erro desconhecido.')
-                    );
+                    alert("Erro ao salvar:\n" + (result.error || "Erro desconhecido."));
                 }
 
             } catch (err) {
-
                 console.error(err);
-                alert('Erro de conexão. Tente novamente.');
+                alert("Erro de conexão. Tente novamente.");
             }
         });
 
