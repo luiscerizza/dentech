@@ -135,7 +135,7 @@ $prontuarios = $stmt->fetchAll();
 
                     </form>
 
-                    <a href="editar_prontuario" class="btn-primary">
+                    <a href="editar_prontuario.php" class="btn-primary">
                         <i class="fa-solid fa-plus"></i>
                         Novo prontuário
                     </a>

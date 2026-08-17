@@ -7,9 +7,6 @@ require_once 'conexao/conexao.php';
 // Limpa qualquer saída anterior
 if (ob_get_level()) ob_end_clean();
 
-// Corrige o caminho da conexão
-require_once 'conexao/conexao.php';
-
 // Garante que NADA seja enviado antes do JSON
 header('Content-Type: application/json');
 
