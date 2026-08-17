@@ -84,8 +84,10 @@ $prontuarios = $stmt->fetchAll();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prontuários - Dentech</title>
-    <link rel="stylesheet" href="css/navbar.css">
-    <link rel="stylesheet" href="css/prontuarios.css">
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/prontuarios.css">>
     <link rel="icon" type="image/png" href="img/icon.PNG">
 </head>
 
@@ -94,95 +96,424 @@ $prontuarios = $stmt->fetchAll();
 
     <div class="content">
         <main>
-            <h1>Prontuários</h1>
 
-            <!-- 🔽 BARRA DE FILTROS -->
-            <div class="filter-bar">
-                <form method="GET" class="filter-form">
-                    <input type="text" name="busca" placeholder="Nome, CPF ou telefone..." value="<?= htmlspecialchars($busca) ?>">
-                    <input type="date" name="data_ini" value="<?= htmlspecialchars($data_ini) ?>" title="Data de nascimento inicial">
-                    <input type="date" name="data_fim" value="<?= htmlspecialchars($data_fim) ?>" title="Data de nascimento final">
-                    <button type="submit" class="btn-filter">🔍 Buscar</button>
-                    <a href="prontuarios" class="btn-reset">✖ Limpar</a>
-                </form>
-                <?php if ($busca !== '' || $data_ini !== '' || $data_fim !== ''): ?>
-                    <div class="filter-info">
-                        ✅ Filtros ativos:
+            <!-- CABEÇALHO DA PÁGINA -->
+            <div class="page-header">
+
+                <div>
+                    <span class="breadcrumb">Prontuários</span>
+                    <h1>Prontuários</h1>
+                </div>
+
+                <div class="page-header-actions">
+
+                    <form method="GET" class="search-form">
+
+                        <div class="search-input">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+
+                            <input
+                                type="text"
+                                name="busca"
+                                placeholder="Buscar paciente..."
+                                value="<?= htmlspecialchars($busca) ?>">
+                        </div>
+
+                        <?php if ($data_ini !== ''): ?>
+                            <input
+                                type="hidden"
+                                name="data_ini"
+                                value="<?= htmlspecialchars($data_ini) ?>">
+                        <?php endif; ?>
+
+                        <?php if ($data_fim !== ''): ?>
+                            <input
+                                type="hidden"
+                                name="data_fim"
+                                value="<?= htmlspecialchars($data_fim) ?>">
+                        <?php endif; ?>
+
+                    </form>
+
+                    <a href="editar_prontuario" class="btn-primary">
+                        <i class="fa-solid fa-plus"></i>
+                        Novo prontuário
+                    </a>
+
+                </div>
+
+            </div>
+
+
+            <!-- CARDS DE RESUMO -->
+            <section class="stats-grid">
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+
+                    <div>
+                        <span>Pacientes</span>
+                        <strong><?= count($prontuarios) ?></strong>
+                    </div>
+                </div>
+
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-file-medical"></i>
+                    </div>
+
+                    <div>
+                        <span>Prontuários</span>
+                        <strong><?= count($prontuarios) ?></strong>
+                    </div>
+                </div>
+
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-notes-medical"></i>
+                    </div>
+
+                    <div>
+                        <span>Procedimentos</span>
+
+                        <strong>
+                            <?php
+                            $totalProcedimentos = 0;
+
+                            foreach ($prontuarios as $p) {
+                                $totalProcedimentos += (int) ($p['total_procedimentos'] ?? 0);
+                            }
+
+                            echo $totalProcedimentos;
+                            ?>
+                        </strong>
+
+                    </div>
+                </div>
+
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+
+                    <div>
+                        <span>Atualização</span>
+                        <strong>Hoje</strong>
+                    </div>
+                </div>
+
+            </section>
+
+
+            <!-- ÁREA PRINCIPAL -->
+            <section class="content-card">
+
+                <!-- ABAS -->
+                <div class="tabs">
+
+                    <button class="tab active" type="button">
+                        Pacientes
+                    </button>
+
+                    <button class="tab" type="button">
+                        Histórico de atendimentos
+                    </button>
+
+                </div>
+
+
+                <!-- FILTROS -->
+                <div class="filter-area">
+
+                    <form method="GET" class="filter-form">
+
+                        <div class="filter-field">
+
+                            <label for="data_ini">
+                                Nascimento a partir de
+                            </label>
+
+                            <input
+                                id="data_ini"
+                                type="date"
+                                name="data_ini"
+                                value="<?= htmlspecialchars($data_ini) ?>">
+
+                        </div>
+
+
+                        <div class="filter-field">
+
+                            <label for="data_fim">
+                                Nascimento até
+                            </label>
+
+                            <input
+                                id="data_fim"
+                                type="date"
+                                name="data_fim"
+                                value="<?= htmlspecialchars($data_fim) ?>">
+
+                        </div>
+
+
+                        <div class="filter-buttons">
+
+                            <button type="submit" class="btn-filter">
+                                <i class="fa-solid fa-filter"></i>
+                                Filtrar
+                            </button>
+
+                            <a href="prontuarios" class="btn-reset">
+                                Limpar
+                            </a>
+
+                        </div>
+
+                    </form>
+
+
+                    <?php if ($busca !== '' || $data_ini !== '' || $data_fim !== ''): ?>
+
+                        <div class="filter-info">
+
+                            <i class="fa-solid fa-circle-info"></i>
+
+                            <span>Filtros ativos:</span>
+
+                            <?php
+                            $ativos = [];
+
+                            if ($busca !== '') {
+                                $ativos[] = "Busca: '{$busca}'";
+                            }
+
+                            if ($data_ini !== '') {
+                                $ativos[] = "De: " . date('d/m/Y', strtotime($data_ini));
+                            }
+
+                            if ($data_fim !== '') {
+                                $ativos[] = "Até: " . date('d/m/Y', strtotime($data_fim));
+                            }
+
+                            echo htmlspecialchars(implode(' • ', $ativos));
+                            ?>
+
+                        </div>
+
+                    <?php endif; ?>
+
+                </div>
+
+
+                <!-- TABELA -->
+                <div class="table-wrapper">
+
+                    <table class="patients-table">
+
+                        <thead>
+
+                            <tr>
+
+                                <th>Paciente</th>
+
+                                <th>Data de nascimento</th>
+
+                                <th>Último atendimento</th>
+
+                                <th>Telefone</th>
+
+                                <th>Ações</th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                            <?php if (empty($prontuarios)): ?>
+
+                                <tr>
+
+                                    <td colspan="5" class="empty-table">
+
+                                        <div class="empty-state">
+
+                                            <i class="fa-solid fa-user-group"></i>
+
+                                            <strong>
+                                                <?= ($busca !== '' || $data_ini !== '' || $data_fim !== '')
+                                                    ? 'Nenhum prontuário encontrado'
+                                                    : 'Nenhum prontuário cadastrado'
+                                                ?>
+                                            </strong>
+
+                                            <span>
+                                                <?= ($busca !== '' || $data_ini !== '' || $data_fim !== '')
+                                                    ? 'Tente alterar os filtros utilizados.'
+                                                    : 'Cadastre o primeiro paciente para começar.'
+                                                ?>
+                                            </span>
+
+                                        </div>
+
+                                    </td>
+
+                                </tr>
+
+                            <?php else: ?>
+
+                                <?php foreach ($prontuarios as $p): ?>
+
+                                    <tr>
+
+                                        <td>
+
+                                            <div class="patient-name">
+
+                                                <div class="patient-avatar">
+                                                    <?= strtoupper(substr($p['paciente'], 0, 1)) ?>
+                                                </div>
+
+                                                <div>
+                                                    <strong>
+                                                        <?= htmlspecialchars($p['paciente']) ?>
+                                                    </strong>
+
+                                                    <span>
+                                                        CPF:
+                                                        <?= htmlspecialchars($p['cpf'] ?? '—') ?>
+                                                    </span>
+                                                </div>
+
+                                            </div>
+
+                                        </td>
+
+
+                                        <td>
+
+                                            <?= date(
+                                                'd/m/Y',
+                                                strtotime($p['nascimento'])
+                                            ) ?>
+
+                                        </td>
+
+
+                                        <td>
+
+                                            <span class="not-available">
+                                                —
+                                            </span>
+
+                                        </td>
+
+
+                                        <td>
+
+                                            <?= htmlspecialchars(
+                                                $p['telefone'] ?? '—'
+                                            ) ?>
+
+                                        </td>
+
+
+                                        <td>
+
+                                            <div class="table-actions">
+
+                                                <a
+                                                    href="visualizar_prontuario.php?id=<?= $p['id'] ?>"
+                                                    class="action-button"
+                                                    title="Visualizar">
+                                                    <i class="fa-solid fa-eye"></i>
+                                                </a>
+
+
+                                                <a
+                                                    href="editar_prontuario.php?id=<?= $p['id'] ?>"
+                                                    class="action-button"
+                                                    title="Editar">
+                                                    <i class="fa-solid fa-pen"></i>
+                                                </a>
+
+
+                                                <button
+                                                    type="button"
+                                                    class="action-button danger"
+                                                    title="Excluir"
+                                                    onclick="excluirProntuario(<?= $p['id'] ?>)">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </button>
+
+                                            </div>
+
+                                        </td>
+
+                                    </tr>
+
+                                <?php endforeach; ?>
+
+                            <?php endif; ?>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
+                <!-- RODAPÉ DA TABELA -->
+                <?php if (!empty($prontuarios)): ?>
+
+                    <div class="table-footer">
+
+                        <span><?= count($prontuarios) ?>prontuário(s) encontrado(s)</span>
                         <?php
-                        $ativos = [];
-                        if ($busca !== '') $ativos[] = "Busca: '{$busca}'";
-                        if ($data_ini !== '') $ativos[] = "De: " . date('d/m/Y', strtotime($data_ini));
-                        if ($data_fim !== '') $ativos[] = "Até: " . date('d/m/Y', strtotime($data_fim));
-                        echo implode(' • ', $ativos);
+                        $export_url = '?' . http_build_query(array_merge($_GET, ['exportar' => '1']));
                         ?>
+                        <a href="<?= $export_url ?>"class="btn-exportar"><i class="fa-solid fa-file-csv"></i>Exportar CSV</a>
                     </div>
                 <?php endif; ?>
-            </div>
-            <!-- 🔼 FIM DA BARRA DE FILTROS -->
-
-            <a href="editar_prontuario" class="add-btn">+ Adicionar Prontuário</a>
-            <?php
-            // Gera link preservando TODOS os filtros atuais automaticamente
-            $export_url = '?' . http_build_query(array_merge($_GET, ['exportar' => '1']));
-            ?>
-            <a href="<?= $export_url ?>" class="btn-exportar">📥 Exportar CSV</a>
-
-            <div class="cards">
-                <?php if (empty($prontuarios)): ?>
-                    <p class="empty">
-                        <?= ($busca !== '' || $data_ini !== '' || $data_fim !== '')
-                            ? 'Nenhum prontuário encontrado com os filtros aplicados.'
-                            : 'Nenhum prontuário cadastrado ainda.'
-                        ?>
-                    </p>
-                <?php else: ?>
-                    <?php foreach ($prontuarios as $p): ?>
-                        <div class="card">
-                            <h3><?= htmlspecialchars($p['paciente']) ?></h3>
-                            <p><strong>Data de nascimento:</strong> <?= date('d/m/Y', strtotime($p['nascimento'])) ?></p>
-                            <p><strong>Telefone:</strong> <?= htmlspecialchars($p['telefone'] ?? '—') ?></p>
-                            <div class="actions">
-                                <a href="visualizar_prontuario.php?id=<?= $p['id'] ?>" class="edit">Visualizar</a>
-                                <a href="editar_prontuario.php?id=<?= $p['id'] ?>" class="edit">Editar</a>
-                                <button class="delete" onclick="excluirProntuario(<?= $p['id'] ?>)">
-                                    Excluir
-                                </button>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
+            </section>
         </main>
 
-    <script>
-        function excluirProntuario(id) {
-            if (!confirm('⚠️ ATENÇÃO:\nExcluir este prontuário também removerá todos os agendamentos, procedimentos e orçamentos vinculados a ele.\n\nDeseja continuar?')) {
-                return;
-            }
+        <script>
+            function excluirProntuario(id) {
+                if (!confirm('⚠️ ATENÇÃO:\nExcluir este prontuário também removerá todos os agendamentos, procedimentos e orçamentos vinculados a ele.\n\nDeseja continuar?')) {
+                    return;
+                }
 
-            fetch('excluir_prontuario.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: 'id=' + encodeURIComponent(id) +
-                        '&csrf_token=' + encodeURIComponent('<?= $_SESSION['csrf_token'] ?>')
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Prontuário excluído com sucesso!');
-                        location.reload();
-                    } else {
-                        alert('Erro: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Erro:', error);
-                    alert('Erro de conexão. Tente novamente.');
-                });
-        }
-    </script>
+                fetch('excluir_prontuario.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: 'id=' + encodeURIComponent(id) +
+                            '&csrf_token=' + encodeURIComponent('<?= $_SESSION['csrf_token'] ?>')
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Prontuário excluído com sucesso!');
+                            location.reload();
+                        } else {
+                            alert('Erro: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erro:', error);
+                        alert('Erro de conexão. Tente novamente.');
+                    });
+            }
+        </script>
 </body>
 
 </html>
