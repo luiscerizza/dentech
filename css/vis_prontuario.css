@@ -1,191 +1,123 @@
 /* =========================================================
-   VISUALIZAÇÃO DO PRONTUÁRIO - DENTECH
+   VISUALIZAÇÃO DO PRONTUÁRIO
+   Compatível com a sidebar Dentech
    ========================================================= */
-
-/* ---------- RESET ---------- */
 
 * {
     box-sizing: border-box;
-    margin: 0;
-    padding: 0;
 }
 
-html {
+html,
+body {
+    margin: 0;
+    padding: 0;
     min-height: 100%;
 }
 
 body {
-    min-height: 100vh;
-    background: #f7f9fc;
-    color: #17233d;
+    background: #f6f8fb;
+    color: #17233c;
     font-family: Arial, Helvetica, sans-serif;
-    font-size: 15px;
-    line-height: 1.5;
 }
-
 
 /* =========================================================
    ÁREA PRINCIPAL
-   IMPORTANTE:
-   A sidebar ocupa aproximadamente 205px.
-   O conteúdo nunca deve ficar atrás dela.
    ========================================================= */
 
 .container {
-    position: relative;
-
     width: calc(100% - 205px);
     min-height: 100vh;
 
     margin-left: 205px;
-    padding: 28px 34px 50px;
+    padding: 32px 36px 50px;
 
-    background: #f7f9fc;
-
-    overflow-x: hidden;
+    position: relative;
+    z-index: 1;
 }
 
-
 /* =========================================================
-   CABEÇALHO DA PÁGINA
+   TÍTULO
    ========================================================= */
 
 .container > h1 {
-    margin: 0 0 24px;
+    margin: 0 0 28px;
 
-    color: #17233d;
-
-    font-size: 28px;
+    font-size: 30px;
+    line-height: 1.2;
     font-weight: 700;
-    line-height: 1.25;
+
+    color: #17233c;
 }
 
-
 /* =========================================================
-   CABEÇALHO DO PRONTUÁRIO
+   CARDS
    ========================================================= */
 
-.prontuario-header {
+.card {
     width: 100%;
-
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 30px;
-
-    padding: 28px 30px;
-
-    margin-bottom: 16px;
 
     background: #ffffff;
 
-    border: 1px solid #e5eaf0;
-    border-radius: 12px;
+    border: 1px solid #e3e8ef;
+    border-radius: 14px;
 
-    box-shadow: 0 1px 3px rgba(20, 40, 70, 0.04);
+    padding: 24px;
+
+    margin-bottom: 24px;
+
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
 }
 
+.card p {
+    margin: 0 0 14px;
 
-/* ---------- Identificação ---------- */
+    font-size: 15px;
+    line-height: 1.6;
 
-.prontuario-identificacao {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-
-    min-width: 0;
+    color: #334155;
 }
 
-
-/* ---------- Avatar ---------- */
-
-.prontuario-avatar {
-    width: 76px;
-    height: 76px;
-
-    flex: 0 0 76px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    border-radius: 50%;
-
-    background: #e1f3f7;
-    color: #218aa5;
-
-    font-size: 25px;
-    font-weight: 600;
+.card p:last-child {
+    margin-bottom: 0;
 }
 
-
-/* ---------- Nome ---------- */
-
-.prontuario-nome {
-    margin-bottom: 7px;
-
-    color: #17233d;
-
-    font-size: 23px;
-    font-weight: 700;
+.card strong {
+    color: #17233c;
 }
-
-
-/* ---------- Informações rápidas ---------- */
-
-.prontuario-info {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-
-    gap: 8px 28px;
-
-    color: #52617a;
-
-    font-size: 14px;
-}
-
-.prontuario-info span {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-}
-
 
 /* =========================================================
-   BOTÕES DO CABEÇALHO
+   ÁREA DE AÇÕES
    ========================================================= */
 
-.prontuario-acoes {
+.acoes {
+    width: 100%;
+    margin: 24px 0;
+
     display: flex;
     align-items: center;
     justify-content: flex-end;
 
-    gap: 10px;
-
-    flex-shrink: 0;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
-
 /* =========================================================
-   BOTÕES GERAIS
+   BOTÕES
    ========================================================= */
 
 .btn {
     display: inline-flex;
+
     align-items: center;
     justify-content: center;
 
-    min-height: 40px;
+    min-height: 42px;
 
-    padding: 9px 17px;
+    padding: 10px 18px;
 
-    border: 1px solid #dce3ec;
-    border-radius: 7px;
+    border-radius: 8px;
 
-    background: #ffffff;
-
-    color: #17233d;
+    border: 1px solid transparent;
 
     font-family: inherit;
     font-size: 14px;
@@ -198,294 +130,105 @@ body {
     transition:
         background-color 0.2s ease,
         border-color 0.2s ease,
-        box-shadow 0.2s ease,
-        transform 0.15s ease;
+        color 0.2s ease,
+        transform 0.2s ease;
 }
 
 .btn:hover {
-    background: #f6f9fc;
-    border-color: #cbd5e1;
+    transform: translateY(-1px);
 }
 
-.btn:active {
-    transform: translateY(1px);
-}
-
-
-/* ---------- Editar ---------- */
-
-.btn-editar {
-    background: #ffffff;
-    border-color: #dce3ec;
-    color: #17233d;
-}
-
-
-/* ---------- Imprimir ---------- */
+/* Botão termo */
 
 .btn-imprimir {
     background: #ffffff;
-    border-color: #dce3ec;
-    color: #17233d;
+    color: #315f8f;
+
+    border-color: #d8e0e9;
 }
 
+.btn-imprimir:hover {
+    background: #f1f7fb;
+    border-color: #b9cfdf;
+}
 
-/* ---------- Adicionar ---------- */
+/* Adicionar procedimento */
 
 .btn-add {
-    background: #0878dc;
-    border-color: #0878dc;
+    background: #315f8f;
     color: #ffffff;
+
+    border-color: #315f8f;
 }
 
 .btn-add:hover {
-    background: #066bc5;
-    border-color: #066bc5;
+    background: #264e78;
 }
 
+/* Editar */
 
-/* ---------- Mais ---------- */
-
-.btn-mais {
+.btn-editar {
     background: #ffffff;
-    border-color: #dce3ec;
-    color: #17233d;
+    color: #315f8f;
+
+    border-color: #d8e0e9;
 }
 
+.btn-editar:hover {
+    background: #f1f7fb;
+}
+
+/* Visualizar */
+
+.btn-visualizar {
+    background: #ffffff;
+    color: #315f8f;
+
+    border: 1px solid #d8e0e9;
+
+    padding: 8px 14px;
+}
+
+.btn-visualizar:hover {
+    background: #eef7fa;
+}
 
 /* =========================================================
-   ABAS
+   PROCEDIMENTOS
    ========================================================= */
 
-.prontuario-tabs {
+.container > h2 {
+    margin: 32px 0 16px;
+
+    font-size: 21px;
+    font-weight: 700;
+
+    color: #17233c;
+}
+
+/* =========================================================
+   ESTADO VAZIO
+   ========================================================= */
+
+.empty {
     width: 100%;
 
-    display: flex;
-    align-items: center;
-
-    padding: 0 15px;
-
-    margin-bottom: 16px;
-
     background: #ffffff;
 
-    border: 1px solid #e5eaf0;
+    border: 1px solid #e3e8ef;
     border-radius: 12px;
 
-    overflow-x: auto;
+    padding: 28px;
+
+    color: #64748b;
+
+    text-align: center;
+
+    margin: 0;
 }
-
-.prontuario-tabs a,
-.prontuario-tabs button,
-.tab {
-    position: relative;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    min-height: 55px;
-
-    padding: 0 18px;
-
-    border: none;
-    background: transparent;
-
-    color: #33415c;
-
-    font-family: inherit;
-    font-size: 15px;
-    font-weight: 500;
-
-    text-decoration: none;
-
-    white-space: nowrap;
-
-    cursor: pointer;
-}
-
-.prontuario-tabs a:hover,
-.prontuario-tabs button:hover,
-.tab:hover {
-    color: #0878dc;
-}
-
-.prontuario-tabs .active,
-.prontuario-tabs a.active,
-.prontuario-tabs button.active,
-.tab.active {
-    color: #0878dc;
-    font-weight: 600;
-}
-
-.prontuario-tabs .active::after,
-.prontuario-tabs a.active::after,
-.prontuario-tabs button.active::after,
-.tab.active::after {
-    content: "";
-
-    position: absolute;
-
-    left: 10px;
-    right: 10px;
-    bottom: 0;
-
-    height: 3px;
-
-    background: #0878dc;
-
-    border-radius: 3px 3px 0 0;
-}
-
 
 /* =========================================================
-   CARDS
-   ========================================================= */
-
-.card {
-    width: 100%;
-
-    margin-bottom: 16px;
-
-    padding: 25px 27px;
-
-    background: #ffffff;
-
-    border: 1px solid #e5eaf0;
-    border-radius: 12px;
-
-    box-shadow: 0 1px 3px rgba(20, 40, 70, 0.03);
-}
-
-.card h2,
-.card h3 {
-    margin-bottom: 18px;
-
-    color: #17233d;
-
-    font-size: 19px;
-    font-weight: 700;
-}
-
-
-/* =========================================================
-   ÁREA DE INFORMAÇÕES
-   ========================================================= */
-
-.info-grid {
-    display: grid;
-
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-
-    gap: 16px;
-}
-
-.info-card {
-    min-width: 0;
-
-    padding: 25px 27px;
-
-    background: #ffffff;
-
-    border: 1px solid #e5eaf0;
-    border-radius: 12px;
-}
-
-.info-card h2,
-.info-card h3 {
-    margin-bottom: 20px;
-
-    color: #17233d;
-
-    font-size: 18px;
-    font-weight: 700;
-}
-
-
-/* =========================================================
-   INFORMAÇÕES PESSOAIS
-   ========================================================= */
-
-.informacoes-pessoais {
-    display: grid;
-
-    grid-template-columns: 195px minmax(0, 1fr);
-
-    row-gap: 14px;
-    column-gap: 20px;
-}
-
-.informacoes-pessoais .label,
-.informacoes-pessoais strong {
-    color: #17233d;
-    font-weight: 600;
-}
-
-.informacoes-pessoais .valor {
-    color: #33415c;
-
-    overflow-wrap: anywhere;
-}
-
-
-/* =========================================================
-   OBSERVAÇÕES
-   ========================================================= */
-
-.observacoes {
-    color: #33415c;
-
-    line-height: 1.8;
-}
-
-.observacoes p {
-    margin-bottom: 12px;
-}
-
-.observacoes p:last-child {
-    margin-bottom: 0;
-}
-
-
-/* =========================================================
-   SEÇÃO DE PROCEDIMENTOS / ATENDIMENTOS
-   ========================================================= */
-
-.procedimentos-card {
-    width: 100%;
-
-    padding: 25px 27px;
-
-    margin-bottom: 16px;
-
-    background: #ffffff;
-
-    border: 1px solid #e5eaf0;
-    border-radius: 12px;
-}
-
-.procedimentos-card h2 {
-    margin-bottom: 18px;
-
-    color: #17233d;
-
-    font-size: 19px;
-    font-weight: 700;
-}
-
-
-/* =========================================================
-   TÍTULOS
-   ========================================================= */
-
-.container h2 {
-    color: #17233d;
-    font-weight: 700;
-}
-
-
-/* =========================================================
-   TABELA DE PROCEDIMENTOS
+   TABELA
    ========================================================= */
 
 .tabela-procedimentos {
@@ -494,160 +237,96 @@ body {
     border-collapse: separate;
     border-spacing: 0;
 
+    background: #ffffff;
+
+    border: 1px solid #e3e8ef;
+    border-radius: 12px;
+
     overflow: hidden;
 
-    border: 1px solid #e5eaf0;
-    border-radius: 9px;
-
-    background: #ffffff;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
 }
 
-.tabela-procedimentos thead th {
-    padding: 12px 13px;
-
-    background: #f4f6f9;
-
-    border-bottom: 1px solid #e5eaf0;
-
-    color: #25344f;
-
-    font-size: 13px;
-    font-weight: 700;
+.tabela-procedimentos th,
+.tabela-procedimentos td {
+    padding: 15px 18px;
 
     text-align: left;
-}
 
-.tabela-procedimentos tbody td {
-    padding: 13px;
-
-    border-bottom: 1px solid #edf0f4;
-
-    color: #33415c;
+    border-bottom: 1px solid #e8edf2;
 
     font-size: 14px;
+}
 
-    vertical-align: middle;
+.tabela-procedimentos th {
+    background: #f8fafc;
+
+    color: #17233c;
+
+    font-weight: 700;
+}
+
+.tabela-procedimentos td {
+    color: #475569;
+
+    background: #ffffff;
 }
 
 .tabela-procedimentos tbody tr:last-child td {
     border-bottom: none;
 }
 
-.tabela-procedimentos tbody tr:hover {
-    background: #fafbfd;
+.tabela-procedimentos tbody tr:hover td {
+    background: #f8fbfd;
 }
-
-
-/* =========================================================
-   BOTÃO VISUALIZAR PROCEDIMENTO
-   ========================================================= */
-
-.btn-visualizar {
-    min-height: 34px;
-
-    padding: 6px 12px;
-
-    border: 1px solid #d7e0ea;
-    border-radius: 6px;
-
-    background: #ffffff;
-
-    color: #0878dc;
-
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 600;
-
-    cursor: pointer;
-}
-
-.btn-visualizar:hover {
-    background: #f1f7fd;
-    border-color: #b9d5ed;
-}
-
-
-/* =========================================================
-   MENSAGEM QUANDO NÃO HÁ PROCEDIMENTOS
-   ========================================================= */
-
-.empty {
-    padding: 25px;
-
-    border: 1px dashed #d8e0e9;
-    border-radius: 8px;
-
-    background: #fafbfd;
-
-    color: #66758b;
-
-    text-align: center;
-}
-
-
-/* =========================================================
-   ÁREA DE AÇÕES
-   ========================================================= */
-
-.acoes {
-    width: 100%;
-
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-
-    gap: 10px;
-
-    margin: 18px 0;
-}
-
 
 /* =========================================================
    MODAL
    ========================================================= */
 
 .modal {
+    display: none;
+
     position: fixed;
 
     inset: 0;
 
-    z-index: 9999;
+    width: 100%;
+    height: 100%;
 
-    display: none;
+    background: rgba(15, 23, 42, 0.45);
 
     align-items: center;
     justify-content: center;
 
-    padding: 25px;
+    padding: 24px;
 
-    background: rgba(15, 25, 45, 0.45);
+    z-index: 9999;
 }
 
 .modal-content {
     width: min(650px, 100%);
+
     max-height: 85vh;
 
-    display: flex;
-    flex-direction: column;
+    overflow-y: auto;
 
     background: #ffffff;
 
-    border-radius: 12px;
+    border-radius: 14px;
 
-    box-shadow: 0 20px 50px rgba(15, 30, 55, 0.2);
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
 
-    overflow: hidden;
+    padding: 0;
 }
-
-
-/* ---------- Cabeçalho do modal ---------- */
 
 .modal-header {
     display: flex;
+
     align-items: center;
     justify-content: space-between;
 
-    padding: 18px 22px;
+    padding: 20px 24px;
 
     border-bottom: 1px solid #e5eaf0;
 }
@@ -655,237 +334,90 @@ body {
 .modal-title {
     margin: 0;
 
-    color: #17233d;
+    font-size: 20px;
 
-    font-size: 18px;
-    font-weight: 700;
+    color: #17233c;
 }
 
-
-/* ---------- Botão fechar ---------- */
-
 .btn-close {
-    width: 34px;
-    height: 34px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 36px;
+    height: 36px;
 
     border: none;
-    border-radius: 6px;
+
+    border-radius: 8px;
 
     background: transparent;
 
-    color: #66758b;
+    color: #64748b;
 
-    font-size: 25px;
+    font-size: 26px;
+
     line-height: 1;
 
     cursor: pointer;
 }
 
 .btn-close:hover {
-    background: #f1f4f7;
-    color: #17233d;
+    background: #f1f5f9;
+    color: #17233c;
 }
 
-
-/* ---------- Corpo ---------- */
-
 .modal-body {
-    padding: 22px;
+    padding: 24px;
 
-    overflow-y: auto;
+    color: #475569;
 
-    color: #33415c;
+    font-size: 15px;
 
     line-height: 1.7;
 }
 
 .modal-body p {
-    margin-bottom: 15px;
+    margin: 0 0 18px;
 }
 
 .modal-body p:last-child {
     margin-bottom: 0;
 }
 
-
-/* ---------- Rodapé ---------- */
-
 .modal-footer {
     display: flex;
+
     justify-content: flex-end;
 
-    padding: 15px 22px;
+    padding: 16px 24px;
 
     border-top: 1px solid #e5eaf0;
 }
 
 .btn-fechar {
-    min-width: 90px;
+    background: #315f8f;
+    color: #ffffff;
+
+    border-color: #315f8f;
 }
-
-
-/* =========================================================
-   STATUS DO TERMO DE CONSENTIMENTO
-   ========================================================= */
-
-.consentimento-status {
-    display: inline-flex;
-    align-items: center;
-
-    gap: 7px;
-
-    padding: 7px 11px;
-
-    border-radius: 6px;
-
-    font-size: 13px;
-    font-weight: 600;
-}
-
-.consentimento-status.aceito {
-    background: #e9f8ef;
-    color: #21864b;
-}
-
-.consentimento-status.pendente {
-    background: #fff5df;
-    color: #9a6a00;
-}
-
 
 /* =========================================================
    RESPONSIVIDADE
    ========================================================= */
 
-@media (max-width: 1100px) {
+@media (max-width: 900px) {
 
     .container {
         width: calc(100% - 205px);
+
         margin-left: 205px;
 
-        padding: 24px 25px 40px;
+        padding: 24px 20px 40px;
     }
 
-    .prontuario-header {
-        align-items: flex-start;
-        flex-direction: column;
+    .container > h1 {
+        font-size: 26px;
     }
 
-    .prontuario-acoes {
-        width: 100%;
-
+    .acoes {
         justify-content: flex-start;
-    }
-
-    .info-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-
-@media (max-width: 800px) {
-
-    .container {
-        width: calc(100% - 205px);
-        margin-left: 205px;
-
-        padding: 20px 18px 35px;
-    }
-
-    .container > h1 {
-        font-size: 24px;
-    }
-
-    .prontuario-header {
-        padding: 22px;
-    }
-
-    .prontuario-identificacao {
-        width: 100%;
-    }
-
-    .prontuario-avatar {
-        width: 62px;
-        height: 62px;
-
-        flex-basis: 62px;
-
-        font-size: 21px;
-    }
-
-    .prontuario-nome {
-        font-size: 20px;
-    }
-
-    .prontuario-info {
-        gap: 7px 15px;
-    }
-
-    .informacoes-pessoais {
-        grid-template-columns: 1fr;
-        gap: 5px;
-    }
-
-    .informacoes-pessoais .valor {
-        margin-bottom: 8px;
-    }
-}
-
-
-@media (max-width: 600px) {
-
-    /*
-     * Mantém compatibilidade com a sidebar.
-     * A sidebar continua ocupando o espaço dela.
-     */
-
-    .container {
-        width: calc(100% - 205px);
-        margin-left: 205px;
-
-        padding: 16px 12px 30px;
-    }
-
-    .container > h1 {
-        font-size: 21px;
-    }
-
-    .prontuario-header {
-        padding: 18px;
-    }
-
-    .prontuario-identificacao {
-        align-items: flex-start;
-    }
-
-    .prontuario-acoes {
-        flex-wrap: wrap;
-    }
-
-    .btn {
-        min-height: 38px;
-        padding: 8px 12px;
-    }
-
-    .info-card,
-    .procedimentos-card,
-    .card {
-        padding: 18px;
-    }
-
-    .prontuario-tabs {
-        padding: 0 5px;
-    }
-
-    .prontuario-tabs a,
-    .prontuario-tabs button,
-    .tab {
-        padding: 0 13px;
-        font-size: 14px;
     }
 
     .tabela-procedimentos {
@@ -897,6 +429,41 @@ body {
     }
 }
 
+@media (max-width: 650px) {
+
+    .container {
+        width: calc(100% - 205px);
+
+        margin-left: 205px;
+
+        padding: 20px 14px 30px;
+    }
+
+    .container > h1 {
+        font-size: 23px;
+    }
+
+    .card {
+        padding: 18px;
+    }
+
+    .acoes {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .acoes .btn {
+        width: 100%;
+    }
+
+    .modal {
+        padding: 12px;
+    }
+
+    .modal-content {
+        max-height: 90vh;
+    }
+}
 
 /* =========================================================
    IMPRESSÃO
@@ -904,47 +471,23 @@ body {
 
 @media print {
 
-    @page {
-        size: A4;
-        margin: 15mm;
-    }
-
-    html,
     body {
-        background: #ffffff !important;
+        background: #ffffff;
     }
 
     .container {
-        width: 100% !important;
-
-        margin: 0 !important;
-        padding: 0 !important;
-
-        background: #ffffff !important;
+        width: 100%;
+        margin: 0;
+        padding: 0;
     }
 
-    .prontuario-acoes,
     .acoes,
-    .prontuario-tabs,
-    .btn,
     .modal {
         display: none !important;
     }
 
     .card,
-    .info-card,
-    .procedimentos-card,
-    .prontuario-header {
-        border: 1px solid #d9dfe6 !important;
-        box-shadow: none !important;
-        break-inside: avoid;
-    }
-
     .tabela-procedimentos {
-        border: 1px solid #d9dfe6 !important;
-    }
-
-    .tabela-procedimentos tbody tr:hover {
-        background: transparent !important;
+        box-shadow: none;
     }
 }
