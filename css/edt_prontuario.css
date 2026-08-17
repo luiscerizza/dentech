@@ -3,22 +3,22 @@
    ======================================== */
 
 * {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 html {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
-    margin: 0;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    background: #f5f7fb;
-    overflow-x: hidden;
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  background: #f5f7fb;
+  overflow-x: hidden;
 }
 
 /* ========================================
@@ -26,17 +26,17 @@ body {
    ======================================== */
 
 .container {
-    width: 100%;
-    max-width: 1400px;
-    min-width: 0;
-    margin: 0 auto;
-    padding: 30px;
+  width: 100%;
+  max-width: 1400px;
+  min-width: 0;
+  margin: 0 auto;
+  padding: 30px;
 }
 
 main {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 /* Evita que elementos internos forcem a página */
@@ -45,7 +45,7 @@ main,
 .section,
 .form-row,
 .form-group {
-    min-width: 0;
+  min-width: 0;
 }
 
 /* ========================================
@@ -53,55 +53,55 @@ main,
    ======================================== */
 
 .page-header {
-    width: 100%;
-    max-width: 100%;
-    margin-bottom: 24px;
-    min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 24px;
+  min-width: 0;
 }
 
 .page-header-info {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .breadcrumb {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 
-    margin-bottom: 10px;
+  margin-bottom: 10px;
 
-    font-size: 13px;
-    color: #6b7280;
+  font-size: 13px;
+  color: #6b7280;
 }
 
 .breadcrumb-separator {
-    color: #9ca3af;
+  color: #9ca3af;
 }
 
 .page-header h1 {
-    margin: 0;
+  margin: 0;
 
-    color: #111827;
+  color: #111827;
 
-    font-size: 28px;
-    line-height: 1.2;
-    font-weight: 700;
+  font-size: 28px;
+  line-height: 1.2;
+  font-weight: 700;
 
-    overflow-wrap: anywhere;
+  overflow-wrap: anywhere;
 }
 
 .page-header p {
-    margin: 8px 0 0;
+  margin: 8px 0 0;
 
-    color: #6b7280;
+  color: #6b7280;
 
-    font-size: 14px;
-    line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.5;
 
-    overflow-wrap: anywhere;
+  overflow-wrap: anywhere;
 }
 
 /* ========================================
@@ -109,40 +109,40 @@ main,
    ======================================== */
 
 .section {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 
-    background: #ffffff;
+  background: #ffffff;
 
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
 
-    padding: 24px;
-    margin-bottom: 20px;
+  padding: 24px;
+  margin-bottom: 20px;
 
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 
-    overflow: hidden;
+  overflow: hidden;
 }
 
 .section-title {
-    width: 100%;
-    max-width: 100%;
+  width: 100%;
+  max-width: 100%;
 
-    margin: 0 0 22px;
+  margin: 0 0 22px;
 
-    padding-bottom: 14px;
+  padding-bottom: 14px;
 
-    border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
 
-    color: #111827;
+  color: #111827;
 
-    font-size: 17px;
-    font-weight: 700;
-    line-height: 1.3;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.3;
 
-    overflow-wrap: anywhere;
+  overflow-wrap: anywhere;
 }
 
 /* ========================================
@@ -150,18 +150,17 @@ main,
    ======================================== */
 
 .form-row {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 
-    display: grid;
+  display: grid;
 
-    grid-template-columns:
-        repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 
-    gap: 18px;
+  gap: 18px;
 
-    margin: 0;
+  margin: 0;
 }
 
 /*
@@ -170,8 +169,8 @@ main,
    selects ou textos estourem a coluna.
 */
 .form-row > * {
-    min-width: 0;
-    max-width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* ========================================
@@ -179,44 +178,44 @@ main,
    ======================================== */
 
 .form-group {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 
-    margin-bottom: 18px;
+  margin-bottom: 18px;
 }
 
 .section .form-group + .form-group {
-    margin-top: 0;
+  margin-top: 0;
 }
 
 .form-group > label:first-child {
-    display: block;
+  display: block;
 
-    width: 100%;
-    max-width: 100%;
+  width: 100%;
+  max-width: 100%;
 
-    margin-bottom: 8px;
+  margin-bottom: 8px;
 
-    color: #374151;
+  color: #374151;
 
-    font-size: 14px;
-    font-weight: 600;
+  font-size: 14px;
+  font-weight: 600;
 
-    line-height: 1.3;
+  line-height: 1.3;
 
-    overflow-wrap: anywhere;
+  overflow-wrap: anywhere;
 }
 
 .form-group > label {
-    display: block;
+  display: block;
 
-    margin-bottom: 7px;
+  margin-bottom: 7px;
 
-    font-size: 14px;
-    font-weight: 600;
+  font-size: 14px;
+  font-weight: 600;
 
-    color: #374151;
+  color: #374151;
 }
 
 /* ========================================
@@ -226,60 +225,59 @@ main,
 .form-group input,
 .form-group select,
 .form-group textarea {
-    display: block;
+  display: block;
 
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 
-    min-height: 42px;
+  min-height: 42px;
 
-    padding: 10px 12px;
+  padding: 10px 12px;
 
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
 
-    background: #ffffff;
+  background: #ffffff;
 
-    font-family: inherit;
-    font-size: 14px;
-    color: #111827;
+  font-family: inherit;
+  font-size: 14px;
+  color: #111827;
 
-    outline: none;
+  outline: none;
 
-    transition:
-        border-color 0.15s ease,
-        box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
-    border-color: #2563eb;
+  border-color: #2563eb;
 
-    box-shadow:
-        0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .form-group textarea {
-    min-height: 100px;
+  min-height: 100px;
 
-    resize: vertical;
+  resize: vertical;
 
-    line-height: 1.5;
+  line-height: 1.5;
 }
 
 .form-group input::placeholder,
 .form-group textarea::placeholder {
-    color: #9ca3af;
+  color: #9ca3af;
 }
 
 .form-group input[readonly] {
-    background: #f9fafb;
+  background: #f9fafb;
 
-    color: #6b7280;
+  color: #6b7280;
 
-    cursor: default;
+  cursor: default;
 }
 
 /* ========================================
@@ -287,9 +285,9 @@ main,
    ======================================== */
 
 .form-group textarea[name="endereco"] {
-    width: 100%;
-    max-width: 100%;
-    min-height: 90px;
+  width: 100%;
+  max-width: 100%;
+  min-height: 90px;
 }
 
 /* ========================================
@@ -297,53 +295,53 @@ main,
    ======================================== */
 
 .checkbox-group {
-    width: 100%;
-    max-width: 100%;
+  width: 100%;
+  max-width: 100%;
 
-    display: flex;
+  display: flex;
 
-    flex-wrap: wrap;
+  flex-wrap: wrap;
 
-    align-items: center;
+  align-items: center;
 
-    gap: 14px 20px;
+  gap: 14px 20px;
 
-    margin-top: 8px;
+  margin-top: 8px;
 }
 
 .checkbox-item {
-    display: flex;
+  display: flex;
 
-    align-items: center;
+  align-items: center;
 
-    gap: 7px;
+  gap: 7px;
 
-    min-width: 0;
+  min-width: 0;
 }
 
 .checkbox-item input[type="radio"],
 .checkbox-item input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
+  width: 16px;
+  height: 16px;
 
-    min-width: 16px;
+  min-width: 16px;
 
-    margin: 0;
+  margin: 0;
 
-    cursor: pointer;
+  cursor: pointer;
 }
 
 .checkbox-item label {
-    margin: 0;
+  margin: 0;
 
-    color: #374151;
+  color: #374151;
 
-    font-size: 14px;
-    font-weight: 400;
+  font-size: 14px;
+  font-weight: 400;
 
-    cursor: pointer;
+  cursor: pointer;
 
-    overflow-wrap: anywhere;
+  overflow-wrap: anywhere;
 }
 
 /* ========================================
@@ -351,15 +349,14 @@ main,
    ======================================== */
 
 .form-group .checkbox-group:has(input[type="checkbox"]) {
-    display: grid;
+  display: grid;
 
-    grid-template-columns:
-        repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 
-    gap: 12px 24px;
+  gap: 12px 24px;
 
-    width: 100%;
-    max-width: 100%;
+  width: 100%;
+  max-width: 100%;
 }
 
 /* ========================================
@@ -367,12 +364,12 @@ main,
    ======================================== */
 
 .condicional {
-    display: none;
+  display: none;
 
-    width: 100%;
-    max-width: 100%;
+  width: 100%;
+  max-width: 100%;
 
-    margin-top: 10px;
+  margin-top: 10px;
 }
 
 /* ========================================
@@ -380,45 +377,45 @@ main,
    ======================================== */
 
 .actions {
-    width: 100%;
-    max-width: 100%;
+  width: 100%;
+  max-width: 100%;
 
-    display: flex;
+  display: flex;
 
-    justify-content: flex-end;
-    align-items: center;
+  justify-content: flex-end;
+  align-items: center;
 
-    gap: 12px;
+  gap: 12px;
 
-    margin-top: 24px;
+  margin-top: 24px;
 
-    padding-bottom: 30px;
+  padding-bottom: 30px;
 }
 
 .btn {
-    min-height: 42px;
+  min-height: 42px;
 
-    padding: 0 18px;
+  padding: 0 18px;
 
-    border: 1px solid transparent;
-    border-radius: 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
 
-    font-family: inherit;
+  font-family: inherit;
 
-    font-size: 14px;
-    font-weight: 600;
+  font-size: 14px;
+  font-weight: 600;
 
-    cursor: pointer;
+  cursor: pointer;
 
-    transition:
-        background-color 0.15s ease,
-        border-color 0.15s ease,
-        box-shadow 0.15s ease,
-        transform 0.05s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.05s ease;
 }
 
 .btn:active {
-    transform: translateY(1px);
+  transform: translateY(1px);
 }
 
 /* ========================================
@@ -426,17 +423,17 @@ main,
    ======================================== */
 
 .btn.cancel {
-    background: #ffffff;
+  background: #ffffff;
 
-    border-color: #d1d5db;
+  border-color: #d1d5db;
 
-    color: #374151;
+  color: #374151;
 }
 
 .btn.cancel:hover {
-    background: #f9fafb;
+  background: #f9fafb;
 
-    border-color: #9ca3af;
+  border-color: #9ca3af;
 }
 
 /* ========================================
@@ -444,24 +441,23 @@ main,
    ======================================== */
 
 .btn.delete {
-    background: #ffffff;
+  background: #ffffff;
 
-    border-color: #fecaca;
+  border-color: #fecaca;
 
-    color: #dc2626;
+  color: #dc2626;
 }
 
 .btn.delete:hover {
-    background: #fef2f2;
+  background: #fef2f2;
 
-    border-color: #fca5a5;
+  border-color: #fca5a5;
 }
 
 .btn.delete:focus-visible {
-    outline: none;
+  outline: none;
 
-    box-shadow:
-        0 0 0 3px rgba(220, 38, 38, 0.12);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
 }
 
 /* ========================================
@@ -469,24 +465,23 @@ main,
    ======================================== */
 
 .btn.save {
-    background: #2563eb;
+  background: #2563eb;
 
-    border-color: #2563eb;
+  border-color: #2563eb;
 
-    color: #ffffff;
+  color: #ffffff;
 }
 
 .btn.save:hover {
-    background: #1d4ed8;
+  background: #1d4ed8;
 
-    border-color: #1d4ed8;
+  border-color: #1d4ed8;
 }
 
 .btn.save:focus-visible {
-    outline: none;
+  outline: none;
 
-    box-shadow:
-        0 0 0 3px rgba(37, 99, 235, 0.18);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
 }
 
 /* ========================================
@@ -494,17 +489,15 @@ main,
    ======================================== */
 
 @media (max-width: 1100px) {
+  .container {
+    padding: 24px;
+  }
 
-    .container {
-        padding: 24px;
-    }
+  .form-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 
-    .form-row {
-        grid-template-columns:
-            repeat(2, minmax(0, 1fr));
-
-        gap: 16px;
-    }
+    gap: 16px;
+  }
 }
 
 /* ========================================
@@ -512,34 +505,33 @@ main,
    ======================================== */
 
 @media (max-width: 900px) {
+  .container {
+    width: 100%;
+    max-width: 100%;
 
-    .container {
-        width: 100%;
-        max-width: 100%;
+    padding: 20px;
+  }
 
-        padding: 20px;
-    }
+  .section {
+    padding: 20px;
+  }
 
-    .section {
-        padding: 20px;
-    }
+  .form-row {
+    grid-template-columns: 1fr;
 
-    .form-row {
-        grid-template-columns: 1fr;
+    gap: 0;
+  }
 
-        gap: 0;
-    }
+  .form-row > .form-group {
+    width: 100%;
+    max-width: 100%;
+  }
 
-    .form-row > .form-group {
-        width: 100%;
-        max-width: 100%;
-    }
+  .form-group .checkbox-group:has(input[type="checkbox"]) {
+    grid-template-columns: 1fr;
 
-    .form-group .checkbox-group:has(input[type="checkbox"]) {
-        grid-template-columns: 1fr;
-
-        gap: 12px;
-    }
+    gap: 12px;
+  }
 }
 
 /* ========================================
@@ -547,113 +539,156 @@ main,
    Compatível com o CSS do INDEX
    ======================================== */
 
-@media (max-width: 760px) {
+.content {
+  width: calc(100% - 220px);
+  margin-left: 220px;
 
-    /*
+  min-height: 100vh;
+
+  padding: 24px 30px 28px;
+
+  box-sizing: border-box;
+
+  overflow-x: hidden;
+}
+
+/*
+   O container do prontuário ocupa somente
+   o espaço disponível dentro do content.
+*/
+.content .container {
+  width: 100%;
+  max-width: 1400px;
+
+  margin: 0 auto;
+
+  padding: 0;
+
+  box-sizing: border-box;
+}
+
+@media (max-width: 760px) {
+  /*
        O index transforma a sidebar em 72px.
        O conteúdo precisa acompanhar essa largura.
     */
 
-    .container {
-        width: 100%;
-        max-width: 100%;
+  .container {
+    width: 100%;
+    max-width: 100%;
 
-        padding: 18px 16px;
-    }
+    padding: 18px 16px;
+  }
 
-    .section {
-        width: 100%;
-        max-width: 100%;
+  .section {
+    width: 100%;
+    max-width: 100%;
 
-        padding: 18px;
+    padding: 18px;
 
-        margin-bottom: 16px;
+    margin-bottom: 16px;
 
-        border-radius: 10px;
-    }
+    border-radius: 10px;
+  }
 
-    .section-title {
-        font-size: 16px;
+  .section-title {
+    font-size: 16px;
 
-        margin-bottom: 18px;
-    }
+    margin-bottom: 18px;
+  }
 
-    .page-header {
-        margin-bottom: 18px;
-    }
+  .page-header {
+    margin-bottom: 18px;
+  }
 
-    .page-header h1 {
-        font-size: 24px;
-    }
+  .page-header h1 {
+    font-size: 24px;
+  }
 
-    .page-header p {
-        font-size: 13px;
-    }
+  .page-header p {
+    font-size: 13px;
+  }
 
-    .breadcrumb {
-        font-size: 12px;
-    }
+  .breadcrumb {
+    font-size: 12px;
+  }
 
-    .form-row {
-        display: grid;
+  .form-row {
+    display: grid;
 
-        grid-template-columns: 1fr;
+    grid-template-columns: 1fr;
 
-        gap: 0;
+    gap: 0;
 
-        width: 100%;
-    }
+    width: 100%;
+  }
 
-    .form-group {
-        width: 100%;
-        max-width: 100%;
-    }
+  .form-group {
+    width: 100%;
+    max-width: 100%;
+  }
 
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-        width: 100%;
-        max-width: 100%;
-    }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    max-width: 100%;
+  }
 
-    .checkbox-group {
-        width: 100%;
+  .checkbox-group {
+    width: 100%;
 
-        display: flex;
+    display: flex;
 
-        flex-direction: column;
+    flex-direction: column;
 
-        align-items: flex-start;
+    align-items: flex-start;
 
-        gap: 12px;
-    }
+    gap: 12px;
+  }
 
-    .form-group .checkbox-group:has(input[type="checkbox"]) {
-        display: grid;
+  .form-group .checkbox-group:has(input[type="checkbox"]) {
+    display: grid;
 
-        grid-template-columns: 1fr;
+    grid-template-columns: 1fr;
 
-        width: 100%;
-    }
+    width: 100%;
+  }
 
-    .actions {
-        width: 100%;
+  .actions {
+    width: 100%;
 
-        flex-direction: column-reverse;
+    flex-direction: column-reverse;
 
-        align-items: stretch;
+    align-items: stretch;
 
-        gap: 10px;
+    gap: 10px;
 
-        padding-bottom: 20px;
-    }
+    padding-bottom: 20px;
+  }
 
-    .actions .btn,
-    .btn {
-        width: 100%;
+  .actions .btn,
+  .btn {
+    width: 100%;
 
-        min-height: 44px;
-    }
+    min-height: 44px;
+  }
+  .content {
+    width: calc(100% - 72px);
+    margin-left: 72px;
+
+    padding: 20px 14px 30px;
+
+    overflow-x: hidden;
+  }
+
+  .content .container {
+    width: 100%;
+    max-width: 100%;
+
+    padding: 0;
+    margin: 0;
+  }
 }
 
 /* ========================================
@@ -661,78 +696,89 @@ main,
    ======================================== */
 
 @media (max-width: 520px) {
+  .container {
+    width: 100%;
+    max-width: 100%;
 
-    .container {
-        width: 100%;
-        max-width: 100%;
+    padding: 14px 10px;
+  }
 
-        padding: 14px 10px;
-    }
+  .section {
+    padding: 15px;
 
-    .section {
-        padding: 15px;
+    border-radius: 9px;
+  }
 
-        border-radius: 9px;
-    }
+  .section-title {
+    font-size: 15px;
 
-    .section-title {
-        font-size: 15px;
+    margin-bottom: 17px;
 
-        margin-bottom: 17px;
+    padding-bottom: 12px;
+  }
 
-        padding-bottom: 12px;
-    }
+  .page-header {
+    margin-bottom: 16px;
+  }
 
-    .page-header {
-        margin-bottom: 16px;
-    }
+  .page-header h1 {
+    font-size: 22px;
+  }
 
-    .page-header h1 {
-        font-size: 22px;
-    }
+  .page-header p {
+    font-size: 12px;
+  }
 
-    .page-header p {
-        font-size: 12px;
-    }
+  .breadcrumb {
+    font-size: 11px;
 
-    .breadcrumb {
-        font-size: 11px;
+    gap: 5px;
+  }
 
-        gap: 5px;
-    }
+  .form-group {
+    margin-bottom: 15px;
+  }
 
-    .form-group {
-        margin-bottom: 15px;
-    }
+  .form-group > label,
+  .form-group > label:first-child {
+    font-size: 13px;
 
-    .form-group > label,
-    .form-group > label:first-child {
-        font-size: 13px;
+    margin-bottom: 6px;
+  }
 
-        margin-bottom: 6px;
-    }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    min-height: 42px;
 
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-        min-height: 42px;
+    padding: 9px 10px;
 
-        padding: 9px 10px;
+    font-size: 13px;
+  }
 
-        font-size: 13px;
-    }
+  .form-group textarea {
+    min-height: 95px;
+  }
 
-    .form-group textarea {
-        min-height: 95px;
-    }
+  .checkbox-item label {
+    font-size: 13px;
+  }
 
-    .checkbox-item label {
-        font-size: 13px;
-    }
+  .actions {
+    margin-top: 18px;
+  }
 
-    .actions {
-        margin-top: 18px;
-    }
+  .content {
+    width: calc(100% - 72px);
+    margin-left: 72px;
+
+    padding: 16px 10px 25px;
+  }
+
+  .content .container {
+    width: 100%;
+    max-width: 100%;
+  }
 }
 
 /* ========================================
@@ -740,32 +786,31 @@ main,
    ======================================== */
 
 @media (max-width: 380px) {
+  .container {
+    padding: 10px 8px;
+  }
 
-    .container {
-        padding: 10px 8px;
-    }
+  .section {
+    padding: 13px;
+  }
 
-    .section {
-        padding: 13px;
-    }
+  .section-title {
+    font-size: 14px;
+  }
 
-    .section-title {
-        font-size: 14px;
-    }
+  .page-header h1 {
+    font-size: 20px;
+  }
 
-    .page-header h1 {
-        font-size: 20px;
-    }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 12px;
+  }
 
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-        font-size: 12px;
-    }
-
-    .btn {
-        font-size: 13px;
-    }
+  .btn {
+    font-size: 13px;
+  }
 }
 
 /* ========================================
@@ -776,19 +821,19 @@ img,
 svg,
 video,
 iframe {
-    max-width: 100%;
+  max-width: 100%;
 }
 
 input,
 select,
 textarea,
 button {
-    max-width: 100%;
+  max-width: 100%;
 }
 
 textarea {
-    overflow-wrap: break-word;
-    word-break: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /*
@@ -801,7 +846,7 @@ textarea {
 .checkbox-item,
 .page-header,
 .page-header-info {
-    overflow-wrap: anywhere;
+  overflow-wrap: anywhere;
 }
 
 /*
@@ -813,7 +858,7 @@ textarea {
 .checkbox-group,
 .checkbox-item,
 .actions {
-    min-width: 0;
+  min-width: 0;
 }
 
 /* ========================================
@@ -821,9 +866,8 @@ textarea {
    ======================================== */
 
 @media (min-width: 1401px) {
-
-    .container {
-        padding-left: 30px;
-        padding-right: 30px;
-    }
+  .container {
+    padding-left: 30px;
+    padding-right: 30px;
+  }
 }
