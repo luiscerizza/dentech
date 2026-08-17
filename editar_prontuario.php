@@ -471,10 +471,14 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+
+            // ========================================
+            // IDADE AUTOMÁTICA
+            // ========================================
+
             const nascimentoInput = document.querySelector('input[name="nascimento"]');
             const idadeInput = document.querySelector('input[name="idade"]');
 
-            // Segurança: só executa se os campos existirem no DOM
             if (nascimentoInput && idadeInput) {
 
                 nascimentoInput.addEventListener('input', function() {
@@ -486,63 +490,144 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
 
                     // Evita problemas de fuso horário
                     const [y, m, d] = this.value.split('-').map(Number);
+
                     const birthDate = new Date(y, m - 1, d);
                     const today = new Date();
 
-                    let age = today.getFullYear() - birthDate.getFullYear();
+                    let age =
+                        today.getFullYear() -
+                        birthDate.getFullYear();
 
                     const monthDiff =
-                        today.getMonth() - birthDate.getMonth();
+                        today.getMonth() -
+                        birthDate.getMonth();
 
                     if (
                         monthDiff < 0 ||
-                        (monthDiff === 0 && today.getDate() < birthDate.getDate())
+                        (
+                            monthDiff === 0 &&
+                            today.getDate() < birthDate.getDate()
+                        )
                     ) {
                         age--;
                     }
 
-                    idadeInput.value = age >= 0 ? `${age} anos` : '';
+                    idadeInput.value =
+                        age >= 0 ? `${age} anos` : '';
                 });
             }
 
+
+            // ========================================
+            // CAMPOS CONDICIONAIS
+            // ========================================
+
             function configurarCampoCondicional(nomeRadio, valorSim) {
-                const radios = document.querySelectorAll(`input[name="${nomeRadio}"]`);
+
+                const radios =
+                    document.querySelectorAll(
+                        `input[name="${nomeRadio}"]`
+                    );
 
                 radios.forEach(radio => {
-                    radio.addEventListener('change', () => {
-                        const grupo = radio.closest('.form-group');
-                        const condicional = grupo?.querySelector('.condicional');
 
-                        if (!condicional) return;
+                    radio.addEventListener('change', () => {
+
+                        const grupo =
+                            radio.closest('.form-group');
+
+                        const condicional =
+                            grupo?.querySelector('.condicional');
+
+                        if (!condicional) {
+                            return;
+                        }
 
                         condicional.style.display =
-                            radio.checked && radio.value === valorSim ?
+                            radio.checked &&
+                            radio.value === valorSim ?
                             'block' :
                             'none';
                     });
                 });
             }
 
-            configurarCampoCondicional('tratamento_odonto_sim', '1');
-            configurarCampoCondicional('tratamento_medico_sim', '1');
-            configurarCampoCondicional('medicamento_continuo_sim', '1');
-            configurarCampoCondicional('alergia_medicamento_sim', '1');
-            configurarCampoCondicional('alergia_outras_sim', '1');
 
-            configurarCampoCondicional('gravida', '1');
-            configurarCampoCondicional('fuma', '1');
-            configurarCampoCondicional('bebida', '1');
-            configurarCampoCondicional('drogas_sim', '1');
+            configurarCampoCondicional(
+                'tratamento_odonto_sim',
+                '1'
+            );
 
-            configurarCampoCondicional('doencas_trans_sim', '1');
-            configurarCampoCondicional('cancer_familiar_sim', '1');
-            configurarCampoCondicional('tratamento_cancer_sim', '1');
+            configurarCampoCondicional(
+                'tratamento_medico_sim',
+                '1'
+            );
+
+            configurarCampoCondicional(
+                'medicamento_continuo_sim',
+                '1'
+            );
+
+            configurarCampoCondicional(
+                'alergia_medicamento_sim',
+                '1'
+            );
+
+            configurarCampoCondicional(
+                'alergia_outras_sim',
+                '1'
+            );
+
+            configurarCampoCondicional(
+                'gravida',
+                '1'
+            );
+
+            configurarCampoCondicional(
+                'fuma',
+                '1'
+            );
+
+            configurarCampoCondicional(
+                'bebida',
+                '1'
+            );
+
+            configurarCampoCondicional(
+                'drogas_sim',
+                '1'
+            );
+
+            configurarCampoCondicional(
+                'doencas_trans_sim',
+                '1'
+            );
+
+            configurarCampoCondicional(
+                'cancer_familiar_sim',
+                '1'
+            );
+
+            configurarCampoCondicional(
+                'tratamento_cancer_sim',
+                '1'
+            );
+
+
+            // ========================================
+            // MOSTRAR CAMPOS CONDICIONAIS
+            // JÁ MARCADOS AO ABRIR A PÁGINA
+            // ========================================
 
             document
                 .querySelectorAll('input[type="radio"]:checked')
                 .forEach(radio => {
-                    radio.dispatchEvent(new Event('change'));
+
+                    radio.dispatchEvent(
+                        new Event('change')
+                    );
                 });
+
 
             // ========================================
             // MÁSCARAS
@@ -552,45 +637,68 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
 
                 input.addEventListener('input', function() {
 
-                    let valor = this.value.replace(/\D/g, '');
+                    let valor =
+                        this.value.replace(/\D/g, '');
+
+
+                    // ====================================
+                    // CPF
+                    // ====================================
 
                     if (mascara === 'cpf') {
 
-                        valor = valor.substring(0, 11);
+                        valor =
+                            valor.substring(0, 11);
 
                         if (valor.length > 9) {
+
                             valor = valor.replace(
                                 /^(\d{3})(\d{3})(\d{3})(\d{0,2}).*/,
                                 '$1.$2.$3-$4'
                             );
 
                         } else if (valor.length > 6) {
+
                             valor = valor.replace(
                                 /^(\d{3})(\d{3})(\d{0,3}).*/,
                                 '$1.$2.$3'
                             );
 
                         } else if (valor.length > 3) {
+
                             valor = valor.replace(
                                 /^(\d{3})(\d{0,3}).*/,
                                 '$1.$2'
                             );
                         }
+                    }
 
-                    } else if (mascara === 'cep') {
 
-                        valor = valor.substring(0, 8);
+                    // ====================================
+                    // CEP
+                    // ====================================
+                    else if (mascara === 'cep') {
+
+                        valor =
+                            valor.substring(0, 8);
 
                         if (valor.length > 5) {
+
                             valor = valor.replace(
                                 /^(\d{5})(\d{0,3}).*/,
                                 '$1-$2'
                             );
                         }
+                    }
 
-                    } else if (mascara === 'telefone') {
 
-                        valor = valor.substring(0, 11);
+                    // ====================================
+                    // TELEFONE
+                    // ====================================
+                    else if (mascara === 'telefone') {
+
+                        valor =
+                            valor.substring(0, 11);
 
                         if (valor.length > 10) {
 
@@ -615,30 +723,53 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
                         }
                     }
 
+
                     this.value = valor;
                 });
             }
 
 
             // ========================================
-            // ATIVAR AS MÁSCARAS
+            // ATIVAR MÁSCARAS
             // ========================================
 
-            const cpfInput = document.querySelector('input[name="cpf"]');
-            const cepInput = document.querySelector('input[name="cep"]');
-            const telefoneInput = document.querySelector('input[name="telefone"]');
+            const cpfInput =
+                document.querySelector(
+                    'input[name="cpf"]'
+                );
+
+            const cepInput =
+                document.querySelector(
+                    'input[name="cep"]'
+                );
+
+            const telefoneInput =
+                document.querySelector(
+                    'input[name="telefone"]'
+                );
+
 
             if (cpfInput) {
-                aplicarMascara(cpfInput, 'cpf');
+                aplicarMascara(
+                    cpfInput,
+                    'cpf'
+                );
             }
 
             if (cepInput) {
-                aplicarMascara(cepInput, 'cep');
+                aplicarMascara(
+                    cepInput,
+                    'cep'
+                );
             }
 
             if (telefoneInput) {
-                aplicarMascara(telefoneInput, 'telefone');
+                aplicarMascara(
+                    telefoneInput,
+                    'telefone'
+                );
             }
+
 
             // ========================================
             // VALIDAÇÃO DO CPF
@@ -646,8 +777,10 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
 
             function cpfValido(cpf) {
 
-                cpf = cpf.replace(/\D/g, '');
+                cpf =
+                    cpf.replace(/\D/g, '');
 
+                // Precisa ter 11 dígitos
                 if (cpf.length !== 11) {
                     return false;
                 }
@@ -657,42 +790,67 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
                     return false;
                 }
 
+
+                // ====================================
+                // PRIMEIRO DÍGITO
+                // ====================================
+
                 let soma = 0;
                 let resto;
 
-                // Primeiro dígito
                 for (let i = 1; i <= 9; i++) {
-                    soma += parseInt(cpf.charAt(i - 1)) * (11 - i);
+
+                    soma +=
+                        parseInt(
+                            cpf.charAt(i - 1)
+                        ) * (11 - i);
                 }
 
-                resto = (soma * 10) % 11;
+                resto =
+                    (soma * 10) % 11;
 
                 if (resto === 10) {
                     resto = 0;
                 }
 
-                if (resto !== parseInt(cpf.charAt(9))) {
+                if (
+                    resto !==
+                    parseInt(cpf.charAt(9))
+                ) {
                     return false;
                 }
 
-                // Segundo dígito
+
+                // ====================================
+                // SEGUNDO DÍGITO
+                // ====================================
+
                 soma = 0;
 
                 for (let i = 1; i <= 10; i++) {
-                    soma += parseInt(cpf.charAt(i - 1)) * (12 - i);
+
+                    soma +=
+                        parseInt(
+                            cpf.charAt(i - 1)
+                        ) * (12 - i);
                 }
 
-                resto = (soma * 10) % 11;
+                resto =
+                    (soma * 10) % 11;
 
                 if (resto === 10) {
                     resto = 0;
                 }
 
-                return resto === parseInt(cpf.charAt(10));
+                return (
+                    resto ===
+                    parseInt(cpf.charAt(10))
+                );
             }
 
+
             // ========================================
-            // VALIDAÇÃO DA DATA
+            // VALIDAÇÃO DA DATA DE NASCIMENTO
             // ========================================
 
             function dataNascimentoValida(data) {
@@ -701,130 +859,344 @@ if (!$is_new && !empty($prontuario['nascimento'])) {
                     return false;
                 }
 
-                const dataNascimento = new Date(data + 'T00:00:00');
+                const dataNascimento =
+                    new Date(
+                        data + 'T00:00:00'
+                    );
+
                 const hoje = new Date();
 
-                hoje.setHours(0, 0, 0, 0);
+                hoje.setHours(
+                    0,
+                    0,
+                    0,
+                    0
+                );
 
                 return dataNascimento <= hoje;
             }
-        });
 
-        // Salvar com AJAX
-        document.getElementById('prontuarioForm').addEventListener('submit', async function(e) {
-
-            e.preventDefault();
-
-            const cpf = document.querySelector('input[name="cpf"]');
-            const nascimento = document.querySelector('input[name="nascimento"]');
-            const email = document.querySelector('input[name="email"]');
 
             // ========================================
-            // VALIDAR CPF
+            // SALVAR PRONTUÁRIO COM AJAX
             // ========================================
 
-            if (cpf && cpf.value.trim() !== '') {
+            const prontuarioForm =
+                document.getElementById(
+                    'prontuarioForm'
+                );
 
-                if (!cpfValido(cpf.value)) {
-                    alert('CPF inválido. Verifique o número informado.');
-                    cpf.focus();
-                    return;
-                }
-            }
 
-            // ========================================
-            // VALIDAR DATA DE NASCIMENTO
-            // ========================================
+            if (prontuarioForm) {
 
-            if (nascimento && !dataNascimentoValida(nascimento.value)) {
+                prontuarioForm.addEventListener(
+                    'submit',
+                    async function(e) {
 
-                alert('A data de nascimento é inválida.');
-                nascimento.focus();
-                return;
-            }
+                        e.preventDefault();
 
-            // ========================================
-            // VALIDAR E-MAIL
-            // ========================================
 
-            if (email && email.value.trim() !== '') {
+                        // ====================================
+                        // CAMPOS
+                        // ====================================
 
-                if (!email.checkValidity()) {
-                    alert('Informe um e-mail válido.');
-                    email.focus();
-                    return;
-                }
-            }
+                        const cpf =
+                            document.querySelector(
+                                'input[name="cpf"]'
+                            );
 
-            // ========================================
-            // ENVIAR
-            // ========================================
+                        const nascimento =
+                            document.querySelector(
+                                'input[name="nascimento"]'
+                            );
 
-            const formData = new FormData(this);
+                        const email =
+                            document.querySelector(
+                                'input[name="email"]'
+                            );
 
-            formData.append(
-                'csrf_token',
-                '<?= $_SESSION['csrf_token'] ?>'
-            );
 
-            try {
-                const response = await fetch('salvar_prontuario.php', {
-                    method: 'POST',
-                    body: formData
-                });
+                        // ====================================
+                        // VALIDAR CPF
+                        // ====================================
 
-                const texto = await response.text();
+                        if (
+                            cpf &&
+                            cpf.value.trim() !== ''
+                        ) {
 
-                console.log('Resposta do servidor:', texto);
+                            if (
+                                !cpfValido(
+                                    cpf.value
+                                )
+                            ) {
 
-                const result = JSON.parse(texto);
+                                alert(
+                                    'CPF inválido. Verifique o número informado.'
+                                );
 
-                if (result.success) {
-                    if (result.redirect) {
-                        window.location.href = result.redirect;
-                    } else {
-                        alert("Prontuário salvo com sucesso!");
-                        window.location.href = 'prontuarios.php';
+                                cpf.focus();
+
+                                return;
+                            }
+                        }
+
+
+                        // ====================================
+                        // VALIDAR DATA DE NASCIMENTO
+                        // ====================================
+
+                        if (
+                            nascimento &&
+                            !dataNascimentoValida(
+                                nascimento.value
+                            )
+                        ) {
+
+                            alert(
+                                'A data de nascimento é inválida.'
+                            );
+
+                            nascimento.focus();
+
+                            return;
+                        }
+
+
+                        // ====================================
+                        // VALIDAR E-MAIL
+                        // ====================================
+
+                        if (
+                            email &&
+                            email.value.trim() !== ''
+                        ) {
+
+                            if (
+                                !email.checkValidity()
+                            ) {
+
+                                alert(
+                                    'Informe um e-mail válido.'
+                                );
+
+                                email.focus();
+
+                                return;
+                            }
+                        }
+
+
+                        // ====================================
+                        // PREPARAR DADOS
+                        // ====================================
+
+                        const formData =
+                            new FormData(this);
+
+
+                        // CSRF
+                        formData.append(
+                            'csrf_token',
+                            '<?= $_SESSION['csrf_token'] ?>'
+                        );
+
+
+                        // ====================================
+                        // ENVIAR PARA PHP
+                        // ====================================
+
+                        try {
+
+                            const response =
+                                await fetch(
+                                    'salvar_prontuario.php', {
+                                        method: 'POST',
+                                        body: formData
+                                    }
+                                );
+
+
+                            // Pega a resposta como texto
+                            const texto =
+                                await response.text();
+
+
+                            // Mostra no console
+                            // para facilitar diagnóstico
+                            console.log(
+                                'Resposta do servidor:',
+                                texto
+                            );
+
+
+                            // ====================================
+                            // CONVERTER JSON
+                            // ====================================
+
+                            let result;
+
+                            try {
+
+                                result =
+                                    JSON.parse(texto);
+
+                            } catch (jsonError) {
+
+                                console.error(
+                                    'Resposta não é um JSON válido:',
+                                    texto
+                                );
+
+                                alert(
+                                    'O servidor retornou uma resposta inválida. Verifique o console.'
+                                );
+
+                                return;
+                            }
+
+
+                            // ====================================
+                            // SUCESSO
+                            // ====================================
+
+                            if (result.success) {
+
+                                if (result.redirect) {
+
+                                    window.location.href =
+                                        result.redirect;
+
+                                } else {
+
+                                    alert(
+                                        'Prontuário salvo com sucesso!'
+                                    );
+
+                                    window.location.href =
+                                        'prontuarios.php';
+                                }
+
+                            }
+
+
+                            // ====================================
+                            // ERRO DO PHP
+                            // ====================================
+                            else {
+
+                                alert(
+                                    'Erro ao salvar:\n' +
+                                    (
+                                        result.error ||
+                                        'Erro desconhecido.'
+                                    )
+                                );
+                            }
+
+
+                        } catch (err) {
+
+                            console.error(
+                                'Erro na requisição:',
+                                err
+                            );
+
+                            alert(
+                                'Erro de conexão. Tente novamente.'
+                            );
+                        }
                     }
-                } else {
-                    alert("Erro ao salvar:\n" + (result.error || "Erro desconhecido."));
-                }
-
-            } catch (err) {
-                console.error(err);
-                alert("Erro de conexão. Tente novamente.");
+                );
             }
+
+
+            // ========================================
+            // FIM DO DOMCONTENTLOADED
+            // ========================================
+
         });
 
-        // Excluir com AJAX
+
+        // ============================================
+        // EXCLUIR PRONTUÁRIO
+        // ============================================
+        // Esta função fica fora do DOMContentLoaded
+        // porque pode ser chamada pelo onclick do HTML.
+        // ============================================
+
         function deleteProntuario() {
-            if (!confirm("⚠️ ATENÇÃO:\nExcluir este prontuário removerá agendamentos, procedimentos e orçamentos vinculados.\n\nDeseja continuar?")) {
+
+            if (
+                !confirm(
+                    "⚠️ ATENÇÃO:\n" +
+                    "Excluir este prontuário removerá " +
+                    "agendamentos, procedimentos e " +
+                    "orçamentos vinculados.\n\n" +
+                    "Deseja continuar?"
+                )
+            ) {
                 return;
             }
 
-            const id = document.querySelector('input[name="id"]')?.value;
-            if (!id) return;
 
-            fetch('excluir_prontuario.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: 'id=' + encodeURIComponent(id) +
-                        '&csrf_token=' + encodeURIComponent('<?= $_SESSION['csrf_token'] ?>')
-                })
+            const id =
+                document.querySelector(
+                    'input[name="id"]'
+                )?.value;
+
+
+            if (!id) {
+                return;
+            }
+
+
+            fetch(
+                    'excluir_prontuario.php', {
+                        method: 'POST',
+
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+
+                        body: 'id=' +
+                            encodeURIComponent(id) +
+                            '&csrf_token=' +
+                            encodeURIComponent(
+                                '<?= $_SESSION['csrf_token'] ?>'
+                            )
+                    }
+                )
+
                 .then(response => response.json())
+
                 .then(data => {
+
                     if (data.success) {
-                        alert('Prontuário excluído com sucesso!');
-                        window.location.href = 'prontuarios';
+
+                        alert(
+                            'Prontuário excluído com sucesso!'
+                        );
+
+                        window.location.href =
+                            'prontuarios';
+
                     } else {
-                        alert('Erro: ' + data.error);
+
+                        alert(
+                            'Erro: ' +
+                            data.error
+                        );
                     }
                 })
+
                 .catch(err => {
+
                     console.error(err);
-                    alert("Erro de conexão.");
+
+                    alert(
+                        'Erro de conexão.'
+                    );
                 });
         }
     </script>
