@@ -475,11 +475,11 @@ $prontuarios = $stmt->fetchAll();
 
                     <div class="table-footer">
 
-                        <span><?= count($prontuarios) ?>prontuário(s) encontrado(s)</span>
+                        <span><?= count($prontuarios) ?> prontuário(s) encontrado(s)</span>
                         <?php
                         $export_url = '?' . http_build_query(array_merge($_GET, ['exportar' => '1']));
                         ?>
-                        <a href="<?= $export_url ?>"class="btn-exportar"><i class="fa-solid fa-file-csv"></i>Exportar CSV</a>
+                        <a href="<?= $export_url ?>" class="btn-exportar"><i class="fa-solid fa-file-csv"></i>Exportar CSV</a>
                     </div>
                 <?php endif; ?>
             </section>

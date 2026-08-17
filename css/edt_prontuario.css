@@ -51,7 +51,21 @@ main > h1 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
-  margin-bottom: 18px;
+}
+
+.section .form-group + .form-group {
+  margin-top: 22px;
+}
+
+.form-group > label:first-child {
+  display: block;
+
+  margin-bottom: 8px;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  color: #374151;
 }
 
 .form-group {
@@ -141,7 +155,7 @@ main > h1 {
 
 .condicional {
   display: none;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .checkbox-group:has(input[type="checkbox"]) {
@@ -196,27 +210,71 @@ main > h1 {
 }
 
 .btn {
-  border: 0;
+  min-height: 42px;
+
+  padding: 0 18px;
+
+  border: 1px solid transparent;
   border-radius: 8px;
-  padding: 11px 18px;
+
+  font-family: inherit;
   font-size: 14px;
   font-weight: 600;
+
   cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.05s ease;
+}
+
+.btn:active {
+  transform: translateY(1px);
 }
 
 .btn.cancel {
   background: #ffffff;
-  border: 1px solid #d1d5db;
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+.btn.cancel:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
 }
 
 .btn.delete {
-  background: #dc2626;
-  color: #ffffff;
+  background: #ffffff;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.btn.delete:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.btn.delete:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
 }
 
 .btn.save {
   background: #2563eb;
+  border-color: #2563eb;
   color: #ffffff;
+}
+
+.btn.save:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.btn.save:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
 }
 
 /* ========================================
@@ -260,6 +318,12 @@ main > h1 {
   color: #6b7280;
 }
 
+@media (max-width: 1000px) {
+  .form-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 900px) {
   .container {
     padding: 20px;
@@ -274,14 +338,39 @@ main > h1 {
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 650px) {
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
   .container {
-    padding: 14px;
+    padding: 12px;
   }
 
   .section {
     padding: 18px;
+    margin-bottom: 16px;
     border-radius: 10px;
+  }
+
+  .checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 20px;
+  }
+
+  .form-group .checkbox-group:has(input[type="checkbox"]) {
+    grid-template-columns: 1fr;
+  }
+
+  .page-header {
+    margin-bottom: 18px;
+  }
+
+  .page-header p {
+    font-size: 13px;
   }
 
   .page-header h1 {
@@ -290,7 +379,11 @@ main > h1 {
 
   .actions {
     flex-direction: column-reverse;
-    align-items: stretch;
+    width: 100%;
+  }
+
+  .actions .btn {
+    width: 100%;
   }
 
   .btn {
