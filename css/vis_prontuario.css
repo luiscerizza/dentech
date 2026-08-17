@@ -1,29 +1,29 @@
 /* =========================================================
-   VIS_PRONTUARIO.CSS
-   Visualização do Prontuário
+   VISUALIZAÇÃO DE PRONTUÁRIO - DENTECH
    ========================================================= */
 
 :root {
-  --primary: #1597b2;
-  --primary-dark: #0e7f96;
-  --primary-soft: #e8f8fb;
+  --primary: #1769d1;
+  --primary-dark: #0e56b3;
+  --primary-soft: #eaf4ff;
 
-  --bg: #f6f9fb;
+  --background: #f7f9fc;
   --surface: #ffffff;
-  --border: #e4ebef;
+  --border: #e4e9ef;
 
-  --text: #173042;
-  --text-secondary: #526878;
-  --muted: #82919b;
+  --text: #172b4d;
+  --text-secondary: #53657d;
+  --muted: #8290a3;
 
-  --shadow: 0 2px 14px rgba(24, 53, 68, 0.055);
-  --shadow-hover: 0 6px 20px rgba(24, 53, 68, 0.08);
+  --success: #2e9d68;
+  --danger: #d95c63;
 
-  --radius: 10px;
+  --radius: 12px;
+  --shadow: 0 2px 10px rgba(20, 45, 75, 0.045);
 }
 
 /* =========================================================
-   BASE
+   RESET
    ========================================================= */
 
 * {
@@ -37,64 +37,76 @@ html {
 
 body {
   margin: 0;
-  width: 100%;
+  padding: 0;
   min-height: 100vh;
-  background: var(--bg);
-  color: var(--text);
-  font-family: "Inter", "Segoe UI", Arial, sans-serif;
-}
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
+  background: var(--background);
+  color: var(--text);
+
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+
+  font-size: 14px;
 }
 
 /* =========================================================
-   CONTAINER PRINCIPAL
-   IMPORTANTE:
-   A sidebar ocupa 220px, portanto o conteúdo começa depois dela.
+   ÁREA PRINCIPAL
+   Compatível com sidebar fixa de aproximadamente 220px
    ========================================================= */
 
 .container {
   width: calc(100% - 220px);
   min-height: 100vh;
+
   margin-left: 220px;
-  padding: 28px 30px 35px;
-  box-sizing: border-box;
+
+  padding: 28px 30px 40px;
+
+  background: var(--background);
 }
 
 /* =========================================================
-   CABEÇALHO
+   TÍTULO DA PÁGINA
    ========================================================= */
 
 .container > h1 {
-  margin: 0 0 22px;
-  color: #1d3546;
-  font-size: 27px;
+  margin: 0 0 24px;
+
+  color: var(--text);
+
+  font-size: 25px;
   line-height: 1.2;
   font-weight: 750;
 }
 
 /* =========================================================
-   CARD PRINCIPAL DO PACIENTE
+   CARD
    ========================================================= */
 
 .card {
   width: 100%;
+
   margin: 0;
-  padding: 22px 26px;
+
+  padding: 24px 28px;
+
   background: var(--surface);
+
   border: 1px solid var(--border);
   border-radius: var(--radius);
+
   box-shadow: var(--shadow);
 }
 
+/* =========================================================
+   DADOS DO PACIENTE
+   ========================================================= */
+
 .card p {
-  margin: 0 0 10px;
+  margin: 0 0 13px;
+
   color: var(--text-secondary);
-  font-size: 13px;
+
+  font-size: 14px;
   line-height: 1.6;
 }
 
@@ -104,8 +116,11 @@ select {
 
 .card strong {
   display: inline-block;
-  min-width: 155px;
-  color: #294354;
+
+  min-width: 165px;
+
+  color: var(--text);
+
   font-weight: 700;
 }
 
@@ -115,12 +130,14 @@ select {
 
 .acoes {
   width: 100%;
-  margin: 20px 0 !important;
-  display: flex !important;
+
+  display: flex;
   align-items: center;
-  justify-content: flex-end !important;
-  gap: 10px !important;
-  flex-wrap: wrap;
+  justify-content: flex-end;
+
+  gap: 10px;
+
+  margin: 16px 0 22px !important;
 }
 
 /* =========================================================
@@ -128,111 +145,81 @@ select {
    ========================================================= */
 
 .btn {
-  min-height: 38px;
+  min-height: 40px;
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
 
-  padding: 8px 14px;
+  padding: 0 17px;
 
   border: 1px solid var(--border);
   border-radius: 8px;
 
   background: #fff;
-  color: #405766;
 
-  font-size: 12px;
+  color: var(--text);
+
+  font-family: inherit;
+  font-size: 13px;
   font-weight: 700;
 
   text-decoration: none;
+
   cursor: pointer;
 
   transition:
     background 0.18s ease,
-    color 0.18s ease,
     border-color 0.18s ease,
-    box-shadow 0.18s ease,
+    color 0.18s ease,
     transform 0.18s ease;
 }
 
 .btn:hover {
-  background: #f7fafb;
-  border-color: #d6e2e7;
-  box-shadow: var(--shadow-hover);
-}
+  transform: translateY(-1px);
 
-.btn:active {
-  transform: translateY(1px);
-}
-
-/* Termo */
-
-.btn-imprimir {
-  background: #fff;
-  color: #536b79;
-  border-color: #dfe7eb;
-}
-
-.btn-imprimir:hover {
-  background: #f5fafb;
-  color: var(--primary-dark);
-  border-color: #cfe1e6;
-}
-
-/* Adicionar procedimento */
-
-.btn-add {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-}
-
-.btn-add:hover {
-  background: var(--primary-dark);
-  border-color: var(--primary-dark);
-  color: #fff;
+  background: #f8fafc;
+  border-color: #d4dce5;
 }
 
 /* Editar */
 
 .btn-editar {
   background: #fff;
-  color: var(--primary-dark);
-  border-color: #cfe3e8;
+  color: var(--text);
 }
 
 .btn-editar:hover {
-  background: var(--primary-soft);
-  border-color: #b9dce4;
-  color: var(--primary-dark);
+  color: var(--primary);
+  border-color: #c8ddf5;
 }
 
-/* Visualizar */
+/* Termo */
 
-.btn-visualizar {
-  min-height: 32px;
-  padding: 6px 11px;
-  background: #f3fafb;
-  border-color: #d9edf0;
-  color: var(--primary-dark);
-  font-size: 11px;
-}
-
-.btn-visualizar:hover {
-  background: var(--primary-soft);
-  border-color: #c4e3e8;
-}
-
-/* Fechar */
-
-.btn-fechar {
+.btn-imprimir {
+  color: var(--text);
   background: #fff;
-  color: #617581;
 }
 
-.btn-fechar:hover {
-  background: #f6f8f9;
+.btn-imprimir:hover {
+  color: var(--primary);
+  border-color: #c8ddf5;
+}
+
+/* Adicionar */
+
+.btn-add {
+  background: var(--primary);
+  border-color: var(--primary);
+
+  color: #fff;
+}
+
+.btn-add:hover {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+
+  color: #fff;
 }
 
 /* =========================================================
@@ -240,29 +227,13 @@ select {
    ========================================================= */
 
 .container > h2 {
-  margin: 25px 0 11px;
-  color: #284355;
-  font-size: 16px;
+  margin: 0 0 13px;
+
+  color: var(--text);
+
+  font-size: 18px;
+  line-height: 1.3;
   font-weight: 750;
-}
-
-/* =========================================================
-   ESTADO VAZIO
-   ========================================================= */
-
-.empty {
-  width: 100%;
-  margin: 0;
-  padding: 28px 20px;
-
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-
-  color: var(--muted);
-  font-size: 12px;
-  text-align: center;
 }
 
 /* =========================================================
@@ -271,45 +242,57 @@ select {
 
 .tabela-procedimentos {
   width: 100%;
+
   border-collapse: separate;
   border-spacing: 0;
 
-  background: #fff;
+  overflow: hidden;
+
+  background: var(--surface);
+
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
 
-  overflow: hidden;
+  box-shadow: var(--shadow);
 }
+
+/* Cabeçalho */
 
 .tabela-procedimentos thead th {
-  padding: 10px 16px;
+  padding: 12px 16px;
 
-  background: #fbfcfd;
-  border-bottom: 1px solid #e9eef1;
+  background: #f8fafc;
 
-  color: #7b8b95;
+  border-bottom: 1px solid var(--border);
 
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-align: left;
-  text-transform: uppercase;
-}
-
-.tabela-procedimentos tbody td {
-  padding: 11px 16px;
-
-  border-bottom: 1px solid #eef2f4;
-
-  color: #536a78;
+  color: var(--text-secondary);
 
   font-size: 11px;
+  font-weight: 800;
+
+  text-align: left;
+
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+/* Células */
+
+.tabela-procedimentos tbody td {
+  padding: 13px 16px;
+
+  border-bottom: 1px solid #edf1f5;
+
+  color: var(--text-secondary);
+
+  font-size: 13px;
+  line-height: 1.4;
+
   vertical-align: middle;
 }
 
 .tabela-procedimentos tbody tr:last-child td {
-  border-bottom: 0;
+  border-bottom: none;
 }
 
 .tabela-procedimentos tbody tr {
@@ -317,22 +300,58 @@ select {
 }
 
 .tabela-procedimentos tbody tr:hover {
-  background: #fbfdfe;
+  background: #fbfdff;
 }
 
-/* Primeira coluna */
+/* =========================================================
+   BOTÃO VISUALIZAR
+   ========================================================= */
 
-.tabela-procedimentos th:first-child,
-.tabela-procedimentos td:first-child {
-  width: 150px;
+.btn-visualizar {
+  min-height: 32px;
+
+  padding: 0 12px;
+
+  border: 1px solid #d7e3ef;
+  border-radius: 7px;
+
+  background: #fff;
+
+  color: var(--primary);
+
+  font-family: inherit;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: 0.18s ease;
 }
 
-/* Coluna de ações */
+.btn-visualizar:hover {
+  background: var(--primary-soft);
+  border-color: #bdd6f2;
+}
 
-.tabela-procedimentos th:last-child,
-.tabela-procedimentos td:last-child {
-  width: 130px;
-  text-align: right;
+/* =========================================================
+   ESTADO VAZIO
+   ========================================================= */
+
+.empty {
+  margin: 0;
+  padding: 35px 20px;
+
+  background: #fff;
+
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+
+  color: var(--muted);
+
+  text-align: center;
+
+  font-size: 13px;
 }
 
 /* =========================================================
@@ -341,9 +360,10 @@ select {
 
 .modal {
   position: fixed;
+
   inset: 0;
 
-  z-index: 1000;
+  z-index: 9999;
 
   display: none;
 
@@ -352,13 +372,15 @@ select {
 
   padding: 25px;
 
-  background: rgba(20, 42, 55, 0.38);
+  background: rgba(17, 35, 55, 0.42);
 
   backdrop-filter: blur(2px);
 }
 
+/* Conteúdo */
+
 .modal-content {
-  width: min(620px, 100%);
+  width: min(650px, 100%);
   max-height: calc(100vh - 50px);
 
   display: flex;
@@ -366,43 +388,43 @@ select {
 
   background: #fff;
 
-  border: 1px solid var(--border);
   border-radius: 12px;
 
-  box-shadow: 0 15px 45px rgba(22, 47, 61, 0.18);
+  box-shadow: 0 15px 45px rgba(15, 40, 70, 0.18);
 
   overflow: hidden;
 }
 
-/* =========================================================
-   CABEÇALHO MODAL
-   ========================================================= */
+/* Cabeçalho */
 
 .modal-header {
-  min-height: 55px;
+  min-height: 58px;
 
   display: flex;
   align-items: center;
   justify-content: space-between;
+
   gap: 15px;
 
-  padding: 10px 17px;
+  padding: 0 20px;
 
-  border-bottom: 1px solid #edf1f3;
+  border-bottom: 1px solid var(--border);
 }
 
 .modal-title {
   margin: 0;
 
-  color: #294354;
+  color: var(--text);
 
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 750;
 }
 
+/* Fechar */
+
 .btn-close {
-  width: 31px;
-  height: 31px;
+  width: 34px;
+  height: 34px;
 
   display: grid;
   place-items: center;
@@ -413,40 +435,35 @@ select {
   border-radius: 7px;
 
   background: transparent;
-  color: #83929b;
 
-  font-size: 22px;
+  color: #7d8b9b;
+
+  font-size: 25px;
   line-height: 1;
 
   cursor: pointer;
-
-  transition: 0.18s ease;
 }
 
 .btn-close:hover {
-  background: #f1f7f8;
-  color: var(--primary-dark);
+  background: #f1f5f8;
+  color: var(--text);
 }
 
-/* =========================================================
-   CORPO MODAL
-   ========================================================= */
+/* Corpo */
 
 .modal-body {
-  flex: 1;
-
   padding: 20px;
 
-  color: #596e7b;
-
-  font-size: 12px;
-  line-height: 1.7;
-
   overflow-y: auto;
+
+  color: var(--text-secondary);
+
+  font-size: 14px;
+  line-height: 1.65;
 }
 
 .modal-body p {
-  margin: 0 0 14px;
+  margin: 0 0 15px;
 }
 
 .modal-body p:last-child {
@@ -454,24 +471,36 @@ select {
 }
 
 .modal-body strong {
-  color: #314b5b;
-  font-weight: 750;
+  color: var(--text);
 }
 
-/* =========================================================
-   RODAPÉ MODAL
-   ========================================================= */
+/* Rodapé */
 
 .modal-footer {
   display: flex;
-  align-items: center;
   justify-content: flex-end;
 
-  padding: 11px 17px;
+  padding: 13px 20px;
 
-  border-top: 1px solid #edf1f3;
+  border-top: 1px solid var(--border);
 
   background: #fbfcfd;
+}
+
+/* Fechar */
+
+.btn-fechar {
+  min-height: 36px;
+
+  padding: 0 15px;
+
+  background: #fff;
+
+  color: var(--text-secondary);
+}
+
+.btn-fechar:hover {
+  background: #f3f6f8;
 }
 
 /* =========================================================
@@ -485,128 +514,103 @@ select {
 @media (max-width: 1100px) {
   .container {
     width: calc(100% - 220px);
-    margin-left: 220px;
-    padding: 24px 22px 30px;
-  }
 
-  .container > h1 {
-    font-size: 24px;
+    margin-left: 220px;
+
+    padding: 24px 22px 35px;
   }
 
   .card {
-    padding: 20px;
-  }
-
-  .acoes {
-    justify-content: flex-start !important;
+    padding: 22px;
   }
 }
 
 /* ---------------------------------------------------------
-   Tablet / sidebar compacta
+   Até 760px
+   Sidebar compacta
    --------------------------------------------------------- */
 
 @media (max-width: 760px) {
   .container {
     width: calc(100% - 72px);
+
     margin-left: 72px;
-    padding: 20px 14px 30px;
+
+    padding: 20px 15px 30px;
   }
 
   .container > h1 {
+    margin-bottom: 18px;
+
     font-size: 22px;
-    margin-bottom: 17px;
   }
 
   .card {
-    padding: 17px;
+    padding: 19px;
   }
 
   .card p {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .card strong {
-    min-width: 125px;
+    display: block;
+
+    min-width: 0;
+
+    margin-bottom: 2px;
   }
 
   .acoes {
     justify-content: flex-start !important;
+
+    flex-wrap: wrap;
+
+    margin-top: 14px !important;
   }
 
   .btn {
-    min-height: 36px;
-    padding: 8px 11px;
-    font-size: 11px;
-  }
-
-  .container > h2 {
-    font-size: 15px;
+    flex: 0 1 auto;
   }
 
   .tabela-procedimentos {
-    min-width: 580px;
-  }
+    display: block;
 
-  .tabela-procedimentos th,
-  .tabela-procedimentos td {
-    padding: 9px 12px;
-  }
+    overflow-x: auto;
 
-  /*
-       Permite que a tabela seja rolada horizontalmente
-       sem estourar o container.
-    */
-  .container {
-    overflow-x: hidden;
-  }
-
-  .tabela-procedimentos {
-    display: table;
+    white-space: nowrap;
   }
 }
 
 /* ---------------------------------------------------------
-   Celulares
+   Até 520px
    --------------------------------------------------------- */
 
 @media (max-width: 520px) {
   .container {
     width: calc(100% - 72px);
+
     margin-left: 72px;
-    padding: 17px 10px 25px;
+
+    padding: 17px 11px 25px;
   }
 
   .container > h1 {
-    font-size: 19px;
-    line-height: 1.25;
+    font-size: 20px;
   }
 
   .card {
-    padding: 15px;
-  }
-
-  .card p {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-
-    margin-bottom: 13px;
-
-    font-size: 11px;
-  }
-
-  .card strong {
-    min-width: 0;
-    font-size: 11px;
+    padding: 16px;
   }
 
   .acoes {
-    width: 100%;
-    margin: 16px 0 !important;
     display: grid !important;
+
     grid-template-columns: 1fr;
-    gap: 8px !important;
+
+    width: 100%;
+
+    gap: 8px;
   }
 
   .acoes .btn {
@@ -614,18 +618,12 @@ select {
   }
 
   .container > h2 {
-    margin-top: 20px;
-    font-size: 14px;
+    font-size: 17px;
   }
 
-  /*
-       Container para tabela em telas pequenas.
-       Como o HTML atual não possui um wrapper específico,
-       a tabela recebe rolagem através do elemento pai.
-    */
-  .tabela-procedimentos {
-    width: 100%;
-    min-width: 520px;
+  .tabela-procedimentos thead th,
+  .tabela-procedimentos tbody td {
+    padding: 10px 12px;
   }
 
   .modal {
@@ -634,21 +632,18 @@ select {
 
   .modal-content {
     max-height: calc(100vh - 24px);
-    border-radius: 10px;
   }
 
   .modal-header {
-    min-height: 50px;
-    padding: 9px 13px;
+    padding: 0 15px;
   }
 
   .modal-body {
     padding: 16px;
-    font-size: 11px;
   }
 
   .modal-footer {
-    padding: 10px 13px;
+    padding: 11px 15px;
   }
 }
 
@@ -663,8 +658,12 @@ select {
 
   .container {
     width: 100%;
+
     margin: 0;
+
     padding: 0;
+
+    background: #fff;
   }
 
   .acoes,
@@ -673,17 +672,13 @@ select {
   }
 
   .card,
-  .empty,
   .tabela-procedimentos {
     box-shadow: none;
+
     border-color: #ccc;
   }
 
   .container > h1 {
     color: #000;
-  }
-
-  .tabela-procedimentos {
-    width: 100%;
   }
 }
