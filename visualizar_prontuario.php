@@ -310,15 +310,7 @@ if ($consentimentoAceito && !empty($consentimento['data_aceite'])) {
 
                 <div class="patient-actions">
 
-                    <a
-                        href="editar_prontuario.php?id=<?= $id ?>"
-                        class="action-button">
-
-                        <i class="fa-solid fa-pen"></i>
-
-                        Editar
-
-                    </a>
+                    
 
 
                     <button
