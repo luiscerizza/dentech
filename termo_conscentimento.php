@@ -27,7 +27,7 @@ $data_hoje = date('d/m/Y');
     <link rel="stylesheet" href="css/termo_cons.css">
     <title>Termos de Consentimento - Dentech</title>
     <style>
-        
+
     </style>
 </head>
 
@@ -129,7 +129,40 @@ $data_hoje = date('d/m/Y');
         Endereço: Siqueira Campos 1100 sala 03 – São João – Araçatuba/SP<br>
         Telefone: (18) 98190-4484
     </div>
-    </div>
+    
+    <!-- CONFIRMAÇÃO DO CONSENTIMENTO -->
+    <?php if (!$isPrint): ?>
+
+        <form class="consentimento" action="salvar_consentimento.php" method="POST">
+
+            <input type="hidden" name="prontuario_id" value="<?= $id ?>">
+
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+
+            <label class="consentimento-label">
+                <input
+                    type="checkbox"
+                    name="aceito"
+                    value="1"
+                    required>
+
+                <span>
+                    Declaro que li e compreendi o Termo de Consentimento Livre e
+                    Esclarecido e estou de acordo com o tratamento dos meus dados
+                    pessoais e dados pessoais sensíveis nos termos apresentados.
+                </span>
+            </label>
+
+            <button type="submit" class="btn-confirmar">
+                Confirmar Consentimento
+            </button>
+
+        </form>
+
+    <?php endif; ?>
 
     <!-- BOTÕES -->
     <?php if (!$isPrint): ?>
