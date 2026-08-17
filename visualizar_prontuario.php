@@ -1,964 +1,719 @@
 <?php
-
-require_once 'config/auth.php';
-exigirLogin();
-
 require_once 'conexao/conexao.php';
 
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     die("Prontuário não encontrado.");
 }
 
-$id = (int) $_GET['id'];
+$id = (int)$_GET['id'];
 
+// Verificar modo impressão
 $isPrint = isset($_GET['print']) && $_GET['print'] == '1';
 
-/*
-|--------------------------------------------------------------------------
-| BUSCAR PRONTUÁRIO
-|--------------------------------------------------------------------------
-*/
-
-$stmt = $pdo->prepare("
-    SELECT *
-    FROM prontuarios
-    WHERE id = ?
-");
-
+// Buscar prontuário
+$stmt = $pdo->prepare("SELECT * FROM prontuarios WHERE id = ?");
 $stmt->execute([$id]);
-
 $prontuario = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$prontuario) {
     die("Prontuário não encontrado.");
 }
 
-/*
-|--------------------------------------------------------------------------
-| CALCULAR IDADE
-|--------------------------------------------------------------------------
-*/
+// Buscar consentimento
+$stmtConsentimento = $pdo->prepare("
+    SELECT aceito, data_aceite
+    FROM consentimentos
+    WHERE prontuario_id = ?
+    ORDER BY id DESC
+    LIMIT 1
+");
+$stmtConsentimento->execute([$id]);
 
+$consentimento = $stmtConsentimento->fetch(PDO::FETCH_ASSOC);
+
+$consentimentoAceito = $consentimento && (int)$consentimento['aceito'] === 1;
+
+// Calcular idade
 $dataNasc = new DateTime($prontuario['nascimento']);
 $hoje = new DateTime();
-
 $idade = $hoje->diff($dataNasc)->y;
 
-/*
-|--------------------------------------------------------------------------
-| INICIAIS DO PACIENTE
-|--------------------------------------------------------------------------
-*/
-
-$nomeCompleto = trim($prontuario['paciente']);
-
-$partesNome = preg_split('/\s+/', $nomeCompleto);
-
-if (count($partesNome) >= 2) {
-    $iniciais =
-        mb_substr($partesNome[0], 0, 1) .
-        mb_substr($partesNome[count($partesNome) - 1], 0, 1);
-} else {
-    $iniciais = mb_substr($nomeCompleto, 0, 2);
-}
-
-$iniciais = mb_strtoupper($iniciais);
-
-/*
-|--------------------------------------------------------------------------
-| BUSCAR PROCEDIMENTOS
-|--------------------------------------------------------------------------
-*/
-
+// Buscar procedimentos
 $stmtProc = $pdo->prepare("
     SELECT *
     FROM procedimentos
     WHERE paciente_id = ?
     ORDER BY data_procedimento DESC
 ");
-
 $stmtProc->execute([$id]);
-
 $procedimentos = $stmtProc->fetchAll(PDO::FETCH_ASSOC);
-
-/*
-|--------------------------------------------------------------------------
-| STATUS DO TERMO
-|--------------------------------------------------------------------------
-*/
-
-$termoAceito = isset($prontuario['termo_consentimento_aceito'])
-    && (int) $prontuario['termo_consentimento_aceito'] === 1;
-
-$dataAceite = $prontuario['termo_consentimento_aceito_em'] ?? null;
-
 ?>
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>
-        Prontuário de <?= htmlspecialchars($prontuario['paciente']) ?>
-        | Dentech
+        Prontuário - <?= htmlspecialchars($prontuario['paciente']) ?> | Dentech
     </title>
 
-    <link
-        rel="stylesheet"
-        href="css/navbar.css">
+    <?php if (!$isPrint): ?>
+        <link rel="stylesheet" href="css/navbar.css">
+    <?php endif; ?>
 
-    <link
-        rel="stylesheet"
-        href="css/vis_prontuario.css">
-
-    <link
-        rel="icon"
-        type="image/png"
-        href="img/icon.PNG">
-
+    <link rel="stylesheet" href="css/vis_prontuario.css">
+    <link rel="icon" type="image/png" href="img/icon.PNG">
 </head>
 
 <body>
 
     <?php if (!$isPrint): ?>
-
         <?php include 'navbar.php'; ?>
-
     <?php endif; ?>
 
+    <div class="container">
 
-    <main class="prontuario-page">
-
-        <!-- =====================================================
-         CABEÇALHO
-    ====================================================== -->
-
+        <!-- CABEÇALHO -->
         <div class="page-header">
 
             <div class="page-header-info">
 
                 <div class="breadcrumb">
-
                     <span>Prontuários</span>
-
                     <span class="breadcrumb-separator">/</span>
-
                     <span>Visualização</span>
-
                 </div>
 
-                <h1>
-                    Prontuário do paciente
-                </h1>
-
-                <p>
-                    Consulte os dados, histórico e informações do paciente.
-                </p>
+                <h1>Prontuário do paciente</h1>
 
             </div>
 
         </div>
 
+        <!-- IDENTIFICAÇÃO DO PACIENTE -->
+        <div class="paciente-header">
 
-        <!-- =====================================================
-         CABEÇALHO DO PACIENTE
-    ====================================================== -->
+            <div class="paciente-avatar">
+                <?= strtoupper(substr($prontuario['paciente'], 0, 1)) ?>
+            </div>
 
-        <section class="patient-header">
+            <div class="paciente-info">
 
-            <div class="patient-main">
+                <h2>
+                    <?= htmlspecialchars($prontuario['paciente']) ?>
+                </h2>
 
-                <div class="patient-avatar">
-                    <?= htmlspecialchars($iniciais) ?>
+                <div class="paciente-detalhes">
+
+                    <span>
+                        📅
+                        <?= date('d/m/Y', strtotime($prontuario['nascimento'])) ?>
+                        (<?= $idade ?> anos)
+                    </span>
+
+                    <?php if (!empty($prontuario['cpf'])): ?>
+                        <span>
+                            👤 CPF: <?= htmlspecialchars($prontuario['cpf']) ?>
+                        </span>
+                    <?php endif; ?>
+
+                    <?php if (!empty($prontuario['telefone'])): ?>
+                        <span>
+                            ☎ <?= htmlspecialchars($prontuario['telefone']) ?>
+                        </span>
+                    <?php endif; ?>
+
                 </div>
 
-                <div class="patient-info">
-
-                    <h2>
-                        <?= htmlspecialchars($prontuario['paciente']) ?>
-                    </h2>
-
-                    <div class="patient-details">
-
-                        <span>
-                            <i class="fa-regular fa-calendar"></i>
-
-                            <?= date(
-                                'd/m/Y',
-                                strtotime($prontuario['nascimento'])
-                            ) ?>
-
-                            (<?= $idade ?> anos)
-                        </span>
-
-
-                        <span>
-                            <i class="fa-regular fa-id-card"></i>
-
-                            CPF:
-                            <?= htmlspecialchars(
-                                $prontuario['cpf'] ?: 'Não informado'
-                            ) ?>
-                        </span>
-
-
-                        <span>
-                            <i class="fa-solid fa-phone"></i>
-
-                            <?= htmlspecialchars(
-                                $prontuario['telefone'] ?: 'Não informado'
-                            ) ?>
-                        </span>
-
-
-                        <?php if (!empty($prontuario['email'])): ?>
-
-                            <span>
-                                <i class="fa-regular fa-envelope"></i>
-
-                                <?= htmlspecialchars($prontuario['email']) ?>
-                            </span>
-
-                        <?php endif; ?>
-
+                <?php if (!empty($prontuario['email'])): ?>
+                    <div class="paciente-email">
+                        <?= htmlspecialchars($prontuario['email']) ?>
                     </div>
-
-                </div>
+                <?php endif; ?>
 
             </div>
 
-
             <?php if (!$isPrint): ?>
 
-                <div class="patient-actions">
+                <div class="paciente-acoes">
 
                     <a
                         href="editar_prontuario.php?id=<?= $id ?>"
-                        class="action-btn">
-
-                        <i class="fa-solid fa-pen"></i>
-
-                        Editar
-
+                        class="btn btn-editar">
+                        ✎ Editar
                     </a>
-
 
                     <button
                         type="button"
-                        class="action-btn"
-                        onclick="window.print()">
-
-                        <i class="fa-solid fa-print"></i>
-
-                        Imprimir
-
+                        class="btn btn-imprimir"
+                        onclick="window.open('visualizar_prontuario.php?id=<?= $id ?>&print=1', '_blank')">
+                        🖨 Imprimir
                     </button>
 
-
-                    <div class="more-wrapper">
-
-                        <button
-                            type="button"
-                            class="action-btn"
-                            id="moreButton">
-
-                            Mais
-
-                            <i class="fa-solid fa-chevron-down"></i>
-
-                        </button>
-
-                        <div
-                            class="more-menu"
-                            id="moreMenu">
-
-                            <a
-                                href="termo_conscentimento.php?id=<?= $id ?>"
-                                target="_blank">
-
-                                <i class="fa-regular fa-file-lines"></i>
-
-                                Termo de Consentimento
-
-                            </a>
-
-                            <a
-                                href="adicionar_procedimento.php?prontuario_id=<?= $id ?>">
-
-                                <i class="fa-solid fa-plus"></i>
-
-                                Adicionar Procedimento
-
-                            </a>
-
-                        </div>
-
-                    </div>
+                    <button
+                        type="button"
+                        class="btn btn-termo"
+                        onclick="window.open('termo_conscentimento.php?id=<?= $id ?>', '_blank')">
+                        📄 Termo de Consentimento
+                    </button>
 
                 </div>
 
             <?php endif; ?>
 
-        </section>
+        </div>
 
+        <!-- STATUS DO CONSENTIMENTO -->
+        <div class="consentimento-status-card">
 
-        <!-- =====================================================
-         ABAS
-    ====================================================== -->
+            <div class="consentimento-status-info">
 
-        <?php if (!$isPrint): ?>
+                <strong>Consentimento LGPD</strong>
 
-            <nav class="patient-tabs">
+                <?php if ($consentimentoAceito): ?>
 
-                <button
-                    class="patient-tab active"
-                    data-tab="resumo">
+                    <span class="status-consentimento aceito">
+                        ✓ Aceito
+                    </span>
 
+                    <?php if (!empty($consentimento['data_aceite'])): ?>
+
+                        <span class="data-consentimento">
+                            em
+                            <?= date(
+                                'd/m/Y H:i',
+                                strtotime($consentimento['data_aceite'])
+                            ) ?>
+                        </span>
+
+                    <?php endif; ?>
+
+                <?php else: ?>
+
+                    <span class="status-consentimento pendente">
+                        ⚠ Pendente
+                    </span>
+
+                <?php endif; ?>
+
+            </div>
+
+            <?php if (!$isPrint && !$consentimentoAceito): ?>
+
+                <a
+                    href="termo_conscentimento.php?id=<?= $id ?>"
+                    target="_blank"
+                    class="btn-consentimento">
+                    Solicitar consentimento
+                </a>
+
+            <?php endif; ?>
+
+        </div>
+
+        <!-- RESUMO -->
+        <div class="tabs-card">
+
+            <div class="tabs">
+
+                <div class="tab active">
                     Resumo
+                </div>
 
-                </button>
-
-                <button
-                    class="patient-tab"
-                    data-tab="historico">
-
+                <div class="tab">
                     Histórico
+                </div>
 
-                </button>
-
-                <button
-                    class="patient-tab"
-                    data-tab="documentos">
-
+                <div class="tab">
                     Documentos
+                </div>
 
-                </button>
-
-                <button
-                    class="patient-tab"
-                    data-tab="anexos">
-
+                <div class="tab">
                     Anexos
+                </div>
 
-                </button>
-
-                <button
-                    class="patient-tab"
-                    data-tab="financeiro">
-
+                <div class="tab">
                     Financeiro
+                </div>
 
-                </button>
+            </div>
 
-            </nav>
+            <div class="resumo-grid">
 
-        <?php endif; ?>
+                <!-- INFORMAÇÕES PESSOAIS -->
+                <div class="card">
 
+                    <h2>Informações pessoais</h2>
 
-        <!-- =====================================================
-         RESUMO
-    ====================================================== -->
+                    <div class="informacoes-lista">
 
-        <div
-            class="tab-content active"
-            id="tab-resumo">
+                        <div class="informacao-item">
+                            <strong>Nome</strong>
+                            <span>
+                                <?= htmlspecialchars($prontuario['paciente']) ?>
+                            </span>
+                        </div>
 
+                        <div class="informacao-item">
+                            <strong>Data de nascimento</strong>
+                            <span>
+                                <?= date(
+                                    'd/m/Y',
+                                    strtotime($prontuario['nascimento'])
+                                ) ?>
+                            </span>
+                        </div>
 
-            <!-- INFORMAÇÕES PESSOAIS -->
-
-            <div class="content-grid">
-
-                <section class="info-card">
-
-                    <div class="card-header">
-
-                        <h2>
-                            Informações pessoais
-                        </h2>
-
-                    </div>
-
-
-                    <div class="info-list">
-
-                        <div class="info-item">
-
+                        <div class="informacao-item">
                             <strong>Sexo</strong>
-
                             <span>
                                 <?= htmlspecialchars(
-                                    $prontuario['sexo'] ?: 'Não informado'
+                                    $prontuario['sexo'] ?? '—'
                                 ) ?>
                             </span>
-
                         </div>
 
-
-                        <div class="info-item">
-
+                        <div class="informacao-item">
                             <strong>Estado civil</strong>
-
                             <span>
                                 <?= htmlspecialchars(
-                                    $prontuario['estado_civil'] ?: 'Não informado'
+                                    $prontuario['estado_civil'] ?? '—'
                                 ) ?>
                             </span>
-
                         </div>
 
-
-                        <div class="info-item">
-
+                        <div class="informacao-item">
                             <strong>Profissão</strong>
-
                             <span>
                                 <?= htmlspecialchars(
-                                    $prontuario['profissao'] ?: 'Não informado'
+                                    $prontuario['profissao'] ?? '—'
                                 ) ?>
                             </span>
-
                         </div>
 
+                        <div class="informacao-item">
+                            <strong>CPF</strong>
+                            <span>
+                                <?= htmlspecialchars(
+                                    $prontuario['cpf'] ?? '—'
+                                ) ?>
+                            </span>
+                        </div>
 
-                        <div class="info-item">
-
+                        <div class="informacao-item">
                             <strong>RG</strong>
-
                             <span>
                                 <?= htmlspecialchars(
-                                    $prontuario['rg'] ?: 'Não informado'
+                                    $prontuario['rg'] ?? '—'
                                 ) ?>
                             </span>
-
                         </div>
 
+                        <div class="informacao-item">
+                            <strong>Telefone</strong>
+                            <span>
+                                <?= htmlspecialchars(
+                                    $prontuario['telefone'] ?? '—'
+                                ) ?>
+                            </span>
+                        </div>
 
-                        <div class="info-item">
+                        <div class="informacao-item">
+                            <strong>E-mail</strong>
+                            <span>
+                                <?= htmlspecialchars(
+                                    $prontuario['email'] ?? '—'
+                                ) ?>
+                            </span>
+                        </div>
 
+                        <div class="informacao-item">
                             <strong>CEP</strong>
-
                             <span>
                                 <?= htmlspecialchars(
-                                    $prontuario['cep'] ?: 'Não informado'
+                                    $prontuario['cep'] ?? '—'
                                 ) ?>
                             </span>
-
                         </div>
 
-
-                        <div class="info-item info-item-full">
-
+                        <div class="informacao-item informacao-endereco">
                             <strong>Endereço</strong>
-
                             <span>
                                 <?= nl2br(
                                     htmlspecialchars(
-                                        $prontuario['endereco'] ?: 'Não informado'
+                                        $prontuario['endereco'] ?? '—'
                                     )
                                 ) ?>
                             </span>
-
                         </div>
 
                     </div>
 
-                </section>
-
+                </div>
 
                 <!-- OBSERVAÇÕES -->
+                <div class="card">
 
-                <section class="info-card">
+                    <h2>Observações</h2>
 
-                    <div class="card-header">
+                    <?php if (!empty($prontuario['observacoes'])): ?>
 
-                        <h2>
-                            Observações
-                        </h2>
-
-                    </div>
-
-
-                    <div class="observacoes">
-
-                        <?php if (!empty($prontuario['observacoes'])): ?>
-
+                        <div class="observacoes">
                             <?= nl2br(
                                 htmlspecialchars(
                                     $prontuario['observacoes']
                                 )
                             ) ?>
+                        </div>
 
-                        <?php else: ?>
+                    <?php else: ?>
 
-                            <span class="empty-text">
-                                Nenhuma observação registrada.
-                            </span>
+                        <div class="observacoes vazio">
+                            Nenhuma observação registrada.
+                        </div>
 
-                        <?php endif; ?>
+                    <?php endif; ?>
 
-                    </div>
-
-                </section>
+                </div>
 
             </div>
 
+        </div>
 
-            <!-- =================================================
-             TERMO DE CONSENTIMENTO
-        ================================================== -->
+        <!-- INFORMAÇÕES DE SAÚDE -->
+        <div class="card saude-card">
 
-            <section class="info-card consent-card">
+            <h2>Informações de saúde</h2>
 
-                <div class="card-header">
+            <div class="saude-grid">
 
-                    <div>
-
-                        <span class="card-kicker">
-                            DOCUMENTAÇÃO
-                        </span>
-
-                        <h2>
-                            Termo de Consentimento
-                        </h2>
-
-                    </div>
-
-                    <?php if ($termoAceito): ?>
-
-                        <span class="status-badge status-accepted">
-                            <i class="fa-solid fa-check"></i>
-                            Aceito
-                        </span>
-
-                    <?php else: ?>
-
-                        <span class="status-badge status-pending">
-                            <i class="fa-solid fa-clock"></i>
-                            Pendente
-                        </span>
-
-                    <?php endif; ?>
-
+                <div class="saude-item">
+                    <strong>Tratamento odontológico</strong>
+                    <span>
+                        <?= nl2br(
+                            htmlspecialchars(
+                                $prontuario['tratamento_odonto'] ?? '—'
+                            )
+                        ) ?>
+                    </span>
                 </div>
 
+                <div class="saude-item">
+                    <strong>Tratamento médico</strong>
+                    <span>
+                        <?= nl2br(
+                            htmlspecialchars(
+                                $prontuario['tratamento_medico'] ?? '—'
+                            )
+                        ) ?>
+                    </span>
+                </div>
 
-                <div class="consent-content">
+                <div class="saude-item">
+                    <strong>Medicamento contínuo</strong>
+                    <span>
+                        <?= nl2br(
+                            htmlspecialchars(
+                                $prontuario['medicamento_continuo'] ?? '—'
+                            )
+                        ) ?>
+                    </span>
+                </div>
 
-                    <?php if ($termoAceito): ?>
+                <div class="saude-item">
+                    <strong>Alergia a medicamentos</strong>
+                    <span>
+                        <?= nl2br(
+                            htmlspecialchars(
+                                $prontuario['alergia_medicamento'] ?? '—'
+                            )
+                        ) ?>
+                    </span>
+                </div>
 
-                        <div class="consent-status accepted">
+                <div class="saude-item">
+                    <strong>Outras alergias</strong>
+                    <span>
+                        <?= nl2br(
+                            htmlspecialchars(
+                                $prontuario['alergia_outras'] ?? '—'
+                            )
+                        ) ?>
+                    </span>
+                </div>
 
-                            <div class="consent-icon">
-                                <i class="fa-solid fa-check"></i>
-                            </div>
+                <div class="saude-item">
+                    <strong>Problemas de saúde</strong>
+                    <span>
+                        <?= nl2br(
+                            htmlspecialchars(
+                                $prontuario['problemas_saude'] ?? '—'
+                            )
+                        ) ?>
+                    </span>
+                </div>
 
-                            <div>
+                <div class="saude-item">
+                    <strong>Gravidez</strong>
+                    <span>
+                        <?= htmlspecialchars(
+                            $prontuario['gravida_meses'] ?? '—'
+                        ) ?>
+                    </span>
+                </div>
 
-                                <strong>
-                                    Termo aceito pelo paciente
-                                </strong>
+                <div class="saude-item">
+                    <strong>Tabagismo</strong>
+                    <span>
+                        <?= htmlspecialchars(
+                            $prontuario['fuma_tempo'] ?? '—'
+                        ) ?>
+                    </span>
+                </div>
 
-                                <?php if ($dataAceite): ?>
+                <div class="saude-item">
+                    <strong>Cigarros por dia</strong>
+                    <span>
+                        <?= htmlspecialchars(
+                            $prontuario['fuma_cigarros_dia'] ?? '—'
+                        ) ?>
+                    </span>
+                </div>
 
-                                    <span>
-                                        Aceito em
-                                        <?= date(
-                                            'd/m/Y \à\s H:i',
-                                            strtotime($dataAceite)
-                                        ) ?>
-                                    </span>
+                <div class="saude-item">
+                    <strong>Consumo de bebida alcoólica</strong>
+                    <span>
+                        <?= htmlspecialchars(
+                            $prontuario['bebida_frequencia'] ?? '—'
+                        ) ?>
+                    </span>
+                </div>
 
+                <div class="saude-item">
+                    <strong>Uso de drogas</strong>
+                    <span>
+                        <?= nl2br(
+                            htmlspecialchars(
+                                $prontuario['drogas_uso'] ?? '—'
+                            )
+                        ) ?>
+                    </span>
+                </div>
+
+                <div class="saude-item">
+                    <strong>Doenças transmissíveis</strong>
+                    <span>
+                        <?= nl2br(
+                            htmlspecialchars(
+                                $prontuario['doencas_transmissiveis'] ?? '—'
+                            )
+                        ) ?>
+                    </span>
+                </div>
+
+                <div class="saude-item">
+                    <strong>Câncer familiar</strong>
+                    <span>
+                        <?= nl2br(
+                            htmlspecialchars(
+                                $prontuario['cancer_familiar'] ?? '—'
+                            )
+                        ) ?>
+                    </span>
+                </div>
+
+                <div class="saude-item">
+                    <strong>Tratamento de câncer</strong>
+                    <span>
+                        <?= nl2br(
+                            htmlspecialchars(
+                                $prontuario['tratamento_cancer'] ?? '—'
+                            )
+                        ) ?>
+                    </span>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- PROCEDIMENTOS -->
+        <div class="card procedimentos-card">
+
+            <div class="card-header">
+
+                <h2>Últimos atendimentos</h2>
+
+                <?php if (!$isPrint): ?>
+
+                    <a
+                        href="adicionar_procedimento.php?prontuario_id=<?= $id ?>"
+                        class="btn btn-add">
+                        + Adicionar Procedimento
+                    </a>
+
+                <?php endif; ?>
+
+            </div>
+
+            <?php if (empty($procedimentos)): ?>
+
+                <p class="empty">
+                    Nenhum procedimento registrado.
+                </p>
+
+            <?php else: ?>
+
+                <div class="table-wrapper">
+
+                    <table class="tabela-procedimentos">
+
+                        <thead>
+
+                            <tr>
+                                <th>Data</th>
+                                <th>Procedimento</th>
+                                <th>Descrição</th>
+                                <th>Medicamentos</th>
+
+                                <?php if (!$isPrint): ?>
+                                    <th>Ações</th>
                                 <?php endif; ?>
 
-                            </div>
+                            </tr>
 
-                        </div>
+                        </thead>
 
-                    <?php else: ?>
+                        <tbody>
 
-                        <div class="consent-status pending">
-
-                            <div class="consent-icon">
-                                <i class="fa-solid fa-clock"></i>
-                            </div>
-
-                            <div>
-
-                                <strong>
-                                    Consentimento ainda não registrado
-                                </strong>
-
-                                <span>
-                                    O paciente ainda não confirmou o Termo de
-                                    Consentimento.
-                                </span>
-
-                            </div>
-
-                        </div>
-
-                    <?php endif; ?>
-
-
-                    <?php if (!$isPrint): ?>
-
-                        <a
-                            href="termo_conscentimento.php?id=<?= $id ?>"
-                            target="_blank"
-                            class="consent-button">
-
-                            <i class="fa-regular fa-file-lines"></i>
-
-                            <?= $termoAceito
-                                ? 'Visualizar Termo'
-                                : 'Abrir Termo'
-                            ?>
-
-                        </a>
-
-                    <?php endif; ?>
-
-                </div>
-
-            </section>
-
-
-            <!-- =================================================
-             PROCEDIMENTOS
-        ================================================== -->
-
-            <section class="info-card procedures-card">
-
-                <div class="card-header">
-
-                    <div>
-
-                        <span class="card-kicker">
-                            HISTÓRICO CLÍNICO
-                        </span>
-
-                        <h2>
-                            Últimos procedimentos
-                        </h2>
-
-                    </div>
-
-                    <?php if (!$isPrint): ?>
-
-                        <a
-                            href="adicionar_procedimento.php?prontuario_id=<?= $id ?>"
-                            class="card-link">
-
-                            + Adicionar procedimento
-
-                        </a>
-
-                    <?php endif; ?>
-
-                </div>
-
-
-                <?php if (empty($procedimentos)): ?>
-
-                    <div class="empty-state">
-
-                        <div class="empty-icon">
-                            <i class="fa-regular fa-folder-open"></i>
-                        </div>
-
-                        <strong>
-                            Nenhum procedimento registrado
-                        </strong>
-
-                        <span>
-                            Os procedimentos realizados neste paciente
-                            aparecerão aqui.
-                        </span>
-
-                    </div>
-
-                <?php else: ?>
-
-                    <div class="table-wrapper">
-
-                        <table class="procedures-table">
-
-                            <thead>
+                            <?php foreach ($procedimentos as $proc): ?>
 
                                 <tr>
 
-                                    <th>Data</th>
+                                    <td>
+                                        <?= date(
+                                            'd/m/Y',
+                                            strtotime(
+                                                $proc['data_procedimento']
+                                            )
+                                        ) ?>
+                                    </td>
 
-                                    <th>Procedimento</th>
+                                    <td>
+                                        <?= htmlspecialchars(
+                                            $proc['titulo']
+                                        ) ?>
+                                    </td>
 
-                                    <th>Descrição</th>
+                                    <td>
+                                        <?= !empty($proc['descricao'])
+                                            ? nl2br(
+                                                htmlspecialchars(
+                                                    $proc['descricao']
+                                                )
+                                            )
+                                            : '—'
+                                        ?>
+                                    </td>
+
+                                    <td>
+                                        <?= !empty($proc['medicamentos'])
+                                            ? nl2br(
+                                                htmlspecialchars(
+                                                    $proc['medicamentos']
+                                                )
+                                            )
+                                            : '—'
+                                        ?>
+                                    </td>
 
                                     <?php if (!$isPrint): ?>
 
-                                        <th>Ação</th>
+                                        <td>
+
+                                            <button
+                                                type="button"
+                                                class="btn btn-visualizar"
+                                                data-titulo="<?= htmlspecialchars(
+                                                                    $proc['titulo'],
+                                                                    ENT_QUOTES
+                                                                ) ?>"
+                                                data-descricao="<?= htmlspecialchars(
+                                                                    $proc['descricao'] ?? '',
+                                                                    ENT_QUOTES
+                                                                ) ?>"
+                                                data-medicamentos="<?= htmlspecialchars(
+                                                                        $proc['medicamentos'] ?? '',
+                                                                        ENT_QUOTES
+                                                                    ) ?>"
+                                                data-data="<?= date(
+                                                                'd/m/Y',
+                                                                strtotime(
+                                                                    $proc['data_procedimento']
+                                                                )
+                                                            ) ?>">
+                                                Visualizar
+                                            </button>
+
+                                        </td>
 
                                     <?php endif; ?>
 
                                 </tr>
 
-                            </thead>
+                            <?php endforeach; ?>
 
+                        </tbody>
 
-                            <tbody>
+                    </table>
 
-                                <?php foreach ($procedimentos as $proc): ?>
+                </div>
 
-                                    <tr>
-
-                                        <td>
-                                            <?= date(
-                                                'd/m/Y',
-                                                strtotime(
-                                                    $proc['data_procedimento']
-                                                )
-                                            ) ?>
-                                        </td>
-
-
-                                        <td>
-
-                                            <strong>
-                                                <?= htmlspecialchars(
-                                                    $proc['titulo']
-                                                ) ?>
-                                            </strong>
-
-                                        </td>
-
-
-                                        <td>
-
-                                            <?php
-
-                                            $descricao =
-                                                trim(
-                                                    $proc['descricao'] ?? ''
-                                                );
-
-                                            if ($descricao === '') {
-                                                echo '<span class="muted">—</span>';
-                                            } else {
-
-                                                echo htmlspecialchars(
-                                                    mb_strimwidth(
-                                                        $descricao,
-                                                        0,
-                                                        100,
-                                                        '...'
-                                                    )
-                                                );
-                                            }
-
-                                            ?>
-
-                                        </td>
-
-
-                                        <?php if (!$isPrint): ?>
-
-                                            <td>
-
-                                                <button
-                                                    type="button"
-                                                    class="table-action btn-visualizar"
-                                                    data-titulo="<?= htmlspecialchars(
-                                                                        $proc['titulo'],
-                                                                        ENT_QUOTES
-                                                                    ) ?>"
-                                                    data-descricao="<?= htmlspecialchars(
-                                                                        $proc['descricao'] ?? '',
-                                                                        ENT_QUOTES
-                                                                    ) ?>"
-                                                    data-medicamentos="<?= htmlspecialchars(
-                                                                            $proc['medicamentos'] ?? '',
-                                                                            ENT_QUOTES
-                                                                        ) ?>"
-                                                    data-data="<?= date(
-                                                                    'd/m/Y',
-                                                                    strtotime(
-                                                                        $proc['data_procedimento']
-                                                                    )
-                                                                ) ?>">
-
-                                                    Visualizar
-
-                                                </button>
-
-                                            </td>
-
-                                        <?php endif; ?>
-
-                                    </tr>
-
-                                <?php endforeach; ?>
-
-                            </tbody>
-
-                        </table>
-
-                    </div>
-
-                <?php endif; ?>
-
-            </section>
+            <?php endif; ?>
 
         </div>
 
-
-        <!-- =====================================================
-         ABAS FUTURAS
-    ====================================================== -->
-
-        <?php if (!$isPrint): ?>
-
-            <div
-                class="tab-content"
-                id="tab-historico">
-
-                <section class="info-card future-card">
-
-                    <div class="future-icon">
-                        <i class="fa-solid fa-clock-rotate-left"></i>
-                    </div>
-
-                    <h2>Histórico</h2>
-
-                    <p>
-                        O histórico completo do paciente será disponibilizado
-                        nesta seção.
-                    </p>
-
-                </section>
-
-            </div>
-
-
-            <div
-                class="tab-content"
-                id="tab-documentos">
-
-                <section class="info-card future-card">
-
-                    <div class="future-icon">
-                        <i class="fa-regular fa-file-lines"></i>
-                    </div>
-
-                    <h2>Documentos</h2>
-
-                    <p>
-                        Os documentos do paciente serão disponibilizados
-                        nesta seção.
-                    </p>
-
-                </section>
-
-            </div>
-
-
-            <div
-                class="tab-content"
-                id="tab-anexos">
-
-                <section class="info-card future-card">
-
-                    <div class="future-icon">
-                        <i class="fa-solid fa-paperclip"></i>
-                    </div>
-
-                    <h2>Anexos</h2>
-
-                    <p>
-                        Os anexos do paciente serão disponibilizados
-                        nesta seção.
-                    </p>
-
-                </section>
-
-            </div>
-
-
-            <div
-                class="tab-content"
-                id="tab-financeiro">
-
-                <section class="info-card future-card">
-
-                    <div class="future-icon">
-                        <i class="fa-solid fa-dollar-sign"></i>
-                    </div>
-
-                    <h2>Financeiro</h2>
-
-                    <p>
-                        As informações financeiras do paciente serão
-                        disponibilizadas nesta seção.
-                    </p>
-
-                </section>
-
-            </div>
-
-        <?php endif; ?>
-
-    </main>
-
-
-    <!-- =========================================================
-     MODAL PROCEDIMENTO
-========================================================== -->
+    </div>
 
     <?php if (!$isPrint): ?>
 
-        <div
-            class="modal"
-            id="procedureModal">
+        <!-- MODAL -->
+        <div id="modal" class="modal">
 
             <div class="modal-content">
 
                 <div class="modal-header">
 
-                    <h2 id="modalTitle">
+                    <h2
+                        class="modal-title"
+                        id="modalTitle">
                         Procedimento
                     </h2>
 
                     <button
                         type="button"
-                        class="modal-close"
-                        id="modalClose">
-
+                        class="btn-close"
+                        onclick="fecharModal()">
                         &times;
-
                     </button>
 
                 </div>
 
-
                 <div
-                    class="modal-body"
-                    id="modalBody">
+                    id="modalBody"
+                    class="modal-body">
                 </div>
-
 
                 <div class="modal-footer">
 
                     <button
                         type="button"
-                        class="modal-button"
-                        id="modalCloseFooter">
-
+                        class="btn btn-fechar"
+                        onclick="fecharModal()">
                         Fechar
-
                     </button>
 
                 </div>
@@ -967,252 +722,93 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em'] ?? null;
 
         </div>
 
-    <?php endif; ?>
-
-
-    <?php if (!$isPrint): ?>
-
         <script>
-            document.addEventListener('DOMContentLoaded', function() {
+            document
+                .querySelectorAll('.btn-visualizar')
+                .forEach(button => {
 
-                /*
-                |--------------------------------------------------------------------------
-                | MENU "MAIS"
-                |--------------------------------------------------------------------------
-                */
+                    button.addEventListener('click', function() {
 
-                const moreButton = document.getElementById('moreButton');
-                const moreMenu = document.getElementById('moreMenu');
+                        const titulo =
+                            this.dataset.titulo;
 
-                if (moreButton && moreMenu) {
+                        const descricao =
+                            this.dataset.descricao || '';
 
-                    moreButton.addEventListener('click', function(event) {
+                        const medicamentos =
+                            this.dataset.medicamentos || '';
 
-                        event.stopPropagation();
+                        const data =
+                            this.dataset.data;
 
-                        moreMenu.classList.toggle('show');
+                        let html =
+                            `<p><strong>Data:</strong> ${data}</p>`;
 
-                    });
+                        if (descricao.trim()) {
 
-                    document.addEventListener('click', function() {
+                            html +=
+                                `<p>
+                                    <strong>Descrição:</strong><br>
+                                    ${descricao.replace(/\n/g, '<br>')}
+                                </p>`;
 
-                        moreMenu.classList.remove('show');
-
-                    });
-
-                }
-
-
-                /*
-                |--------------------------------------------------------------------------
-                | ABAS
-                |--------------------------------------------------------------------------
-                */
-
-                const tabs = document.querySelectorAll('.patient-tab');
-                const contents = document.querySelectorAll('.tab-content');
-
-                tabs.forEach(function(tab) {
-
-                    tab.addEventListener('click', function() {
-
-                        const target = this.dataset.tab;
-
-                        tabs.forEach(function(item) {
-                            item.classList.remove('active');
-                        });
-
-                        contents.forEach(function(content) {
-                            content.classList.remove('active');
-                        });
-
-                        this.classList.add('active');
-
-                        const targetContent =
-                            document.getElementById('tab-' + target);
-
-                        if (targetContent) {
-                            targetContent.classList.add('active');
                         }
+
+                        if (medicamentos.trim()) {
+
+                            html +=
+                                `<p>
+                                    <strong>Medicamentos receitados:</strong><br>
+                                    ${medicamentos.replace(/\n/g, '<br>')}
+                                </p>`;
+
+                        }
+
+                        if (
+                            !descricao.trim() &&
+                            !medicamentos.trim()
+                        ) {
+
+                            html +=
+                                `<p>Nenhuma informação adicional.</p>`;
+
+                        }
+
+                        document
+                            .getElementById('modalTitle')
+                            .textContent = titulo;
+
+                        document
+                            .getElementById('modalBody')
+                            .innerHTML = html;
+
+                        document
+                            .getElementById('modal')
+                            .style.display = 'flex';
 
                     });
 
                 });
 
-
-                /*
-                |--------------------------------------------------------------------------
-                | MODAL DE PROCEDIMENTO
-                |--------------------------------------------------------------------------
-                */
-
-                const modal =
-                    document.getElementById('procedureModal');
-
-                const modalTitle =
-                    document.getElementById('modalTitle');
-
-                const modalBody =
-                    document.getElementById('modalBody');
-
-                const modalClose =
-                    document.getElementById('modalClose');
-
-                const modalCloseFooter =
-                    document.getElementById('modalCloseFooter');
-
-
-                function fecharModal() {
-
-                    if (modal) {
-                        modal.classList.remove('show');
-                    }
-
-                }
-
+            function fecharModal() {
 
                 document
-                    .querySelectorAll('.btn-visualizar')
-                    .forEach(function(button) {
+                    .getElementById('modal')
+                    .style.display = 'none';
 
-                        button.addEventListener('click', function() {
+            }
 
-                            const titulo =
-                                this.dataset.titulo || 'Procedimento';
+            window.onclick = function(event) {
 
-                            const descricao =
-                                this.dataset.descricao || '';
+                const modal =
+                    document.getElementById('modal');
 
-                            const medicamentos =
-                                this.dataset.medicamentos || '';
-
-                            const data =
-                                this.dataset.data || '';
-
-
-                            modalTitle.textContent = titulo;
-
-
-                            let html = '';
-
-                            html += `
-                    <div class="modal-info">
-                        <strong>Data</strong>
-                        <span>${data}</span>
-                    </div>
-                `;
-
-
-                            if (descricao.trim() !== '') {
-
-                                html += `
-                        <div class="modal-section">
-                            <strong>Descrição</strong>
-                            <p>
-                                ${descricao.replace(/\n/g, '<br>')}
-                            </p>
-                        </div>
-                    `;
-
-                            }
-
-
-                            if (medicamentos.trim() !== '') {
-
-                                html += `
-                        <div class="modal-section">
-                            <strong>Medicamentos receitados</strong>
-                            <p>
-                                ${medicamentos.replace(/\n/g, '<br>')}
-                            </p>
-                        </div>
-                    `;
-
-                            }
-
-
-                            if (
-                                descricao.trim() === '' &&
-                                medicamentos.trim() === ''
-                            ) {
-
-                                html += `
-                        <p class="modal-empty">
-                            Nenhuma informação adicional registrada.
-                        </p>
-                    `;
-
-                            }
-
-
-                            modalBody.innerHTML = html;
-
-                            modal.classList.add('show');
-
-                        });
-
-                    });
-
-
-                if (modalClose) {
-                    modalClose.addEventListener(
-                        'click',
-                        fecharModal
-                    );
+                if (event.target === modal) {
+                    fecharModal();
                 }
 
-
-                if (modalCloseFooter) {
-                    modalCloseFooter.addEventListener(
-                        'click',
-                        fecharModal
-                    );
-                }
-
-
-                if (modal) {
-
-                    modal.addEventListener('click', function(event) {
-
-                        if (event.target === modal) {
-                            fecharModal();
-                        }
-
-                    });
-
-                }
-
-
-                document.addEventListener('keydown', function(event) {
-
-                    if (event.key === 'Escape') {
-                        fecharModal();
-                    }
-
-                });
-
-            });
+            };
         </script>
-
-    <?php endif; ?>
-
-
-    <?php if ($isPrint): ?>
-
-        <style>
-            .prontuario-page {
-                margin-left: 0 !important;
-                width: 100% !important;
-            }
-
-            .patient-actions,
-            .patient-tabs,
-            .consent-button,
-            .card-link,
-            .table-action {
-                display: none !important;
-            }
-        </style>
 
     <?php endif; ?>
 
