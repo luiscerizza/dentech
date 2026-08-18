@@ -119,7 +119,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $dataObj = DateTime::createFromFormat('Y-m-d', $data);
 
-        if (!$dataObj || $dataObj->format('Y-m-d') !== $data) {
+        if (
+            !$dataObj ||
+            $dataObj->format('Y-m-d') !== $data
+        ) {
             $erros[] = 'Informe uma data válida.';
         }
     }
@@ -160,7 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $erros[] = 'Informe um valor válido.';
         } else {
 
-            $valor_numero = (float)$valor_limpo;
+            $valor_numero = (float) $valor_limpo;
 
             if ($valor_numero <= 0) {
                 $erros[] = 'O valor deve ser maior que zero.';
@@ -290,6 +293,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         rel="stylesheet"
         href="css/navbar.css">
 
+    <!-- CSS CORRETO -->
     <link
         rel="stylesheet"
         href="css/novo_lancamento.css">
@@ -318,13 +322,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <span>Financeiro</span>
 
-                    <span class="breadcrumb-separator">/</span>
+                    <span class="breadcrumb-separator">
+                        /
+                    </span>
 
                     <span>Novo lançamento</span>
 
                 </div>
 
-                <h1>Novo Lançamento</h1>
+                <h1>
+                    Novo Lançamento
+                </h1>
 
                 <p>
                     Registre uma nova receita ou despesa no financeiro.
@@ -397,7 +405,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <div>
 
-                        <h2>Tipo de lançamento</h2>
+                        <h2>
+                            Tipo de lançamento
+                        </h2>
 
                         <p>
                             Informe se o lançamento representa uma entrada ou saída.
@@ -430,7 +440,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             <span>
 
-                                <strong>Receita</strong>
+                                <strong>
+                                    Receita
+                                </strong>
 
                                 <small>
                                     Entrada de dinheiro
@@ -463,7 +475,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             <span>
 
-                                <strong>Despesa</strong>
+                                <strong>
+                                    Despesa
+                                </strong>
 
                                 <small>
                                     Saída de dinheiro
@@ -496,7 +510,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <div>
 
-                        <h2>Dados do lançamento</h2>
+                        <h2>
+                            Dados do lançamento
+                        </h2>
 
                         <p>
                             Preencha as informações financeiras.
@@ -612,7 +628,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         <div class="input-money">
 
-                            <span>R$</span>
+                            <span>
+                                R$
+                            </span>
 
                             <input
                                 type="text"
@@ -644,7 +662,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                                 <option
                                     value="<?= $i ?>"
-                                    <?= (string)$parcelas === (string)$i ? 'selected' : '' ?>>
+                                    <?= (string) $parcelas === (string) $i ? 'selected' : '' ?>>
 
                                     <?= $i === 1 ? 'À vista' : $i . 'x' ?>
 
@@ -677,7 +695,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <div>
 
-                        <h2>Observações</h2>
+                        <h2>
+                            Observações
+                        </h2>
 
                         <p>
                             Campo opcional.
