@@ -15,7 +15,7 @@ $data_filtro = $_GET['data'] ?? date('Y-m-d');
 
 $dataAtual = DateTime::createFromFormat('Y-m-d', $data_filtro);
 
-if (!$dataAtual) {
+if (!$dataAtual || $dataAtual->format('Y-m-d') !== $data_filtro) {
     $dataAtual = new DateTime();
     $data_filtro = $dataAtual->format('Y-m-d');
 }
@@ -26,8 +26,13 @@ if (!$dataAtual) {
 |--------------------------------------------------------------------------
 */
 
-$dataAnterior = (clone $dataAtual)->modify('-1 day')->format('Y-m-d');
-$dataProxima  = (clone $dataAtual)->modify('+1 day')->format('Y-m-d');
+$dataAnterior = (clone $dataAtual)
+    ->modify('-1 day')
+    ->format('Y-m-d');
+
+$dataProxima = (clone $dataAtual)
+    ->modify('+1 day')
+    ->format('Y-m-d');
 
 $dataHoje = date('Y-m-d');
 
@@ -38,7 +43,9 @@ $dataHoje = date('Y-m-d');
 */
 
 $stmt_pacientes = $pdo->query("
-    SELECT id, paciente
+    SELECT
+        id,
+        paciente
     FROM prontuarios
     ORDER BY paciente ASC
 ");
@@ -87,8 +94,7 @@ $stmt_proximos = $pdo->prepare("
     FROM agendamentos a
     LEFT JOIN prontuarios p
         ON a.paciente_id = p.id
-    WHERE
-        a.data >= ?
+    WHERE a.data >= ?
     ORDER BY
         a.data ASC,
         a.horario ASC
@@ -105,16 +111,42 @@ $proximos = $stmt_proximos->fetchAll(PDO::FETCH_ASSOC);
 |--------------------------------------------------------------------------
 */
 
-$mesCalendario = (clone $dataAtual)->modify('first day of this month');
+$mesCalendario = (clone $dataAtual)
+    ->modify('first day of this month');
 
 $anoMes = (int)$mesCalendario->format('Y');
 $mesMes = (int)$mesCalendario->format('m');
 
-$primeiroDiaSemana = (int)$mesCalendario->format('N');
 $quantidadeDias = (int)$mesCalendario->format('t');
 
-$mesAnterior = (clone $mesCalendario)->modify('-1 month')->format('Y-m-d');
-$mesProximo  = (clone $mesCalendario)->modify('+1 month')->format('Y-m-d');
+/*
+|--------------------------------------------------------------------------
+| CORREÇÃO DO CALENDÁRIO
+|--------------------------------------------------------------------------
+|
+| PHP:
+| N = segunda 1 ... domingo 7
+|
+| Nossa grade:
+| domingo = 0
+| segunda = 1
+| terça   = 2
+| ...
+|
+| Portanto usamos:
+| N % 7
+|
+*/
+
+$primeiroDiaSemana = (int)$mesCalendario->format('N') % 7;
+
+$mesAnterior = (clone $mesCalendario)
+    ->modify('-1 month')
+    ->format('Y-m-d');
+
+$mesProximo = (clone $mesCalendario)
+    ->modify('+1 month')
+    ->format('Y-m-d');
 
 $nomesMeses = [
     1 => 'Janeiro',
@@ -135,33 +167,97 @@ $nomeMes = $nomesMeses[$mesMes];
 
 /*
 |--------------------------------------------------------------------------
-| ORGANIZAR AGENDAMENTOS POR HORÁRIO
+| ORGANIZAR AGENDAMENTOS POR HORA
 |--------------------------------------------------------------------------
+|
+| Exemplo:
+|
+| 08:30 -> 08:00
+| 10:15 -> 10:00
+| 19:45 -> 19:00
+|
+| O evento continua mostrando o horário real.
+|
 */
 
 $agendamentosPorHorario = [];
 
 foreach ($agendamentos as $agendamento) {
 
-    $horario = substr($agendamento['horario'], 0, 5);
+    $horarioOriginal = substr(
+        (string)$agendamento['horario'],
+        0,
+        5
+    );
 
-    $agendamentosPorHorario[$horario][] = $agendamento;
+    if (preg_match('/^(\d{2}):(\d{2})$/', $horarioOriginal, $match)) {
+
+        $hora = (int)$match[1];
+
+        $horarioGrade = sprintf(
+            '%02d:00',
+            $hora
+        );
+    } else {
+
+        $horarioGrade = '00:00';
+    }
+
+    $agendamentosPorHorario[$horarioGrade][] = $agendamento;
 }
 
 /*
 |--------------------------------------------------------------------------
 | HORÁRIOS DA AGENDA
 |--------------------------------------------------------------------------
+|
+| Grade padrão:
+| 08:00 até 18:00
+|
+| Porém, se existir um agendamento fora desse intervalo,
+| o horário dele será automaticamente acrescentado.
+|
 */
 
 $horarios = [];
 
+/*
+| Horário padrão
+*/
+
 for ($hora = 8; $hora <= 18; $hora++) {
-    $horarios[] = sprintf('%02d:00', $hora);
+
+    $horarios[] = sprintf(
+        '%02d:00',
+        $hora
+    );
 }
 
-?>
+/*
+| Adicionar horários de agendamentos fora da grade
+*/
 
+foreach (array_keys($agendamentosPorHorario) as $horarioAgendamento) {
+
+    if (!in_array($horarioAgendamento, $horarios, true)) {
+
+        $horarios[] = $horarioAgendamento;
+    }
+}
+
+/*
+| Ordenar horários
+*/
+
+usort(
+    $horarios,
+    function ($a, $b) {
+
+        return strcmp($a, $b);
+    }
+);
+
+?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 
@@ -175,11 +271,21 @@ for ($hora = 8; $hora <= 18; $hora++) {
 
     <title>Agendamentos - Dentech</title>
 
-    <link rel="stylesheet" href="css/global.css">
-    <link rel="stylesheet" href="css/variables.css">
-    <link rel="stylesheet" href="css/layout.css">
+    <link
+        rel="stylesheet"
+        href="css/global.css">
 
-    <link rel="stylesheet" href="css/agendamento.css">
+    <link
+        rel="stylesheet"
+        href="css/variables.css">
+
+    <link
+        rel="stylesheet"
+        href="css/layout.css">
+
+    <link
+        rel="stylesheet"
+        href="css/agendamento.css">
 
     <link
         rel="stylesheet"
@@ -196,12 +302,11 @@ for ($hora = 8; $hora <= 18; $hora++) {
 
     <?php include 'navbar.php'; ?>
 
-
     <div class="agenda-page">
 
         <!-- =========================================================
-         CABEÇALHO
-    ========================================================== -->
+             CABEÇALHO
+        ========================================================== -->
 
         <header class="agenda-header">
 
@@ -226,15 +331,15 @@ for ($hora = 8; $hora <= 18; $hora++) {
 
 
         <!-- =========================================================
-         BARRA SUPERIOR
-    ========================================================== -->
+             BARRA SUPERIOR
+        ========================================================== -->
 
         <section class="agenda-toolbar">
 
             <div class="agenda-navigation">
 
                 <a
-                    href="?data=<?= $dataHoje ?>"
+                    href="?data=<?= htmlspecialchars($dataHoje) ?>"
                     class="btn-hoje">
 
                     Hoje
@@ -245,7 +350,7 @@ for ($hora = 8; $hora <= 18; $hora++) {
                 <div class="date-navigation">
 
                     <a
-                        href="?data=<?= $dataAnterior ?>"
+                        href="?data=<?= htmlspecialchars($dataAnterior) ?>"
                         class="date-arrow"
                         title="Dia anterior">
 
@@ -259,18 +364,24 @@ for ($hora = 8; $hora <= 18; $hora++) {
                         <i class="fa-regular fa-calendar"></i>
 
                         <span>
+
                             <?= $dataAtual->format('d') ?>
+
                             de
-                            <?= $nomeMes ?>
+
+                            <?= htmlspecialchars($nomeMes) ?>
+
                             de
+
                             <?= $dataAtual->format('Y') ?>
+
                         </span>
 
                     </div>
 
 
                     <a
-                        href="?data=<?= $dataProxima ?>"
+                        href="?data=<?= htmlspecialchars($dataProxima) ?>"
                         class="date-arrow"
                         title="Próximo dia">
 
@@ -293,10 +404,11 @@ for ($hora = 8; $hora <= 18; $hora++) {
 
                 </button>
 
+
                 <button
                     type="button"
                     class="view-button"
-                    onclick="window.location.href='listar_mes.php?mes=<?= $dataAtual->format('Y-m') ?>'">
+                    onclick="window.location.href='listar_mes.php?mes=<?= htmlspecialchars($dataAtual->format('Y-m')) ?>'">
 
                     Mês
 
@@ -308,19 +420,24 @@ for ($hora = 8; $hora <= 18; $hora++) {
 
 
         <!-- =========================================================
-         CONTEÚDO PRINCIPAL
-    ========================================================== -->
+             CONTEÚDO PRINCIPAL
+        ========================================================== -->
 
         <div class="agenda-layout">
 
 
             <!-- =====================================================
-             AGENDA DO DIA
-        ====================================================== -->
+                 AGENDA DO DIA
+            ====================================================== -->
 
             <section class="agenda-card">
 
                 <div class="agenda-grid">
+
+
+                    <!-- =================================================
+                         COLUNA DE HORÁRIOS
+                    ================================================== -->
 
                     <div class="time-column">
 
@@ -328,7 +445,7 @@ for ($hora = 8; $hora <= 18; $hora++) {
 
                             <div class="time-slot">
 
-                                <?= $horario ?>
+                                <?= htmlspecialchars($horario) ?>
 
                             </div>
 
@@ -337,6 +454,10 @@ for ($hora = 8; $hora <= 18; $hora++) {
                     </div>
 
 
+                    <!-- =================================================
+                         COLUNA DE AGENDAMENTOS
+                    ================================================== -->
+
                     <div class="appointments-column">
 
                         <?php foreach ($horarios as $index => $horario): ?>
@@ -344,16 +465,22 @@ for ($hora = 8; $hora <= 18; $hora++) {
                             <div class="hour-row">
 
                                 <?php
+
                                 $agendamentosHorario =
                                     $agendamentosPorHorario[$horario] ?? [];
+
                                 ?>
 
 
                                 <?php if (!empty($agendamentosHorario)): ?>
 
-                                    <?php foreach ($agendamentosHorario as $posicao => $ag): ?>
+                                    <?php foreach (
+                                        $agendamentosHorario
+                                        as $posicao => $ag
+                                    ): ?>
 
                                         <?php
+
                                         $classesEvento = [
                                             'event-blue',
                                             'event-green',
@@ -361,36 +488,53 @@ for ($hora = 8; $hora <= 18; $hora++) {
                                         ];
 
                                         $classeEvento =
-                                            $classesEvento[($index + $posicao) %
+                                            $classesEvento[($index + $posicao)
+                                                %
                                                 count($classesEvento)];
+
                                         ?>
 
-                                        <div class="appointment-event <?= $classeEvento ?>">
+
+                                        <div
+                                            class="appointment-event <?= htmlspecialchars($classeEvento) ?>">
 
                                             <div class="event-content">
 
                                                 <strong>
+
                                                     <?= htmlspecialchars(
                                                         $ag['nome_paciente']
                                                     ) ?>
+
                                                 </strong>
 
+
                                                 <span>
+
                                                     <?= htmlspecialchars(
                                                         $ag['procedimento']
                                                     ) ?>
+
                                                 </span>
 
+
                                                 <small>
+
                                                     <?= htmlspecialchars(
-                                                        substr($ag['horario'], 0, 5)
+                                                        substr(
+                                                            $ag['horario'],
+                                                            0,
+                                                            5
+                                                        )
                                                     ) ?>
+
                                                 </small>
 
                                             </div>
 
 
                                             <div class="event-actions">
+
 
                                                 <?php if (!empty($ag['paciente_id'])): ?>
 
@@ -417,6 +561,7 @@ for ($hora = 8; $hora <= 18; $hora++) {
                                                         name="id"
                                                         value="<?= (int)$ag['id'] ?>">
 
+
                                                     <button
                                                         type="submit"
                                                         title="Confirmar atendimento">
@@ -440,6 +585,7 @@ for ($hora = 8; $hora <= 18; $hora++) {
                                                         name="id"
                                                         value="<?= (int)$ag['id'] ?>">
 
+
                                                     <button
                                                         type="submit"
                                                         title="Excluir agendamento">
@@ -449,6 +595,7 @@ for ($hora = 8; $hora <= 18; $hora++) {
                                                     </button>
 
                                                 </form>
+
 
                                             </div>
 
@@ -470,20 +617,22 @@ for ($hora = 8; $hora <= 18; $hora++) {
 
 
             <!-- =====================================================
-             COLUNA DIREITA
-        ====================================================== -->
+                 COLUNA DIREITA
+            ====================================================== -->
 
             <aside class="agenda-sidebar">
 
 
-                <!-- CALENDÁRIO -->
+                <!-- =================================================
+                     CALENDÁRIO
+                ================================================== -->
 
                 <section class="calendar-card">
 
                     <div class="calendar-header">
 
                         <a
-                            href="?data=<?= $mesAnterior ?>"
+                            href="?data=<?= htmlspecialchars($mesAnterior) ?>"
                             class="calendar-arrow">
 
                             <i class="fa-solid fa-chevron-left"></i>
@@ -492,13 +641,16 @@ for ($hora = 8; $hora <= 18; $hora++) {
 
 
                         <h2>
-                            <?= $nomeMes ?>
+
+                            <?= htmlspecialchars($nomeMes) ?>
+
                             <?= $anoMes ?>
+
                         </h2>
 
 
                         <a
-                            href="?data=<?= $mesProximo ?>"
+                            href="?data=<?= htmlspecialchars($mesProximo) ?>"
                             class="calendar-arrow">
 
                             <i class="fa-solid fa-chevron-right"></i>
@@ -507,6 +659,10 @@ for ($hora = 8; $hora <= 18; $hora++) {
 
                     </div>
 
+
+                    <!-- =================================================
+                         DIAS DA SEMANA
+                    ================================================== -->
 
                     <div class="calendar-weekdays">
 
@@ -521,35 +677,65 @@ for ($hora = 8; $hora <= 18; $hora++) {
                     </div>
 
 
+                    <!-- =================================================
+                         DIAS
+                    ================================================== -->
+
                     <div class="calendar-days">
 
                         <?php
 
-                        $diasMesAnterior = (int)(
-                            (clone $mesCalendario)
-                            ->modify('-1 day')
-                            ->format('t')
-                        );
+                        /*
+                        | Dias do mês anterior
+                        |
+                        | Como o calendário começa no domingo,
+                        | o deslocamento agora está correto.
+                        */
+
+                        $mesAnteriorCalendario = (clone $mesCalendario)
+                            ->modify('-1 month');
+
+                        $diasMesAnterior =
+                            (int)$mesAnteriorCalendario->format('t');
+
+
+                        /*
+                        | Preencher dias anteriores ao primeiro dia
+                        */
 
                         for (
                             $i = $primeiroDiaSemana - 1;
-                            $i > 0;
+                            $i >= 0;
                             $i--
                         ):
 
                             $diaAnterior =
-                                $diasMesAnterior - $i + 1;
+                                $diasMesAnterior - $i;
 
                         ?>
 
-                            <span class="other-month">
+                            <a
+                                href="?data=<?= htmlspecialchars(
+                                                $mesAnteriorCalendario->format('Y-m-')
+                                            ) . sprintf('%02d', $diaAnterior) ?>"
+                                class="other-month">
+
                                 <?= $diaAnterior ?>
-                            </span>
+
+                            </a>
 
                         <?php endfor; ?>
 
 
-                        <?php for ($dia = 1; $dia <= $quantidadeDias; $dia++): ?>
+                        <!-- =============================================
+                             DIAS DO MÊS ATUAL
+                        ============================================== -->
+
+                        <?php for (
+                            $dia = 1;
+                            $dia <= $quantidadeDias;
+                            $dia++
+                        ): ?>
 
                             <?php
 
@@ -562,19 +748,67 @@ for ($hora = 8; $hora <= 18; $hora++) {
 
                             $classes = [];
 
+
                             if ($dataDia === $data_filtro) {
+
                                 $classes[] = 'selected';
                             }
 
+
                             if ($dataDia === $dataHoje) {
+
                                 $classes[] = 'today';
                             }
 
                             ?>
 
+
                             <a
-                                href="?data=<?= $dataDia ?>"
-                                class="<?= implode(' ', $classes) ?>">
+                                href="?data=<?= htmlspecialchars($dataDia) ?>"
+                                class="<?= htmlspecialchars(
+                                            implode(' ', $classes)
+                                        ) ?>">
+
+                                <?= $dia ?>
+
+                            </a>
+
+                        <?php endfor; ?>
+
+
+                        <?php
+
+                        /*
+                        | Preencher os dias restantes da última semana
+                        |
+                        | Isso mantém a grade visualmente organizada.
+                        */
+
+                        $totalCelulas =
+                            $primeiroDiaSemana + $quantidadeDias;
+
+                        $celulasRestantes =
+                            (7 - ($totalCelulas % 7)) % 7;
+
+                        $mesProximoCalendario =
+                            (clone $mesCalendario)
+                            ->modify('+1 month');
+
+                        for (
+                            $dia = 1;
+                            $dia <= $celulasRestantes;
+                            $dia++
+                        ):
+
+                            $dataProximoMes =
+                                $mesProximoCalendario->format('Y-m-')
+                                . sprintf('%02d', $dia);
+
+                        ?>
+
+                            <a
+                                href="?data=<?= htmlspecialchars($dataProximoMes) ?>"
+                                class="other-month">
 
                                 <?= $dia ?>
 
@@ -587,13 +821,19 @@ for ($hora = 8; $hora <= 18; $hora++) {
                 </section>
 
 
-                <!-- PRÓXIMOS AGENDAMENTOS -->
+                <!-- =================================================
+                     PRÓXIMOS AGENDAMENTOS
+                ================================================== -->
 
                 <section class="next-appointments-card">
 
                     <div class="next-header">
 
-                        <h2>Próximos agendamentos</h2>
+                        <h2>
+
+                            Próximos agendamentos
+
+                        </h2>
 
                     </div>
 
@@ -605,7 +845,9 @@ for ($hora = 8; $hora <= 18; $hora++) {
                             <i class="fa-regular fa-calendar-xmark"></i>
 
                             <span>
+
                                 Nenhum agendamento próximo.
+
                             </span>
 
                         </div>
@@ -620,16 +862,23 @@ for ($hora = 8; $hora <= 18; $hora++) {
                                     href="?data=<?= htmlspecialchars($proximo['data']) ?>"
                                     class="next-item">
 
+
                                     <div class="next-date">
 
                                         <strong>
+
                                             <?= date(
                                                 'd/m',
-                                                strtotime($proximo['data'])
+                                                strtotime(
+                                                    $proximo['data']
+                                                )
                                             ) ?>
+
                                         </strong>
 
+
                                         <span>
+
                                             <?= htmlspecialchars(
                                                 substr(
                                                     $proximo['horario'],
@@ -637,6 +886,7 @@ for ($hora = 8; $hora <= 18; $hora++) {
                                                     5
                                                 )
                                             ) ?>
+
                                         </span>
 
                                     </div>
@@ -645,15 +895,20 @@ for ($hora = 8; $hora <= 18; $hora++) {
                                     <div class="next-patient">
 
                                         <strong>
+
                                             <?= htmlspecialchars(
                                                 $proximo['nome_paciente']
                                             ) ?>
+
                                         </strong>
 
+
                                         <span>
+
                                             <?= htmlspecialchars(
                                                 $proximo['procedimento']
                                             ) ?>
+
                                         </span>
 
                                     </div>
@@ -676,25 +931,36 @@ for ($hora = 8; $hora <= 18; $hora++) {
 
 
     <!-- =============================================================
-     MODAL NOVO AGENDAMENTO
-============================================================== -->
+         MODAL NOVO AGENDAMENTO
+    ============================================================== -->
 
     <div
         class="modal-overlay"
         id="modalAgendamento">
 
+
         <div class="modal-agendamento">
+
+
+            <!-- =====================================================
+                 CABEÇALHO DO MODAL
+            ====================================================== -->
 
             <div class="modal-header">
 
                 <div>
 
                     <span class="modal-kicker">
+
                         AGENDAMENTOS
+
                     </span>
 
+
                     <h2>
+
                         Novo agendamento
+
                     </h2>
 
                 </div>
@@ -712,42 +978,66 @@ for ($hora = 8; $hora <= 18; $hora++) {
             </div>
 
 
+            <!-- =====================================================
+                 MENSAGEM
+            ====================================================== -->
+
             <div
                 id="mensagem"
                 class="mensagem"
                 style="display:none;">
+
             </div>
 
+
+            <!-- =====================================================
+                 FORMULÁRIO
+            ====================================================== -->
 
             <form
                 id="formAgendamento">
 
+
                 <input
                     type="hidden"
                     name="csrf_token"
-                    value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                    value="<?= htmlspecialchars(
+                                $_SESSION['csrf_token']
+                            ) ?>">
 
+
+                <!-- PACIENTE -->
 
                 <div class="form-group">
 
                     <label for="paciente_id">
+
                         Paciente cadastrado
+
                     </label>
+
 
                     <select
                         name="paciente_id"
                         id="paciente_id">
 
                         <option value="">
+
                             Selecione o paciente
+
                         </option>
+
 
                         <?php foreach ($prontuarios as $p): ?>
 
                             <option
-                                value="<?= htmlspecialchars($p['id']) ?>">
+                                value="<?= htmlspecialchars(
+                                            $p['id']
+                                        ) ?>">
 
-                                <?= htmlspecialchars($p['paciente']) ?>
+                                <?= htmlspecialchars(
+                                    $p['paciente']
+                                ) ?>
 
                             </option>
 
@@ -758,11 +1048,16 @@ for ($hora = 8; $hora <= 18; $hora++) {
                 </div>
 
 
+                <!-- NOME AVULSO -->
+
                 <div class="form-group">
 
                     <label for="paciente_nome">
+
                         Nome avulso
+
                     </label>
+
 
                     <input
                         type="text"
@@ -773,11 +1068,16 @@ for ($hora = 8; $hora <= 18; $hora++) {
                 </div>
 
 
+                <!-- PROCEDIMENTO -->
+
                 <div class="form-group">
 
                     <label for="procedimento">
+
                         Procedimento
+
                     </label>
+
 
                     <input
                         type="text"
@@ -789,19 +1089,27 @@ for ($hora = 8; $hora <= 18; $hora++) {
                 </div>
 
 
+                <!-- DATA E HORÁRIO -->
+
                 <div class="form-row">
+
 
                     <div class="form-group">
 
                         <label for="data">
+
                             Data
+
                         </label>
+
 
                         <input
                             type="date"
                             name="data"
                             id="data"
-                            value="<?= htmlspecialchars($data_filtro) ?>"
+                            value="<?= htmlspecialchars(
+                                        $data_filtro
+                                    ) ?>"
                             required>
 
                     </div>
@@ -810,8 +1118,11 @@ for ($hora = 8; $hora <= 18; $hora++) {
                     <div class="form-group">
 
                         <label for="horario">
+
                             Horário
+
                         </label>
+
 
                         <input
                             type="time"
@@ -821,10 +1132,14 @@ for ($hora = 8; $hora <= 18; $hora++) {
 
                     </div>
 
+
                 </div>
 
 
+                <!-- BOTÕES -->
+
                 <div class="modal-actions">
+
 
                     <button
                         type="button"
@@ -846,7 +1161,9 @@ for ($hora = 8; $hora <= 18; $hora++) {
 
                     </button>
 
+
                 </div>
+
 
             </form>
 
@@ -855,14 +1172,19 @@ for ($hora = 8; $hora <= 18; $hora++) {
     </div>
 
 
+    <!-- =============================================================
+         JAVASCRIPT
+    ============================================================== -->
+
     <script>
         /*
-|--------------------------------------------------------------------------
-| MODAL
-|--------------------------------------------------------------------------
-*/
+        |--------------------------------------------------------------------------
+        | MODAL
+        |--------------------------------------------------------------------------
+        */
 
-        const modal = document.getElementById('modalAgendamento');
+        const modal =
+            document.getElementById('modalAgendamento');
 
         const abrirModal =
             document.getElementById('abrirModal');
@@ -945,13 +1267,20 @@ for ($hora = 8; $hora <= 18; $hora++) {
 
                     e.preventDefault();
 
+
                     const form = this;
 
                     const formData =
                         new FormData(form);
 
                     const mensagem =
-                        document.getElementById('mensagem');
+                        document.getElementById(
+                            'mensagem'
+                        );
+
+
+                    mensagem.style.display =
+                        'none';
 
 
                     try {
@@ -990,11 +1319,14 @@ for ($hora = 8; $hora <= 18; $hora++) {
 
                                     window.location.href =
                                         '?data=' +
-                                        encodeURIComponent(data);
+                                        encodeURIComponent(
+                                            data
+                                        );
 
                                 },
                                 700
                             );
+
 
                         } else {
 
@@ -1013,9 +1345,11 @@ for ($hora = 8; $hora <= 18; $hora++) {
 
                         }
 
+
                     } catch (error) {
 
                         console.error(error);
+
 
                         mensagem.className =
                             'mensagem erro';
