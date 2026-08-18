@@ -80,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         */
 
         $stmt = $pdo->prepare("
-            INSERT INTO orcamento (
+            INSERT INTO orcamentos (
                 paciente_id,
                 data_criacao,
                 validade,
@@ -220,7 +220,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 */
 
                 $stmtItem = $pdo->prepare("
-                    INSERT INTO orcamento_itens (
+                    INSERT INTO orcamentos_itens (
                         orcamento_id,
                         descricao,
                         quantidade,
