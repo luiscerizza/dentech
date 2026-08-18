@@ -134,36 +134,17 @@ switch ($status_orcamento) {
 
 $logo_base64 = '';
 
-$possiveis_logos = [
-    'img/logo.png',
-    'img/logo.jpg',
-    'img/logo.PNG'
-];
+$logo_path = 'img/logo.jpg';
 
-foreach ($possiveis_logos as $logo_path) {
+if (file_exists($logo_path)) {
 
-    if (file_exists($logo_path)) {
+    $imageData = base64_encode(
+        file_get_contents($logo_path)
+    );
 
-        $extensao = strtolower(pathinfo($logo_path, PATHINFO_EXTENSION));
-
-        if ($extensao === 'png') {
-            $tipo_imagem = 'image/png';
-        } else {
-            $tipo_imagem = 'image/jpeg';
-        }
-
-        $imageData = base64_encode(
-            file_get_contents($logo_path)
-        );
-
-        $logo_base64 =
-            'data:' .
-            $tipo_imagem .
-            ';base64,' .
-            $imageData;
-
-        break;
-    }
+    $logo_base64 =
+        'data:image/jpeg;base64,' .
+        $imageData;
 }
 
 
