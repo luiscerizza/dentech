@@ -1,3 +1,27 @@
+<?php
+/*
+|--------------------------------------------------------------------------
+| NAVBAR / SIDEBAR
+|--------------------------------------------------------------------------
+| Identifica automaticamente a página atual para marcar o menu correto.
+|--------------------------------------------------------------------------
+*/
+
+$paginaAtual = basename($_SERVER['PHP_SELF'], '.php');
+
+/*
+ * Caso o sistema utilize URLs amigáveis/rewrite, também tratamos
+ * os nomes sem extensão.
+ */
+$paginaAtual = trim($paginaAtual, '/');
+
+
+function menuAtivo(string $pagina, string $paginaAtual): string
+{
+    return $pagina === $paginaAtual ? 'active' : '';
+}
+?>
+
 <link rel="stylesheet" href="css/global.css">
 <link rel="stylesheet" href="css/variables.css">
 <link rel="stylesheet" href="css/layout.css">
@@ -6,50 +30,73 @@
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
-<?php
-$pagina_atual = basename($_SERVER['PHP_SELF']);
-?>
-
 <aside class="sidebar">
 
+    <!-- LOGO -->
     <div class="sidebar-logo">
         <img src="img/logo.png" alt="Dentech">
     </div>
 
+    <!-- MENU -->
     <nav class="sidebar-nav">
 
-        <a href="index" class="nav-link <?= $pagina_atual === 'index.php' ? 'active' : '' ?>">
+        <!-- DASHBOARD -->
+        <a
+            href="index"
+            class="nav-link <?= menuAtivo('index', $paginaAtual) ?>">
             <i class="fa-solid fa-house"></i>
             <span>Dashboard</span>
         </a>
 
-        <a href="prontuarios" class="nav-link <?= $pagina_atual === 'prontuarios.php' ? 'active' : '' ?>">
+
+        <!-- PRONTUÁRIOS -->
+        <a
+            href="prontuarios"
+            class="nav-link <?= menuAtivo('prontuarios', $paginaAtual) ?>">
             <i class="fa-solid fa-user-group"></i>
             <span>Prontuários</span>
         </a>
 
-        <a href="agendamentos" class="nav-link <?= $pagina_atual === 'agendamentos.php' ? 'active' : '' ?>">
+
+        <!-- AGENDAMENTOS -->
+        <a
+            href="agendamentos"
+            class="nav-link <?= menuAtivo('agendamentos', $paginaAtual) ?>">
             <i class="fa-solid fa-calendar-check"></i>
             <span>Agenda</span>
         </a>
 
-        <a href="inventario" class="nav-link <?= $pagina_atual === 'inventario.php' ? 'active' : '' ?>">
+
+        <!-- ESTOQUE -->
+        <a
+            href="inventario"
+            class="nav-link <?= menuAtivo('inventario', $paginaAtual) ?>">
             <i class="fa-solid fa-box"></i>
             <span>Estoque</span>
         </a>
 
-        <a href="orcamento" class="nav-link <?= $pagina_atual === 'orcamento.php' ? 'active' : '' ?>">
+
+        <!-- ORÇAMENTOS -->
+        <a
+            href="orcamento"
+            class="nav-link <?= menuAtivo('orcamento', $paginaAtual) ?>">
             <i class="fa-solid fa-file-invoice-dollar"></i>
             <span>Orçamentos</span>
         </a>
 
-        <a href="restrito" class="nav-link restricted <?= $pagina_atual === 'restrito.php' ? 'active' : '' ?>">
+
+        <!-- ÁREA RESTRITA -->
+        <a
+            href="restrito"
+            class="nav-link restricted <?= menuAtivo('restrito', $paginaAtual) ?>">
             <i class="fa-solid fa-lock"></i>
             <span>Área Restrita</span>
         </a>
 
     </nav>
 
+
+    <!-- SAIR -->
     <button
         class="logout"
         type="button"
