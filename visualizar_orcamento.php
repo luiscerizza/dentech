@@ -7,6 +7,7 @@ exigirLogin();
 
 require_once 'conexao/conexao.php';
 
+
 /*
 |--------------------------------------------------------------------------
 | ID DO ORÇAMENTO
@@ -16,57 +17,138 @@ require_once 'conexao/conexao.php';
 $id = (int)($_GET['id'] ?? 0);
 
 if ($id <= 0) {
-    die("Orçamento não encontrado.");
+    die("ID do orçamento não informado.");
 }
+
 
 /*
 |--------------------------------------------------------------------------
-| CONFIRMAR PAGAMENTO DE PARCELA
+| PROCESSAR POST
 |--------------------------------------------------------------------------
 */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    if (
-        empty($_POST['csrf_token']) ||
-        empty($_SESSION['csrf_token']) ||
-        !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
-    ) {
-        http_response_code(403);
-        die("Token de segurança inválido.");
-    }
+    validar_csrf();
 
-    $parcela_id = (int)($_POST['parcela_id'] ?? 0);
+    $acao = $_POST['acao'] ?? '';
 
-    if ($parcela_id > 0) {
 
-        $stmtPagamento = $pdo->prepare("
-            UPDATE parcelas
-            SET
-                status = 'paga',
-                data_pagamento = CURDATE()
+    /*
+    |--------------------------------------------------------------------------
+    | CONFIRMAR ORÇAMENTO
+    |--------------------------------------------------------------------------
+    */
+
+    if ($acao === 'aceitar_orcamento') {
+
+        $stmt = $pdo->prepare("
+            UPDATE orcamentos
+            SET status = 'aceito'
             WHERE id = ?
-              AND orcamento_id = ?
+              AND status = 'pendente'
         ");
 
-        $stmtPagamento->execute([
-            $parcela_id,
+        $stmt->execute([
             $id
         ]);
 
-        header("Location: visualizar_orcamento.php?id=" . $id);
+
+        header(
+            "Location: visualizar_orcamento.php?id=" .
+                $id
+        );
+
+        exit;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | RECUSAR ORÇAMENTO
+    |--------------------------------------------------------------------------
+    */
+
+    if ($acao === 'recusar_orcamento') {
+
+        $stmt = $pdo->prepare("
+            UPDATE orcamentos
+            SET status = 'recusado'
+            WHERE id = ?
+              AND status = 'pendente'
+        ");
+
+        $stmt->execute([
+            $id
+        ]);
+
+
+        header(
+            "Location: visualizar_orcamento.php?id=" .
+                $id
+        );
+
+        exit;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PAGAR PARCELA
+    |--------------------------------------------------------------------------
+    */
+
+    if ($acao === 'pagar_parcela') {
+
+        $parcela_id = (int)(
+            $_POST['parcela_id'] ?? 0
+        );
+
+
+        if ($parcela_id > 0) {
+
+            /*
+            | Atualiza somente uma parcela
+            | pertencente a este orçamento.
+            */
+
+            $stmt = $pdo->prepare("
+                UPDATE parcelas
+
+                SET
+                    status = 'paga',
+                    data_pagamento = CURDATE()
+
+                WHERE id = ?
+                  AND orcamento_id = ?
+                  AND status IN ('pendente', 'atrasada')
+            ");
+
+            $stmt->execute([
+                $parcela_id,
+                $id
+            ]);
+        }
+
+
+        /*
+        | Volta para a própria página
+        */
+
+        header(
+            "Location: visualizar_orcamento.php?id=" .
+                $id
+        );
+
         exit;
     }
 }
+
 
 /*
 |--------------------------------------------------------------------------
 | BUSCAR ORÇAMENTO + PACIENTE
 |--------------------------------------------------------------------------
-|
-| IMPORTANTE:
-| A tabela informada por você é "orcamento" (singular).
-|
 */
 
 $stmt = $pdo->prepare("
@@ -76,108 +158,28 @@ $stmt = $pdo->prepare("
         p.cpf,
         p.telefone,
         p.email
+
     FROM orcamentos o
+
     JOIN prontuarios p
         ON o.paciente_id = p.id
+
     WHERE o.id = ?
 ");
 
-$stmt->execute([$id]);
+$stmt->execute([
+    $id
+]);
 
-$orc = $stmt->fetch(PDO::FETCH_ASSOC);
+$orc = $stmt->fetch(
+    PDO::FETCH_ASSOC
+);
+
 
 if (!$orc) {
     die("Orçamento não encontrado.");
 }
 
-/*
-|--------------------------------------------------------------------------
-| BUSCAR ITENS
-|--------------------------------------------------------------------------
-|
-| A tabela informada por você é "orcamento_itens".
-|
-*/
-
-$stmtItens = $pdo->prepare("
-    SELECT *
-    FROM orcamentos_itens
-    WHERE orcamento_id = ?
-    ORDER BY id ASC
-");
-
-$stmtItens->execute([$id]);
-
-$itens = $stmtItens->fetchAll(PDO::FETCH_ASSOC);
-
-/*
-|--------------------------------------------------------------------------
-| ATUALIZAR PARCELAS VENCIDAS
-|--------------------------------------------------------------------------
-*/
-
-$stmtAtrasadas = $pdo->prepare("
-    UPDATE parcelas
-    SET status = 'atrasada'
-    WHERE orcamento_id = ?
-      AND status = 'pendente'
-      AND vencimento < CURDATE()
-");
-
-$stmtAtrasadas->execute([$id]);
-
-/*
-|--------------------------------------------------------------------------
-| BUSCAR PARCELAS
-|--------------------------------------------------------------------------
-*/
-
-$stmtParcelas = $pdo->prepare("
-    SELECT *
-    FROM parcelas
-    WHERE orcamento_id = ?
-    ORDER BY numero_parcela ASC
-");
-
-$stmtParcelas->execute([$id]);
-
-$parcelas = $stmtParcelas->fetchAll(PDO::FETCH_ASSOC);
-
-/*
-|--------------------------------------------------------------------------
-| CALCULAR TOTAL DOS ITENS
-|--------------------------------------------------------------------------
-*/
-
-$total_itens = 0;
-
-foreach ($itens as $item) {
-
-    $quantidade = (float)($item['quantidade'] ?? 0);
-    $valor_unitario = (float)($item['valor_unitario'] ?? 0);
-
-    $total_itens += $quantidade * $valor_unitario;
-}
-
-/*
-|--------------------------------------------------------------------------
-| CALCULAR PROGRESSO DAS PARCELAS
-|--------------------------------------------------------------------------
-*/
-
-$qtd_total = count($parcelas);
-$qtd_pagas = 0;
-
-foreach ($parcelas as $parcela) {
-
-    if (($parcela['status'] ?? '') === 'paga') {
-        $qtd_pagas++;
-    }
-}
-
-$progresso = $qtd_total > 0
-    ? round(($qtd_pagas / $qtd_total) * 100)
-    : 0;
 
 /*
 |--------------------------------------------------------------------------
@@ -185,40 +187,170 @@ $progresso = $qtd_total > 0
 |--------------------------------------------------------------------------
 */
 
-$status = $orc['status'] ?? 'pendente';
+$status_orcamento =
+    strtolower(
+        trim(
+            $orc['status'] ?? 'pendente'
+        )
+    );
 
-$statusLabels = [
-    'pendente' => 'Pendente',
-    'aprovado' => 'Aprovado',
-    'aprovada' => 'Aprovado',
-    'cancelado' => 'Cancelado',
-    'cancelada' => 'Cancelado',
-    'concluido' => 'Concluído',
-    'concluida' => 'Concluído'
-];
-
-$statusTexto = $statusLabels[$status] ?? ucfirst($status);
 
 /*
 |--------------------------------------------------------------------------
-| VALIDADE
+| BUSCAR ITENS
 |--------------------------------------------------------------------------
 */
 
-$validade = '—';
+$stmt_itens = $pdo->prepare("
+    SELECT *
+    FROM orcamentos_itens
+    WHERE orcamento_id = ?
+    ORDER BY id ASC
+");
 
-if (!empty($orc['validade'])) {
+$stmt_itens->execute([
+    $id
+]);
 
-    $dataValidade = strtotime($orc['validade']);
+$itens =
+    $stmt_itens->fetchAll(
+        PDO::FETCH_ASSOC
+    );
 
-    if ($dataValidade !== false) {
-        $validade = date('d/m/Y', $dataValidade);
+
+/*
+|--------------------------------------------------------------------------
+| ATUALIZAR PARCELAS VENCIDAS
+|--------------------------------------------------------------------------
+*/
+
+$pdo->prepare("
+    UPDATE parcelas
+
+    SET status = 'atrasada'
+
+    WHERE orcamento_id = ?
+
+      AND status = 'pendente'
+
+      AND vencimento < CURDATE()
+")
+    ->execute([
+        $id
+    ]);
+
+
+/*
+|--------------------------------------------------------------------------
+| BUSCAR PARCELAS
+|--------------------------------------------------------------------------
+*/
+
+$stmt_par = $pdo->prepare("
+    SELECT *
+    FROM parcelas
+    WHERE orcamento_id = ?
+    ORDER BY numero_parcela ASC
+");
+
+$stmt_par->execute([
+    $id
+]);
+
+$parcelas =
+    $stmt_par->fetchAll(
+        PDO::FETCH_ASSOC
+    );
+
+
+/*
+|--------------------------------------------------------------------------
+| CÁLCULO DO TOTAL
+|--------------------------------------------------------------------------
+*/
+
+$total_itens = 0;
+
+foreach ($itens as $item) {
+
+    $quantidade =
+        (int)($item['quantidade'] ?? 1);
+
+    $valor =
+        (float)($item['valor_unitario'] ?? 0);
+
+    $total_itens +=
+        $quantidade * $valor;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| CONTROLE DAS PARCELAS
+|--------------------------------------------------------------------------
+*/
+
+$qtd_total =
+    count($parcelas);
+
+$qtd_pagas = 0;
+
+$total_pago = 0;
+
+$total_pendente = 0;
+
+
+foreach ($parcelas as $p) {
+
+    $valor_parcela =
+        (float)($p['valor'] ?? 0);
+
+
+    if ($p['status'] === 'paga') {
+
+        $qtd_pagas++;
+
+        $total_pago +=
+            $valor_parcela;
+    } else {
+
+        $total_pendente +=
+            $valor_parcela;
     }
 }
+
+
+$progresso =
+    $qtd_total > 0
+    ? round(
+        ($qtd_pagas / $qtd_total) * 100
+    )
+    : 0;
+
+
+/*
+|--------------------------------------------------------------------------
+| STATUS VISUAL
+|--------------------------------------------------------------------------
+*/
+
+$status_texto = match ($status_orcamento) {
+
+    'aceito' =>
+    'Aceito',
+
+    'recusado' =>
+    'Recusado',
+
+    default =>
+    'Pendente'
+};
+
 
 ?>
 
 <!DOCTYPE html>
+
 <html lang="pt-BR">
 
 <head>
@@ -230,25 +362,9 @@ if (!empty($orc['validade'])) {
         content="width=device-width, initial-scale=1.0">
 
     <title>
-        Orçamento #<?= $id ?> | Dentech
+        Orçamento #<?= $id ?> - Dentech
     </title>
 
-    <link
-        rel="icon"
-        type="image/png"
-        href="img/icon.PNG">
-
-    <link
-        rel="stylesheet"
-        href="css/global.css">
-
-    <link
-        rel="stylesheet"
-        href="css/variables.css">
-
-    <link
-        rel="stylesheet"
-        href="css/layout.css">
 
     <link
         rel="stylesheet"
@@ -259,10 +375,12 @@ if (!empty($orc['validade'])) {
         href="css/vis_orcamento.css">
 
     <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+        rel="icon"
+        type="image/png"
+        href="img/icon.PNG">
 
 </head>
+
 
 <body>
 
@@ -273,27 +391,32 @@ if (!empty($orc['validade'])) {
 
         <div class="orc-container">
 
+
             <!-- =====================================================
              CABEÇALHO
         ====================================================== -->
 
             <div class="header-actions">
 
+
                 <div class="header-info">
 
                     <div class="breadcrumb">
 
-                        <span>Orçamentos</span>
+                        <span>
+                            Orçamentos
+                        </span>
 
                         <span class="breadcrumb-separator">
                             /
                         </span>
 
                         <span>
-                            Orçamento #<?= $id ?>
+                            Visualização
                         </span>
 
                     </div>
+
 
                     <div class="title-row">
 
@@ -301,14 +424,22 @@ if (!empty($orc['validade'])) {
                             Orçamento #<?= $id ?>
                         </h1>
 
-                        <span class="status-badge status-<?= htmlspecialchars($status) ?>">
-                            <?= htmlspecialchars($statusTexto) ?>
+
+                        <span
+                            class="status-badge
+                        status-<?= htmlspecialchars($status_orcamento) ?>">
+
+                            <?= htmlspecialchars(
+                                $status_texto
+                            ) ?>
+
                         </span>
 
                     </div>
 
+
                     <p>
-                        Visualização completa do orçamento
+                        Detalhes completos do orçamento.
                     </p>
 
                 </div>
@@ -316,36 +447,106 @@ if (!empty($orc['validade'])) {
 
                 <div class="btn-group">
 
-                    <a
-                        href="editar_orcamento.php?id=<?= $id ?>"
-                        class="btn btn-primary">
 
-                        <i class="fa-solid fa-pen"></i>
+                    <!-- =================================================
+                     CONFIRMAR / RECUSAR
+                ================================================== -->
 
-                        Editar
+                    <?php if ($status_orcamento === 'pendente'): ?>
 
-                    </a>
 
+                        <form
+                            method="POST"
+                            style="display:inline;">
+
+                            <?= csrf_field() ?>
+
+
+                            <input
+                                type="hidden"
+                                name="acao"
+                                value="aceitar_orcamento">
+
+
+                            <button
+                                type="submit"
+                                class="btn btn-success">
+
+                                ✓ Confirmar
+
+                            </button>
+
+                        </form>
+
+
+                        <form
+                            method="POST"
+                            style="display:inline;">
+
+                            <?= csrf_field() ?>
+
+
+                            <input
+                                type="hidden"
+                                name="acao"
+                                value="recusar_orcamento">
+
+
+                            <button
+                                type="submit"
+                                class="btn btn-danger">
+
+                                ✕ Recusar
+
+                            </button>
+
+                        </form>
+
+
+                    <?php endif; ?>
+
+
+                    <!-- =================================================
+                     EDITAR
+                     Só aparece enquanto estiver pendente
+                ================================================== -->
+
+                    <?php if ($status_orcamento === 'pendente'): ?>
+
+                        <a
+                            href="editar_orcamento.php?id=<?= $id ?>"
+                            class="btn btn-primary">
+
+                            ✏️ Editar
+
+                        </a>
+
+                    <?php endif; ?>
+
+
+                    <!-- =================================================
+                     PDF
+                ================================================== -->
 
                     <a
                         href="gerar_orcamento_pdf.php?id=<?= $id ?>"
                         target="_blank"
                         class="btn btn-success">
 
-                        <i class="fa-solid fa-file-pdf"></i>
-
-                        Baixar PDF
+                        📥 Baixar PDF
 
                     </a>
 
+
+                    <!-- =================================================
+                     VOLTAR
+                ================================================== -->
 
                     <a
                         href="orcamento.php"
                         class="btn btn-outline">
 
-                        <i class="fa-solid fa-arrow-left"></i>
-
-                        Voltar
+                        ← Voltar
 
                     </a>
 
@@ -355,10 +556,79 @@ if (!empty($orc['validade'])) {
 
 
             <!-- =====================================================
+             AVISO DE STATUS
+        ====================================================== -->
+
+            <?php if ($status_orcamento === 'aceito'): ?>
+
+                <div class="status-message status-message-success">
+
+                    <i class="fa-solid fa-circle-check"></i>
+
+                    <div>
+
+                        <strong>
+                            Orçamento confirmado
+                        </strong>
+
+                        <span>
+                            Este orçamento foi aceito e não pode mais ser editado.
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+            <?php elseif ($status_orcamento === 'recusado'): ?>
+
+                <div class="status-message status-message-danger">
+
+                    <i class="fa-solid fa-circle-xmark"></i>
+
+                    <div>
+
+                        <strong>
+                            Orçamento recusado
+                        </strong>
+
+                        <span>
+                            Este orçamento foi recusado e não pode mais ser editado.
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+            <?php else: ?>
+
+                <div class="status-message status-message-pending">
+
+                    <i class="fa-solid fa-clock"></i>
+
+                    <div>
+
+                        <strong>
+                            Orçamento pendente
+                        </strong>
+
+                        <span>
+                            Confirme ou recuse o orçamento para finalizar sua situação.
+                        </span>
+
+                    </div>
+
+                </div>
+
+            <?php endif; ?>
+
+
+            <!-- =====================================================
              DADOS DO PACIENTE
         ====================================================== -->
 
-            <section class="card">
+            <div class="card">
 
                 <div class="section-title">
 
@@ -375,7 +645,7 @@ if (!empty($orc['validade'])) {
                         </h2>
 
                         <p>
-                            Informações do paciente relacionado ao orçamento.
+                            Informações vinculadas ao orçamento
                         </p>
 
                     </div>
@@ -385,6 +655,7 @@ if (!empty($orc['validade'])) {
 
                 <div class="info-grid">
 
+
                     <div class="info-item">
 
                         <label>
@@ -392,7 +663,9 @@ if (!empty($orc['validade'])) {
                         </label>
 
                         <span>
-                            <?= htmlspecialchars($orc['paciente'] ?? '—') ?>
+                            <?= htmlspecialchars(
+                                $orc['paciente']
+                            ) ?>
                         </span>
 
                     </div>
@@ -405,10 +678,12 @@ if (!empty($orc['validade'])) {
                         </label>
 
                         <span>
+
                             <?= !empty($orc['cpf'])
                                 ? htmlspecialchars($orc['cpf'])
                                 : '—'
                             ?>
+
                         </span>
 
                     </div>
@@ -421,10 +696,12 @@ if (!empty($orc['validade'])) {
                         </label>
 
                         <span>
+
                             <?= !empty($orc['telefone'])
                                 ? htmlspecialchars($orc['telefone'])
                                 : '—'
                             ?>
+
                         </span>
 
                     </div>
@@ -437,10 +714,35 @@ if (!empty($orc['validade'])) {
                         </label>
 
                         <span>
+
                             <?= !empty($orc['email'])
                                 ? htmlspecialchars($orc['email'])
                                 : '—'
                             ?>
+
+                        </span>
+
+                    </div>
+
+
+                    <div class="info-item">
+
+                        <label>
+                            Data de criação
+                        </label>
+
+                        <span>
+
+                            <?= !empty($orc['data_criacao'])
+                                ? date(
+                                    'd/m/Y',
+                                    strtotime(
+                                        $orc['data_criacao']
+                                    )
+                                )
+                                : '—'
+                            ?>
+
                         </span>
 
                     </div>
@@ -453,21 +755,32 @@ if (!empty($orc['validade'])) {
                         </label>
 
                         <span>
-                            <?= $validade ?>
+
+                            <?= !empty($orc['validade'])
+                                ? date(
+                                    'd/m/Y',
+                                    strtotime(
+                                        $orc['validade']
+                                    )
+                                )
+                                : '—'
+                            ?>
+
                         </span>
 
                     </div>
 
+
                 </div>
 
-            </section>
+            </div>
 
 
             <!-- =====================================================
              PROCEDIMENTOS
         ====================================================== -->
 
-            <section class="card">
+            <div class="card">
 
                 <div class="section-title">
 
@@ -484,7 +797,7 @@ if (!empty($orc['validade'])) {
                         </h2>
 
                         <p>
-                            Procedimentos e valores incluídos neste orçamento.
+                            Itens incluídos neste orçamento
                         </p>
 
                     </div>
@@ -494,17 +807,20 @@ if (!empty($orc['validade'])) {
 
                 <?php if (empty($itens)): ?>
 
+
                     <div class="empty-state">
 
-                        <i class="fa-solid fa-file-circle-xmark"></i>
+                        <i class="fa-solid fa-box-open"></i>
 
                         <p>
-                            Nenhum item registrado neste orçamento.
+                            Nenhum item registrado.
                         </p>
 
                     </div>
 
+
                 <?php else: ?>
+
 
                     <div class="table-wrapper">
 
@@ -523,7 +839,7 @@ if (!empty($orc['validade'])) {
                                     </th>
 
                                     <th class="right">
-                                        Valor unitário
+                                        Unitário
                                     </th>
 
                                     <th class="right">
@@ -541,11 +857,10 @@ if (!empty($orc['validade'])) {
 
                                     <?php
 
-                                    $quantidade = (float)($item['quantidade'] ?? 0);
-
-                                    $valorUnitario = (float)($item['valor_unitario'] ?? 0);
-
-                                    $subtotal = $quantidade * $valorUnitario;
+                                    $sub =
+                                        (int)$item['quantidade']
+                                        *
+                                        (float)$item['valor_unitario'];
 
                                     ?>
 
@@ -554,7 +869,7 @@ if (!empty($orc['validade'])) {
                                         <td>
 
                                             <?= htmlspecialchars(
-                                                $item['descricao'] ?? '—'
+                                                $item['descricao']
                                             ) ?>
 
                                         </td>
@@ -562,18 +877,9 @@ if (!empty($orc['validade'])) {
 
                                         <td class="center">
 
-                                            <?= rtrim(
-                                                rtrim(
-                                                    number_format(
-                                                        $quantidade,
-                                                        2,
-                                                        ',',
-                                                        '.'
-                                                    ),
-                                                    '0'
-                                                ),
-                                                ','
-                                            ) ?>
+                                            <?= (int)
+                                            $item['quantidade']
+                                            ?>
 
                                         </td>
 
@@ -582,7 +888,7 @@ if (!empty($orc['validade'])) {
 
                                             R$
                                             <?= number_format(
-                                                $valorUnitario,
+                                                $item['valor_unitario'],
                                                 2,
                                                 ',',
                                                 '.'
@@ -595,7 +901,7 @@ if (!empty($orc['validade'])) {
 
                                             R$
                                             <?= number_format(
-                                                $subtotal,
+                                                $sub,
                                                 2,
                                                 ',',
                                                 '.'
@@ -614,35 +920,33 @@ if (!empty($orc['validade'])) {
                     </div>
 
 
-                    <!-- TOTAL -->
-
-                    <div class="total-box">
-
-                        <div>
-
-                            <span class="total-label">
-                                Valor Total do Orçamento
-                            </span>
-
-                        </div>
-
-                        <strong class="total-value">
-
-                            R$
-                            <?= number_format(
-                                $total_itens,
-                                2,
-                                ',',
-                                '.'
-                            ) ?>
-
-                        </strong>
-
-                    </div>
-
                 <?php endif; ?>
 
-            </section>
+
+                <div class="total-box">
+
+                    <span class="total-label">
+
+                        Valor Total do Orçamento
+
+                    </span>
+
+
+                    <strong class="total-value">
+
+                        R$
+                        <?= number_format(
+                            $total_itens,
+                            2,
+                            ',',
+                            '.'
+                        ) ?>
+
+                    </strong>
+
+                </div>
+
+            </div>
 
 
             <!-- =====================================================
@@ -651,7 +955,8 @@ if (!empty($orc['validade'])) {
 
             <?php if (!empty($orc['observacoes'])): ?>
 
-                <section class="card">
+
+                <div class="card">
 
                     <div class="section-title">
 
@@ -668,7 +973,7 @@ if (!empty($orc['validade'])) {
                             </h2>
 
                             <p>
-                                Informações adicionais do orçamento.
+                                Informações adicionais
                             </p>
 
                         </div>
@@ -686,7 +991,8 @@ if (!empty($orc['validade'])) {
 
                     </div>
 
-                </section>
+                </div>
+
 
             <?php endif; ?>
 
@@ -697,7 +1003,9 @@ if (!empty($orc['validade'])) {
 
             <?php if (!empty($parcelas)): ?>
 
-                <section class="card parcelas-section">
+
+                <div class="card parcelas-section">
+
 
                     <div class="section-title">
 
@@ -714,19 +1022,28 @@ if (!empty($orc['validade'])) {
                             </h2>
 
                             <p>
-                                Acompanhe os pagamentos deste orçamento.
+                                <?= $qtd_pagas ?>
+                                de
+                                <?= $qtd_total ?>
+                                parcelas pagas
                             </p>
 
                         </div>
 
-                        <span class="parcelas-resumo">
 
-                            <?= $qtd_pagas ?>
-                            /
-                            <?= $qtd_total ?>
-                            pagas
+                        <div class="parcelas-resumo">
 
-                        </span>
+                            R$
+                            <?= number_format(
+                                $total_pendente,
+                                2,
+                                ',',
+                                '.'
+                            ) ?>
+
+                            pendente
+
+                        </div>
 
                     </div>
 
@@ -766,35 +1083,25 @@ if (!empty($orc['validade'])) {
 
                             <tbody>
 
-                                <?php foreach ($parcelas as $parcela): ?>
+                                <?php foreach ($parcelas as $p): ?>
+
 
                                     <?php
 
-                                    $statusParcela =
-                                        $parcela['status'] ?? 'pendente';
-
-                                    $statusParcelaLabels = [
-
-                                        'pendente' => 'Pendente',
-
-                                        'paga' => 'Paga',
-
-                                        'atrasada' => 'Atrasada'
-
-                                    ];
-
-                                    $statusParcelaTexto =
-                                        $statusParcelaLabels[$statusParcela]
-                                        ?? ucfirst($statusParcela);
+                                    $status_parcela =
+                                        $p['status'];
 
                                     ?>
+
 
                                     <tr>
 
                                         <td>
 
                                             <strong>
-                                                <?= (int)$parcela['numero_parcela'] ?>ª
+                                                <?= (int)
+                                                $p['numero_parcela']
+                                                ?>ª
                                             </strong>
 
                                         </td>
@@ -802,22 +1109,12 @@ if (!empty($orc['validade'])) {
 
                                         <td>
 
-                                            <?php
-
-                                            if (!empty($parcela['vencimento'])) {
-
-                                                echo date(
-                                                    'd/m/Y',
-                                                    strtotime(
-                                                        $parcela['vencimento']
-                                                    )
-                                                );
-                                            } else {
-
-                                                echo '—';
-                                            }
-
-                                            ?>
+                                            <?= date(
+                                                'd/m/Y',
+                                                strtotime(
+                                                    $p['vencimento']
+                                                )
+                                            ) ?>
 
                                         </td>
 
@@ -826,7 +1123,7 @@ if (!empty($orc['validade'])) {
 
                                             R$
                                             <?= number_format(
-                                                (float)$parcela['valor'],
+                                                $p['valor'],
                                                 2,
                                                 ',',
                                                 '.'
@@ -837,62 +1134,68 @@ if (!empty($orc['validade'])) {
 
                                         <td class="center">
 
-                                            <span class="status-badge parcela-status status-<?= htmlspecialchars($statusParcela) ?>">
 
-                                                <?= htmlspecialchars(
-                                                    $statusParcelaTexto
-                                                ) ?>
+                                            <?php if (
+                                                $status_parcela === 'paga'
+                                            ): ?>
 
-                                            </span>
+                                                <span
+                                                    class="status-badge parcela-status status-paga">
+
+                                                    ✓ Paga
+
+                                                </span>
+
+
+                                            <?php elseif (
+                                                $status_parcela === 'atrasada'
+                                            ): ?>
+
+                                                <span
+                                                    class="status-badge parcela-status status-atrasada">
+
+                                                    Atrasada
+
+                                                </span>
+
+
+                                            <?php else: ?>
+
+                                                <span
+                                                    class="status-badge parcela-status status-pendente">
+
+                                                    Pendente
+
+                                                </span>
+
+                                            <?php endif; ?>
+
 
                                         </td>
 
 
                                         <td class="center">
 
-                                            <?php if ($statusParcela === 'pendente'): ?>
 
-                                                <form
-                                                    method="POST"
-                                                    class="form-pagamento"
-                                                    onsubmit="return confirm('Confirmar pagamento desta parcela?');">
+                                            <?php if (
+                                                $status_parcela === 'paga'
+                                            ): ?>
 
-                                                    <input
-                                                        type="hidden"
-                                                        name="csrf_token"
-                                                        value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
 
-                                                    <input
-                                                        type="hidden"
-                                                        name="parcela_id"
-                                                        value="<?= (int)$parcela['id'] ?>">
-
-                                                    <button
-                                                        type="submit"
-                                                        name="marcar_paga"
-                                                        class="btn-pagar">
-
-                                                        <i class="fa-solid fa-check"></i>
-
-                                                        Confirmar
-
-                                                    </button>
-
-                                                </form>
-
-                                            <?php elseif ($statusParcela === 'paga'): ?>
-
-                                                <span class="pagamento-confirmado">
+                                                <span
+                                                    class="pagamento-confirmado">
 
                                                     <i class="fa-solid fa-circle-check"></i>
 
-                                                    <?php if (!empty($parcela['data_pagamento'])): ?>
+                                                    <?php if (
+                                                        !empty($p['data_pagamento'])
+                                                    ): ?>
 
                                                         Pago em
                                                         <?= date(
                                                             'd/m/Y',
                                                             strtotime(
-                                                                $parcela['data_pagamento']
+                                                                $p['data_pagamento']
                                                             )
                                                         ) ?>
 
@@ -904,21 +1207,58 @@ if (!empty($orc['validade'])) {
 
                                                 </span>
 
-                                            <?php else: ?>
 
-                                                <span class="pagamento-atrasado">
+                                            <?php elseif (
+                                                in_array(
+                                                    $status_parcela,
+                                                    [
+                                                        'pendente',
+                                                        'atrasada'
+                                                    ],
+                                                    true
+                                                )
+                                            ): ?>
 
-                                                    <i class="fa-solid fa-triangle-exclamation"></i>
 
-                                                    Em atraso
+                                                <form
+                                                    method="POST"
+                                                    class="form-pagamento">
 
-                                                </span>
+                                                    <?= csrf_field() ?>
+
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="acao"
+                                                        value="pagar_parcela">
+
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="parcela_id"
+                                                        value="<?= (int)$p['id'] ?>">
+
+
+                                                    <button
+                                                        type="submit"
+                                                        class="btn-pagar">
+
+                                                        <i class="fa-solid fa-check"></i>
+
+                                                        Pagar
+
+                                                    </button>
+
+                                                </form>
+
 
                                             <?php endif; ?>
+
 
                                         </td>
 
                                     </tr>
+
 
                                 <?php endforeach; ?>
 
@@ -938,7 +1278,7 @@ if (!empty($orc['validade'])) {
                         <div class="progress-header">
 
                             <span>
-                                Progresso dos pagamentos
+                                Pagamentos
                             </span>
 
                             <strong>
@@ -952,24 +1292,38 @@ if (!empty($orc['validade'])) {
 
                             <div
                                 class="progress-fill"
-                                style="width: <?= $progresso ?>%;">
-                            </div>
+                                style="width: <?= $progresso ?>%;"></div>
 
                         </div>
 
 
                         <div class="progress-text">
 
-                            <?= $qtd_pagas ?>
-                            de
-                            <?= $qtd_total ?>
-                            parcelas pagas
+                            R$
+                            <?= number_format(
+                                $total_pago,
+                                2,
+                                ',',
+                                '.'
+                            ) ?>
+
+                            pagos de
+
+                            R$
+                            <?= number_format(
+                                $total_itens,
+                                2,
+                                ',',
+                                '.'
+                            ) ?>
 
                         </div>
 
                     </div>
 
-                </section>
+
+                </div>
+
 
             <?php endif; ?>
 
@@ -980,18 +1334,21 @@ if (!empty($orc['validade'])) {
 
             <div class="footer-note">
 
-                <i class="fa-solid fa-circle-info"></i>
+                <i class="fa-solid fa-shield-halved"></i>
 
                 Dentech <?= date('Y') ?>
+
                 |
+
                 Documento gerado automaticamente.
-                Valores sujeitos a alteração conforme avaliação clínica.
 
             </div>
+
 
         </div>
 
     </main>
+
 
 </body>
 
