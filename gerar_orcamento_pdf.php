@@ -1,237 +1,1420 @@
 <?php
-// gerar_orcamento_pdf.php - Versão com Parcelas Corrigida
+
+// =========================================================
+// GERAR ORÇAMENTO EM PDF
+// Dentech - Novo padrão visual
+// =========================================================
+
 require_once 'config/auth.php';
 exigirLogin();
-require_once 'conexao/conexao.php';
 
-// 1. Carregar Dompdf
+require_once 'conexao/conexao.php';
 require_once 'dompdf/autoload.inc.php';
 
 use Dompdf\Dompdf;
 use Dompdf\Options;
 
+
+// =========================================================
+// CONFIGURAÇÃO DO DOMPDF
+// =========================================================
+
 $options = new Options();
+
 $options->set('defaultFont', 'Helvetica');
 $options->set('isHtml5ParserEnabled', true);
 $options->set('isRemoteEnabled', true);
+
 $dompdf = new Dompdf($options);
 
-// 2. Receber ID
+
+// =========================================================
+// RECEBER ID DO ORÇAMENTO
+// =========================================================
+
 $id_orc = $_GET['id'] ?? ($_POST['id'] ?? 0);
-if (!$id_orc) die("ID do orçamento não informado.");
 
-// 3. Buscar dados do orçamento + paciente
+$id_orc = (int)$id_orc;
+
+if ($id_orc <= 0) {
+    die('ID do orçamento não informado.');
+}
+
+
+// =========================================================
+// BUSCAR ORÇAMENTO + PACIENTE
+// =========================================================
+
 $stmt = $pdo->prepare("
-    SELECT o.*, p.paciente, p.cpf, p.telefone, p.email 
-    FROM orcamentos o 
-    JOIN prontuarios p ON o.paciente_id = p.id 
+    SELECT
+        o.*,
+        p.paciente,
+        p.cpf,
+        p.telefone,
+        p.email
+    FROM orcamentos o
+    INNER JOIN prontuarios p
+        ON o.paciente_id = p.id
     WHERE o.id = ?
+    LIMIT 1
 ");
+
 $stmt->execute([$id_orc]);
+
 $orc = $stmt->fetch(PDO::FETCH_ASSOC);
-if (!$orc) die("Orçamento não encontrado.");
 
-// 4. Buscar itens
-$stmt_itens = $pdo->prepare("SELECT * FROM orcamentos_itens WHERE orcamento_id = ? ORDER BY id ASC");
+if (!$orc) {
+    die('Orçamento não encontrado.');
+}
+
+
+// =========================================================
+// BUSCAR ITENS DO ORÇAMENTO
+// =========================================================
+
+$stmt_itens = $pdo->prepare("
+    SELECT *
+    FROM orcamentos_itens
+    WHERE orcamento_id = ?
+    ORDER BY id ASC
+");
+
 $stmt_itens->execute([$id_orc]);
-$itens = $stmt_itens->fetchAll();
 
-// 5. 🔽 BUSCAR PARCELAS (ANTES de montar o HTML)
-$stmt_par = $pdo->prepare("SELECT * FROM parcelas WHERE orcamento_id = ? ORDER BY numero_parcela ASC");
+$itens = $stmt_itens->fetchAll(PDO::FETCH_ASSOC);
+
+
+// =========================================================
+// BUSCAR PARCELAS
+// =========================================================
+
+$stmt_par = $pdo->prepare("
+    SELECT *
+    FROM parcelas
+    WHERE orcamento_id = ?
+    ORDER BY numero_parcela ASC
+");
+
 $stmt_par->execute([$id_orc]);
-$parcelas = $stmt_par->fetchAll();
 
-// Montar HTML das parcelas (compatível com PHP 7+)
-$html_parcelas = '';
-if (!empty($parcelas)) {
-    $html_parcelas = "
-    <div class='section-title'>CRONOGRAMA DE PARCELAS</div>
-    <table class='items-table'>
-        <thead>
-            <tr>
-                <th style='width:15%; text-align:center;'>PARCELA</th>
-                <th style='width:30%; text-align:center;'>VENCIMENTO</th>
-                <th style='width:25%; text-align:right;'>VALOR</th>
-                <th style='width:30%; text-align:center;'>STATUS</th>
-            </tr>
-        </thead>
-        <tbody>
-    ";
+$parcelas = $stmt_par->fetchAll(PDO::FETCH_ASSOC);
 
-    foreach ($parcelas as $p) {
-        // Compatível com PHP 7.x (sem match())
-        if ($p['status'] === 'paga') {
-            $cor_status = '#43a047';
-        } elseif ($p['status'] === 'atrasada') {
-            $cor_status = '#e53935';
+
+// =========================================================
+// STATUS DO ORÇAMENTO
+// =========================================================
+
+$status_orcamento = $orc['status'] ?? 'pendente';
+
+switch ($status_orcamento) {
+
+    case 'aceito':
+        $status_texto = 'Confirmado';
+        $status_cor = '#198754';
+        $status_fundo = '#d1fae5';
+        break;
+
+    case 'recusado':
+        $status_texto = 'Recusado';
+        $status_cor = '#dc3545';
+        $status_fundo = '#fee2e2';
+        break;
+
+    default:
+        $status_texto = 'Pendente';
+        $status_cor = '#856404';
+        $status_fundo = '#fff3cd';
+        break;
+}
+
+
+// =========================================================
+// LOGO
+// =========================================================
+
+$logo_base64 = '';
+
+$possiveis_logos = [
+    'img/logo.png',
+    'img/logo.jpg',
+    'img/logo.PNG'
+];
+
+foreach ($possiveis_logos as $logo_path) {
+
+    if (file_exists($logo_path)) {
+
+        $extensao = strtolower(pathinfo($logo_path, PATHINFO_EXTENSION));
+
+        if ($extensao === 'png') {
+            $tipo_imagem = 'image/png';
         } else {
-            $cor_status = '#ef6c00';
+            $tipo_imagem = 'image/jpeg';
         }
 
-        $html_parcelas .= "
+        $imageData = base64_encode(
+            file_get_contents($logo_path)
+        );
+
+        $logo_base64 =
+            'data:' .
+            $tipo_imagem .
+            ';base64,' .
+            $imageData;
+
+        break;
+    }
+}
+
+
+// =========================================================
+// CALCULAR TOTAL DOS ITENS
+// =========================================================
+
+$total = 0;
+
+$linhas_itens = '';
+
+foreach ($itens as $item) {
+
+    $quantidade = (int)($item['quantidade'] ?? 0);
+
+    $valor_unitario = (float)($item['valor_unitario'] ?? 0);
+
+    $subtotal = $quantidade * $valor_unitario;
+
+    $total += $subtotal;
+
+
+    $descricao = htmlspecialchars(
+        $item['descricao'] ?? '',
+        ENT_QUOTES,
+        'UTF-8'
+    );
+
+
+    $linhas_itens .= "
+        <tr>
+
+            <td class='item-description'>
+                {$descricao}
+            </td>
+
+            <td class='item-center'>
+                {$quantidade}
+            </td>
+
+            <td class='item-right'>
+                R$ " . number_format(
+        $valor_unitario,
+        2,
+        ',',
+        '.'
+    ) . "
+            </td>
+
+            <td class='item-right item-total'>
+                R$ " . number_format(
+        $subtotal,
+        2,
+        ',',
+        '.'
+    ) . "
+            </td>
+
+        </tr>
+    ";
+}
+
+
+// =========================================================
+// MONTAR PARCELAS
+// =========================================================
+
+$html_parcelas = '';
+
+if (!empty($parcelas)) {
+
+    $linhas_parcelas = '';
+
+    foreach ($parcelas as $parcela) {
+
+        $numero = (int)($parcela['numero_parcela'] ?? 0);
+
+        $valor = (float)($parcela['valor'] ?? 0);
+
+        $vencimento = !empty($parcela['vencimento'])
+            ? date(
+                'd/m/Y',
+                strtotime($parcela['vencimento'])
+            )
+            : '—';
+
+
+        $status_parcela = $parcela['status'] ?? 'pendente';
+
+
+        switch ($status_parcela) {
+
+            case 'paga':
+                $parcela_status_texto = 'Paga';
+                $parcela_status_cor = '#198754';
+                $parcela_status_fundo = '#d1fae5';
+                break;
+
+            case 'atrasada':
+                $parcela_status_texto = 'Atrasada';
+                $parcela_status_cor = '#dc3545';
+                $parcela_status_fundo = '#fee2e2';
+                break;
+
+            default:
+                $parcela_status_texto = 'Pendente';
+                $parcela_status_cor = '#856404';
+                $parcela_status_fundo = '#fff3cd';
+                break;
+        }
+
+
+        $linhas_parcelas .= "
             <tr>
-                <td style='text-align:center; font-weight:bold;'>{$p['numero_parcela']}x</td>
-                <td style='text-align:center;'>" . date('d/m/Y', strtotime($p['vencimento'])) . "</td>
-                <td style='text-align:right;'>R$ " . number_format($p['valor'], 2, ',', '.') . "</td>
-                <td style='text-align:center; color:{$cor_status}; font-weight:bold; text-transform:uppercase; font-size:9pt;'>" . ucfirst($p['status']) . "</td>
+
+                <td class='item-center'>
+                    {$numero}ª
+                </td>
+
+                <td class='item-center'>
+                    {$vencimento}
+                </td>
+
+                <td class='item-right'>
+                    R$ " . number_format(
+            $valor,
+            2,
+            ',',
+            '.'
+        ) . "
+                </td>
+
+                <td class='item-center'>
+
+                    <span
+                        class='parcel-status'
+                        style='
+                            background: {$parcela_status_fundo};
+                            color: {$parcela_status_cor};
+                        '
+                    >
+                        {$parcela_status_texto}
+                    </span>
+
+                </td>
+
             </tr>
         ";
     }
-    $html_parcelas .= "
-        </tbody>
-    </table>
-    <div style='margin-top:8px; font-size:8pt; color:#718096;'>
-        * Valores sem juros. Vencimentos a cada 30 dias.
-    </div>
-    <br>
+
+
+    $html_parcelas = "
+
+        <div class='section-title'>
+            CONDIÇÕES DE PAGAMENTO
+        </div>
+
+        <table class='items-table parcelas-table'>
+
+            <thead>
+
+                <tr>
+
+                    <th style='width:15%; text-align:center;'>
+                        PARCELA
+                    </th>
+
+                    <th style='width:25%; text-align:center;'>
+                        VENCIMENTO
+                    </th>
+
+                    <th style='width:30%; text-align:right;'>
+                        VALOR
+                    </th>
+
+                    <th style='width:30%; text-align:center;'>
+                        STATUS
+                    </th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {$linhas_parcelas}
+
+            </tbody>
+
+        </table>
+
     ";
 }
-// 🔼 FIM DA MONTAGEM DAS PARCELAS
 
-// 6. Logo em Base64
-$logo_path = 'img/logo.jpg';
-$logo_base64 = '';
-if (file_exists($logo_path)) {
-    $imageData = base64_encode(file_get_contents($logo_path));
-    $logo_base64 = 'data:image/jpeg;base64,' . $imageData;
-}
 
-// 7. Calcular totais e montar linhas da tabela de itens
-$total = 0;
-$linhas_itens = '';
-foreach ($itens as $item) {
-    $subtotal = $item['quantidade'] * $item['valor_unitario'];
-    $total += $subtotal;
-    $linhas_itens .= "
-        <tr>
-            <td style='padding:10px 12px; border-bottom:1px solid #edf2f7;'>{$item['descricao']}</td>
-            <td style='padding:10px 12px; text-align:center; border-bottom:1px solid #edf2f7;'>{$item['quantidade']}</td>
-            <td style='padding:10px 12px; text-align:right; border-bottom:1px solid #edf2f7;'>R$ " . number_format($item['valor_unitario'], 2, ',', '.') . "</td>
-            <td style='padding:10px 12px; text-align:right; font-weight:bold; border-bottom:1px solid #edf2f7;'>R$ " . number_format($subtotal, 2, ',', '.') . "</td>
-        </tr>
+// =========================================================
+// OBSERVAÇÕES
+// =========================================================
+
+$html_observacoes = '';
+
+if (!empty($orc['observacoes'])) {
+
+    $observacoes = nl2br(
+        htmlspecialchars(
+            $orc['observacoes'],
+            ENT_QUOTES,
+            'UTF-8'
+        )
+    );
+
+
+    $html_observacoes = "
+
+        <div class='observacoes-box'>
+
+            <div class='observacoes-title'>
+                Observações
+            </div>
+
+            <div class='observacoes-text'>
+                {$observacoes}
+            </div>
+
+        </div>
+
     ";
 }
 
-// 8. HTML Profissional (agora com $html_parcelas já pronto)
+
+// =========================================================
+// DADOS FORMATADOS
+// =========================================================
+
+$paciente = htmlspecialchars(
+    $orc['paciente'] ?? '',
+    ENT_QUOTES,
+    'UTF-8'
+);
+
+
+$cpf = !empty($orc['cpf'])
+    ? htmlspecialchars(
+        $orc['cpf'],
+        ENT_QUOTES,
+        'UTF-8'
+    )
+    : '—';
+
+
+$telefone = !empty($orc['telefone'])
+    ? htmlspecialchars(
+        $orc['telefone'],
+        ENT_QUOTES,
+        'UTF-8'
+    )
+    : '—';
+
+
+$email = !empty($orc['email'])
+    ? htmlspecialchars(
+        $orc['email'],
+        ENT_QUOTES,
+        'UTF-8'
+    )
+    : '—';
+
+
+$data_criacao = !empty($orc['data_criacao'])
+    ? date(
+        'd/m/Y',
+        strtotime($orc['data_criacao'])
+    )
+    : '—';
+
+
+$validade = !empty($orc['validade'])
+    ? date(
+        'd/m/Y',
+        strtotime($orc['validade'])
+    )
+    : '—';
+
+
+// =========================================================
+// HTML DO PDF
+// =========================================================
+
 $html = "
+
 <!DOCTYPE html>
+
 <html lang='pt-BR'>
+
 <head>
+
 <meta charset='UTF-8'>
+
 <style>
-    @page { margin: 14mm 16mm 14mm 16mm; }
-    body { font-family: 'Helvetica', 'Arial', sans-serif; font-size: 10pt; color: #2d3748; line-height: 1.5; margin: 0; padding: 0; }
-    
-    /* CABEÇALHO */
-    .header { display: table; width: 100%; border-bottom: 3px solid #7b3ff2; padding-bottom: 12px; margin-bottom: 20px; }
-    .header-left { display: table-cell; vertical-align: middle; width: 25%; }
-    .header-right { display: table-cell; vertical-align: middle; text-align: right; }
-    .logo { max-width: 110px; max-height: 65px; }
-    .title { font-size: 18pt; font-weight: bold; color: #7b3ff2; margin: 0 0 4px 0; letter-spacing: 0.5px; }
-    .subtitle { font-size: 8.5pt; color: #718096; margin: 0; }
-    .badge { display: inline-block; background: #ACC89F; color: #1a2e1a; padding: 4px 10px; border-radius: 12px; font-size: 8pt; font-weight: bold; margin-top: 6px; }
 
-    /* SEÇÕES */
-    .section-title { background: #7b3ff2; color: #fff; padding: 6px 10px; font-size: 9pt; font-weight: bold; border-radius: 4px 4px 0 0; margin-top: 18px; }
-    .info-table { width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0; border-top: none; background: #fff; }
-    .info-table td { padding: 9px 12px; border-bottom: 1px solid #edf2f7; font-size: 10pt; }
-    .label { color: #718096; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-bottom: 2px; }
 
-    /* TABELA DE ITENS */
-    .items-table { width: 100%; border-collapse: collapse; }
-    .items-table th { background: #7b3ff2; color: #fff; padding: 9px 10px; text-align: left; font-size: 8.5pt; font-weight: bold; border-bottom: 2px solid #5e2fc4; }
-    .items-table th:nth-child(2) { text-align: center; width: 12%; }
-    .items-table th:nth-child(3), .items-table th:nth-child(4) { text-align: right; width: 22%; }
-    .items-table tbody tr:nth-child(even) { background-color: #f8fafc; }
+/* =====================================================
+   CONFIGURAÇÃO DA PÁGINA
+   ===================================================== */
 
-    /* TOTAL & OBS */
-    .total-box { text-align: right; margin-top: 14px; padding: 14px; background: #f0f4f8; border-radius: 6px; border-left: 5px solid #ACC89F; }
-    .total-label { font-size: 9pt; color: #4a5568; text-transform: uppercase; letter-spacing: 0.5px; }
-    .total-value { font-size: 16pt; font-weight: bold; color: #7b3ff2; margin-top: 2px; }
+@page {
 
-    .obs-box { margin-top: 16px; padding: 12px; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 6px; font-size: 9pt; color: #744210; }
+    margin: 13mm 15mm 15mm 15mm;
 
-    /* ASSINATURAS */
-    .signatures { margin-top: 45px; display: table; width: 100%; }
-    .sign-box { display: table-cell; width: 46%; text-align: center; vertical-align: bottom; }
-    .sign-line { border-top: 1px solid #cbd5e0; margin-top: 55px; padding-top: 6px; font-size: 8pt; color: #718096; }
+}
 
-    /* RODAPÉ */
-    .footer { margin-top: 25px; text-align: center; font-size: 7.5pt; color: #a0aec0; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+
+body {
+
+    font-family:
+        Helvetica,
+        Arial,
+        sans-serif;
+
+    font-size: 9.5pt;
+
+    color: #2d3748;
+
+    line-height: 1.45;
+
+    margin: 0;
+
+    padding: 0;
+
+}
+
+
+/* =====================================================
+   CABEÇALHO
+   ===================================================== */
+
+.header {
+
+    width: 100%;
+
+    display: table;
+
+    border-bottom: 2px solid #2563eb;
+
+    padding-bottom: 13px;
+
+    margin-bottom: 20px;
+
+}
+
+
+.header-left {
+
+    display: table-cell;
+
+    width: 35%;
+
+    vertical-align: middle;
+
+}
+
+
+.header-right {
+
+    display: table-cell;
+
+    width: 65%;
+
+    text-align: right;
+
+    vertical-align: middle;
+
+}
+
+
+.logo {
+
+    max-width: 125px;
+
+    max-height: 65px;
+
+}
+
+
+.document-title {
+
+    margin: 0;
+
+    color: #17213a;
+
+    font-size: 17pt;
+
+    font-weight: bold;
+
+}
+
+
+.document-subtitle {
+
+    margin-top: 4px;
+
+    color: #718096;
+
+    font-size: 8pt;
+
+}
+
+
+.status-badge {
+
+    display: inline-block;
+
+    margin-top: 7px;
+
+    padding: 5px 11px;
+
+    border-radius: 12px;
+
+    font-size: 8pt;
+
+    font-weight: bold;
+
+}
+
+
+/* =====================================================
+   IDENTIFICAÇÃO
+   ===================================================== */
+
+.document-info {
+
+    width: 100%;
+
+    margin-bottom: 18px;
+
+}
+
+
+.document-info table {
+
+    width: 100%;
+
+    border-collapse: collapse;
+
+}
+
+
+.document-info td {
+
+    width: 33.33%;
+
+    padding: 7px 10px;
+
+    border: 1px solid #e2e8f0;
+
+    background: #f8fafc;
+
+}
+
+
+.info-label {
+
+    display: block;
+
+    margin-bottom: 2px;
+
+    color: #718096;
+
+    font-size: 7pt;
+
+    font-weight: bold;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.5px;
+
+}
+
+
+.info-value {
+
+    color: #17213a;
+
+    font-size: 9pt;
+
+    font-weight: 600;
+
+}
+
+
+/* =====================================================
+   TÍTULOS DAS SEÇÕES
+   ===================================================== */
+
+.section-title {
+
+    margin-top: 18px;
+
+    margin-bottom: 0;
+
+    padding: 8px 11px;
+
+    background: #2563eb;
+
+    color: #ffffff;
+
+    border-radius: 5px 5px 0 0;
+
+    font-size: 8.5pt;
+
+    font-weight: bold;
+
+    letter-spacing: 0.4px;
+
+}
+
+
+/* =====================================================
+   DADOS DO PACIENTE
+   ===================================================== */
+
+.info-table {
+
+    width: 100%;
+
+    border-collapse: collapse;
+
+    border: 1px solid #e2e8f0;
+
+    border-top: none;
+
+}
+
+
+.info-table td {
+
+    padding: 10px 11px;
+
+    border-bottom: 1px solid #edf2f7;
+
+    vertical-align: top;
+
+}
+
+
+.info-table tr:last-child td {
+
+    border-bottom: none;
+
+}
+
+
+/* =====================================================
+   TABELA DE ITENS
+   ===================================================== */
+
+.items-table {
+
+    width: 100%;
+
+    border-collapse: collapse;
+
+}
+
+
+.items-table th {
+
+    padding: 8px 10px;
+
+    background: #f1f5f9;
+
+    color: #334155;
+
+    border: 1px solid #e2e8f0;
+
+    font-size: 8pt;
+
+    font-weight: bold;
+
+}
+
+
+.items-table td {
+
+    padding: 9px 10px;
+
+    border-left: 1px solid #e2e8f0;
+
+    border-right: 1px solid #e2e8f0;
+
+    border-bottom: 1px solid #e2e8f0;
+
+    font-size: 8.5pt;
+
+}
+
+
+.items-table tbody tr:nth-child(even) {
+
+    background: #f8fafc;
+
+}
+
+
+.item-description {
+
+    text-align: left;
+
+}
+
+
+.item-center {
+
+    text-align: center;
+
+}
+
+
+.item-right {
+
+    text-align: right;
+
+}
+
+
+.item-total {
+
+    font-weight: bold;
+
+    color: #17213a;
+
+}
+
+
+/* =====================================================
+   TOTAL
+   ===================================================== */
+
+.total-box {
+
+    width: 100%;
+
+    margin-top: 12px;
+
+    padding: 12px 15px;
+
+    box-sizing: border-box;
+
+    background: #eff6ff;
+
+    border: 1px solid #bfdbfe;
+
+    border-left: 4px solid #2563eb;
+
+}
+
+
+.total-table {
+
+    width: 100%;
+
+    border-collapse: collapse;
+
+}
+
+
+.total-label {
+
+    color: #475569;
+
+    font-size: 9pt;
+
+    font-weight: bold;
+
+    text-transform: uppercase;
+
+}
+
+
+.total-value {
+
+    color: #2563eb;
+
+    font-size: 16pt;
+
+    font-weight: bold;
+
+    text-align: right;
+
+}
+
+
+/* =====================================================
+   OBSERVAÇÕES
+   ===================================================== */
+
+.observacoes-box {
+
+    margin-top: 17px;
+
+    padding: 11px 13px;
+
+    background: #fffbeb;
+
+    border: 1px solid #fde68a;
+
+    border-radius: 5px;
+
+}
+
+
+.observacoes-title {
+
+    margin-bottom: 5px;
+
+    color: #92400e;
+
+    font-size: 8.5pt;
+
+    font-weight: bold;
+
+}
+
+
+.observacoes-text {
+
+    color: #78350f;
+
+    font-size: 8.5pt;
+
+}
+
+
+/* =====================================================
+   PARCELAS
+   ===================================================== */
+
+.parcelas-table {
+
+    page-break-inside: auto;
+
+}
+
+
+.parcelas-table tr {
+
+    page-break-inside: avoid;
+
+}
+
+
+.parcel-status {
+
+    display: inline-block;
+
+    padding: 4px 9px;
+
+    border-radius: 10px;
+
+    font-size: 7.5pt;
+
+    font-weight: bold;
+
+}
+
+
+/* =====================================================
+   ASSINATURAS
+   ===================================================== */
+
+.signatures {
+
+    width: 100%;
+
+    display: table;
+
+    margin-top: 48px;
+
+}
+
+
+.sign-box {
+
+    display: table-cell;
+
+    width: 45%;
+
+    text-align: center;
+
+    vertical-align: bottom;
+
+}
+
+
+.sign-space {
+
+    height: 45px;
+
+}
+
+
+.sign-line {
+
+    border-top: 1px solid #94a3b8;
+
+    padding-top: 6px;
+
+    color: #64748b;
+
+    font-size: 8pt;
+
+}
+
+
+/* =====================================================
+   RODAPÉ
+   ===================================================== */
+
+.footer {
+
+    margin-top: 25px;
+
+    padding-top: 9px;
+
+    border-top: 1px solid #e2e8f0;
+
+    text-align: center;
+
+    color: #94a3b8;
+
+    font-size: 7pt;
+
+    line-height: 1.5;
+
+}
+
+
+/* =====================================================
+   QUEBRA DE PÁGINA
+   ===================================================== */
+
+.section-break {
+
+    page-break-before: auto;
+
+}
+
+
 </style>
+
 </head>
+
+
 <body>
-    <div class='header'>
-        <div class='header-left'>
-            " . ($logo_base64 ? "<img src='{$logo_base64}' class='logo'>" : "<span style='font-size:24px;'>🦷</span>") . "
-        </div>
-        <div class='header-right'>
-            <h1 class='title'>ORÇAMENTO ODONTOLÓGICO</h1>
-            <p class='subtitle'>Documento gerado automaticamente pelo sistema Dentech</p>
-            <span class='badge'>📅 Válido até: " . date('d/m/Y', strtotime($orc['validade'])) . "</span>
-        </div>
+
+
+<!-- ===================================================
+     CABEÇALHO
+     =================================================== -->
+
+<div class='header'>
+
+    <div class='header-left'>
+
+        " .
+    (
+        $logo_base64
+        ? "<img src='{$logo_base64}' class='logo'>"
+        : "<strong style='font-size:18pt;color:#2563eb;'>DENTECH</strong>"
+    )
+    . "
+
     </div>
 
-    <div class='section-title'>DADOS DO PACIENTE</div>
-    <table class='info-table'>
+
+    <div class='header-right'>
+
+        <h1 class='document-title'>
+            ORÇAMENTO ODONTOLÓGICO
+        </h1>
+
+        <div class='document-subtitle'>
+            Sistema de Gestão Odontológica Dentech
+        </div>
+
+
+        <span
+            class='status-badge'
+            style='
+                background: {$status_fundo};
+                color: {$status_cor};
+            '
+        >
+            {$status_texto}
+        </span>
+
+    </div>
+
+</div>
+
+
+<!-- ===================================================
+     INFORMAÇÕES DO DOCUMENTO
+     =================================================== -->
+
+<div class='document-info'>
+
+    <table>
+
         <tr>
-            <td width='50%'><span class='label'>Nome Completo</span>{$orc['paciente']}</td>
-            <td width='25%'><span class='label'>CPF</span>" . (!empty($orc['cpf']) ? htmlspecialchars($orc['cpf']) : "—") . "</td>
-            <td width='25%'><span class='label'>Contato</span>" . (!empty($orc['telefone']) ? htmlspecialchars($orc['telefone']) : "—") . "</td>
+
+            <td>
+
+                <span class='info-label'>
+                    Orçamento
+                </span>
+
+                <span class='info-value'>
+                    #{$id_orc}
+                </span>
+
+            </td>
+
+
+            <td>
+
+                <span class='info-label'>
+                    Data de emissão
+                </span>
+
+                <span class='info-value'>
+                    {$data_criacao}
+                </span>
+
+            </td>
+
+
+            <td>
+
+                <span class='info-label'>
+                    Válido até
+                </span>
+
+                <span class='info-value'>
+                    {$validade}
+                </span>
+
+            </td>
+
         </tr>
+
     </table>
 
-    <div class='section-title'>PROCEDIMENTOS & VALORES</div>
-    <table class='items-table'>
-        <thead>
-            <tr>
-                <th>DESCRIÇÃO</th>
-                <th>QTD</th>
-                <th>VALOR UNIT.</th>
-                <th>SUBTOTAL</th>
-            </tr>
-        </thead>
-        <tbody>
-            {$linhas_itens}
-        </tbody>
+</div>
+
+
+<!-- ===================================================
+     DADOS DO PACIENTE
+     =================================================== -->
+
+<div class='section-title'>
+    DADOS DO PACIENTE
+</div>
+
+
+<table class='info-table'>
+
+    <tr>
+
+        <td width='40%'>
+
+            <span class='info-label'>
+                Nome completo
+            </span>
+
+            <span class='info-value'>
+                {$paciente}
+            </span>
+
+        </td>
+
+
+        <td width='30%'>
+
+            <span class='info-label'>
+                CPF
+            </span>
+
+            <span class='info-value'>
+                {$cpf}
+            </span>
+
+        </td>
+
+
+        <td width='30%'>
+
+            <span class='info-label'>
+                Telefone
+            </span>
+
+            <span class='info-value'>
+                {$telefone}
+            </span>
+
+        </td>
+
+    </tr>
+
+
+    <tr>
+
+        <td colspan='3'>
+
+            <span class='info-label'>
+                E-mail
+            </span>
+
+            <span class='info-value'>
+                {$email}
+            </span>
+
+        </td>
+
+    </tr>
+
+</table>
+
+
+<!-- ===================================================
+     PROCEDIMENTOS
+     =================================================== -->
+
+<div class='section-title'>
+    PROCEDIMENTOS E VALORES
+</div>
+
+
+<table class='items-table'>
+
+    <thead>
+
+        <tr>
+
+            <th style='width:46%;'>
+                DESCRIÇÃO
+            </th>
+
+            <th style='width:12%; text-align:center;'>
+                QTD.
+            </th>
+
+            <th style='width:21%; text-align:right;'>
+                VALOR UNIT.
+            </th>
+
+            <th style='width:21%; text-align:right;'>
+                SUBTOTAL
+            </th>
+
+        </tr>
+
+    </thead>
+
+
+    <tbody>
+
+        " .
+    (
+        !empty($linhas_itens)
+        ? $linhas_itens
+        : "
+                <tr>
+                    <td colspan='4' style='text-align:center;color:#718096;'>
+                        Nenhum procedimento registrado.
+                    </td>
+                </tr>
+            "
+    )
+    . "
+
+    </tbody>
+
+</table>
+
+
+<!-- ===================================================
+     TOTAL
+     =================================================== -->
+
+<div class='total-box'>
+
+    <table class='total-table'>
+
+        <tr>
+
+            <td>
+
+                <div class='total-label'>
+                    Valor total do orçamento
+                </div>
+
+            </td>
+
+
+            <td>
+
+                <div class='total-value'>
+                    R$ " .
+    number_format(
+        $total,
+        2,
+        ',',
+        '.'
+    )
+    . "
+                </div>
+
+            </td>
+
+        </tr>
+
     </table>
 
-    <div class='total-box'>
-        <div class='total-label'>Valor Total do Orçamento</div>
-        <div class='total-value'>R$ " . number_format($total, 2, ',', '.') . "</div>
-    </div>
+</div>
 
-    " . (!empty($orc['observacoes']) ? "
-    <div class='obs-box'>
-        <strong>📝 Observações Clínicas:</strong><br>
-        " . nl2br(htmlspecialchars($orc['observacoes'])) . "
-    </div>
-    " : "") . "
 
-    <!-- 🔽 PARCELAS (inserido aqui, já pré-montado) -->
-    {$html_parcelas}
-    <!-- 🔼 FIM PARCELAS -->
+<!-- ===================================================
+     OBSERVAÇÕES
+     =================================================== -->
 
-    <div class='signatures'>
-        <div class='sign-box'>
-            <div class='sign-line'>Assinatura do Paciente</div>
+{$html_observacoes}
+
+
+<!-- ===================================================
+     PARCELAS
+     =================================================== -->
+
+{$html_parcelas}
+
+
+<!-- ===================================================
+     ASSINATURAS
+     =================================================== -->
+
+<div class='signatures'>
+
+    <div class='sign-box'>
+
+        <div class='sign-space'></div>
+
+        <div class='sign-line'>
+            Assinatura do Paciente
         </div>
-        <div class='sign-box'>
-            <div class='sign-line'>Assinatura do Cirurgião-Dentista</div>
-        </div>
+
     </div>
 
-    <div class='footer'>
-        Dentech - Sistema de Gestão Odontológica | Gerado em " . date('d/m/Y \à\s H:i') . "<br>
-        Este documento não substitui a avaliação clínica presencial. Valores podem ser reajustados conforme complexidade do tratamento.
+
+    <div style='width:10%; display:table-cell;'></div>
+
+
+    <div class='sign-box'>
+
+        <div class='sign-space'></div>
+
+        <div class='sign-line'>
+            Assinatura do Cirurgião-Dentista
+        </div>
+
     </div>
+
+</div>
+
+
+<!-- ===================================================
+     RODAPÉ
+     =================================================== -->
+
+<div class='footer'>
+
+    Dentech - Sistema de Gestão Odontológica<br>
+
+    Documento gerado em " .
+    date('d/m/Y \\à\\s H:i')
+    . "
+
+    <br>
+
+    Este documento apresenta uma proposta de tratamento
+    e não substitui a avaliação clínica profissional.
+
+</div>
+
+
 </body>
+
 </html>
 ";
 
-// 9. Renderizar e Baixar
+
+// =========================================================
+// GERAR PDF
+// =========================================================
+
 $dompdf->loadHtml($html);
-$dompdf->setPaper('A4', 'portrait');
+
+$dompdf->setPaper(
+    'A4',
+    'portrait'
+);
+
 $dompdf->render();
-$dompdf->stream("Orcamento_{$orc['id']}_{$orc['paciente']}.pdf", ["Attachment" => true]);
+
+
+// =========================================================
+// NOME DO ARQUIVO
+// =========================================================
+
+$nome_paciente = preg_replace(
+    '/[^A-Za-z0-9À-ÿ _-]/u',
+    '',
+    $orc['paciente'] ?? 'Paciente'
+);
+
+
+$nome_paciente = trim(
+    preg_replace(
+        '/\s+/',
+        '_',
+        $nome_paciente
+    )
+);
+
+
+$nome_arquivo =
+    'Orcamento_' .
+    $id_orc .
+    '_' .
+    $nome_paciente .
+    '.pdf';
+
+
+// =========================================================
+// ENVIAR PDF
+// =========================================================
+
+$dompdf->stream(
+    $nome_arquivo,
+    [
+        'Attachment' => true
+    ]
+);
+
 exit;
