@@ -101,7 +101,7 @@ if (!$orc) {
 
 $stmtItens = $pdo->prepare("
     SELECT *
-    FROM orcamento_itens
+    FROM orcamentos_itens
     WHERE orcamento_id = ?
     ORDER BY id ASC
 ");
