@@ -40,6 +40,23 @@ $observacoes = trim($_POST['observacoes'] ?? '');
 
 /*
 |--------------------------------------------------------------------------
+| Métodos de pagamento
+|--------------------------------------------------------------------------
+*/
+
+$formas_validas = [
+    'Dinheiro',
+    'PIX',
+    'Cartão de débito',
+    'Cartão de crédito',
+    'Boleto',
+    'Transferência bancária',
+    'Cheque',
+    'Outro'
+];
+
+/*
+|--------------------------------------------------------------------------
 | Processamento
 |--------------------------------------------------------------------------
 */
@@ -48,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /*
     |--------------------------------------------------------------------------
-    | Verificação CSRF
+    | CSRF
     |--------------------------------------------------------------------------
     */
 
@@ -96,6 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     */
 
     if ($data === '') {
+
         $erros[] = 'Informe a data do lançamento.';
     } else {
 
@@ -111,16 +129,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     | Forma de pagamento
     |--------------------------------------------------------------------------
     */
-
-    $formas_validas = [
-        'Dinheiro',
-        'PIX',
-        'Cartão de débito',
-        'Cartão de crédito',
-        'Boleto',
-        'Transferência',
-        'Outro'
-    ];
 
     if (!in_array($forma_pagamento, $formas_validas, true)) {
         $erros[] = 'Selecione uma forma de pagamento válida.';
@@ -138,11 +146,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
 
         /*
-         * Aceita tanto:
-         * 1500.50
-         * 1.500,50
-         * 1500,50
-         */
+        | Aceita:
+        | 1500.50
+        | 1.500,50
+        | 1500,50
+        */
 
         $valor_limpo = str_replace('.', '', $valor);
         $valor_limpo = str_replace(',', '.', $valor_limpo);
@@ -166,7 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     |--------------------------------------------------------------------------
     */
 
-    $parcelas = filter_var(
+    $parcelas_validacao = filter_var(
         $parcelas,
         FILTER_VALIDATE_INT,
         [
@@ -177,8 +185,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]
     );
 
-    if ($parcelas === false) {
+    if ($parcelas_validacao === false) {
+
         $erros[] = 'Informe uma quantidade válida de parcelas.';
+    } else {
+
+        $parcelas = $parcelas_validacao;
     }
 
     /*
@@ -225,16 +237,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':forma_pagamento' => $forma_pagamento,
                 ':valor' => $valor_numero,
                 ':parcelas' => $parcelas,
-
-                /*
-                 * Inicialmente:
-                 * todo novo lançamento começa como pendente.
-                 *
-                 * Depois podemos colocar uma opção
-                 * "Pago" no formulário.
-                 */
                 ':status' => 'pendente',
-
                 ':observacoes' => $observacoes !== ''
                     ? $observacoes
                     : null
@@ -242,7 +245,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             /*
             |--------------------------------------------------------------------------
-            | Regenerar CSRF
+            | Novo CSRF
             |--------------------------------------------------------------------------
             */
 
@@ -250,7 +253,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             /*
             |--------------------------------------------------------------------------
-            | Redirecionar
+            | Redirecionamento
             |--------------------------------------------------------------------------
             */
 
@@ -291,6 +294,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         rel="stylesheet"
         href="css/novo_lancamento.css">
 
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
 </head>
 
 <body>
@@ -299,7 +306,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <main class="container">
 
-        <!-- CABEÇALHO -->
+        <!-- =====================================================
+             CABEÇALHO
+        ====================================================== -->
 
         <div class="page-header">
 
@@ -326,14 +335,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
 
-        <!-- ERROS -->
+        <!-- =====================================================
+             ERROS
+        ====================================================== -->
 
         <?php if (!empty($erros)): ?>
 
             <div class="alert alert-error">
 
                 <div class="alert-icon">
+
                     <i class="fa-solid fa-circle-exclamation"></i>
+
                 </div>
 
                 <div>
@@ -353,7 +366,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
 
-        <!-- FORMULÁRIO -->
+        <!-- =====================================================
+             FORMULÁRIO
+        ====================================================== -->
 
         <form
             method="POST"
@@ -366,14 +381,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 value="<?= htmlspecialchars($csrf_token) ?>">
 
 
-            <!-- TIPO -->
+            <!-- =================================================
+                 TIPO
+            ================================================== -->
 
             <div class="form-section">
 
                 <div class="section-header">
 
                     <div class="section-icon">
+
                         <i class="fa-solid fa-arrow-right-arrow-left"></i>
+
                     </div>
 
                     <div>
@@ -391,6 +410,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div class="tipo-grid">
 
+                    <!-- RECEITA -->
+
                     <label class="tipo-option receita">
 
                         <input
@@ -402,7 +423,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <span class="tipo-content">
 
                             <span class="tipo-icon">
+
                                 <i class="fa-solid fa-arrow-trend-up"></i>
+
                             </span>
 
                             <span>
@@ -420,6 +443,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </label>
 
 
+                    <!-- DESPESA -->
+
                     <label class="tipo-option despesa">
 
                         <input
@@ -431,7 +456,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <span class="tipo-content">
 
                             <span class="tipo-icon">
+
                                 <i class="fa-solid fa-arrow-trend-down"></i>
+
                             </span>
 
                             <span>
@@ -453,14 +480,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
 
-            <!-- DADOS -->
+            <!-- =================================================
+                 DADOS DO LANÇAMENTO
+            ================================================== -->
 
             <div class="form-section">
 
                 <div class="section-header">
 
                     <div class="section-icon">
+
                         <i class="fa-solid fa-file-invoice"></i>
+
                     </div>
 
                     <div>
@@ -551,7 +582,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             required>
 
                             <option value="">
-                                Selecione
+                                Selecione a forma de pagamento
                             </option>
 
                             <?php foreach ($formas_validas as $forma): ?>
@@ -625,20 +656,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     </div>
 
-
                 </div>
 
             </div>
 
 
-            <!-- OBSERVAÇÕES -->
+            <!-- =================================================
+                 OBSERVAÇÕES
+            ================================================== -->
 
             <div class="form-section">
 
                 <div class="section-header">
 
                     <div class="section-icon">
+
                         <i class="fa-solid fa-note-sticky"></i>
+
                     </div>
 
                     <div>
@@ -668,7 +702,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
 
-            <!-- AÇÕES -->
+            <!-- =================================================
+                 AÇÕES
+            ================================================== -->
 
             <div class="form-actions">
 
@@ -700,7 +736,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </main>
 
 
-    <!-- MÁSCARA DO VALOR -->
+    <!-- =========================================================
+         MÁSCARA DE VALOR
+    ========================================================== -->
 
     <script>
         const campoValor = document.getElementById('valor');
@@ -712,14 +750,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             valor = valor.replace(/\D/g, '');
 
             if (!valor) {
+
                 this.value = '';
+
                 return;
             }
 
             valor = (parseInt(valor, 10) / 100).toFixed(2);
 
-            valor = valor
-                .replace('.', ',');
+            valor = valor.replace('.', ',');
 
             valor = valor.replace(
                 /\B(?=(\d{3})+(?!\d))/g,

@@ -84,6 +84,14 @@ function menuAtivo(string $pagina, string $paginaAtual): string
             <span>Orçamentos</span>
         </a>
 
+        <!-- ORÇAMENTOS -->
+        <a
+            href="financeiro"
+            class="nav-link <?= menuAtivo('financeiro', $paginaAtual) ?>">
+            <i class="fa-solid fa-file-invoice-dollar"></i>
+            <span>Orçamentos</span>
+        </a>
+
 
         <!-- ÁREA RESTRITA -->
         <a
