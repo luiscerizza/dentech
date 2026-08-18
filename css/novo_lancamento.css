@@ -1,0 +1,726 @@
+/* =========================================================
+   NOVO LANÇAMENTO - DENTECH
+   ========================================================= */
+
+:root {
+    --finance-primary: #1597b2;
+    --finance-primary-dark: #0e7f96;
+    --finance-primary-light: #e8f8fb;
+
+    --finance-bg: #f6f9fb;
+    --finance-surface: #ffffff;
+    --finance-border: #e3ebef;
+
+    --finance-text: #173042;
+    --finance-muted: #728391;
+
+    --finance-green: #249b69;
+    --finance-green-light: #eaf8f1;
+
+    --finance-red: #d95c63;
+    --finance-red-light: #fff0f1;
+
+    --finance-shadow: 0 2px 14px rgba(24, 53, 68, 0.055);
+
+    --finance-radius: 10px;
+}
+
+
+/* =========================================================
+   BASE
+   ========================================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--finance-bg);
+    color: var(--finance-text);
+    font-family: "Inter", "Segoe UI", Arial, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
+}
+
+
+/* =========================================================
+   CONTAINER
+   ========================================================= */
+
+.container {
+    width: calc(100% - 220px);
+    min-height: 100vh;
+
+    margin-left: 220px;
+
+    padding: 28px 32px 40px;
+
+    box-sizing: border-box;
+}
+
+
+/* =========================================================
+   CABEÇALHO
+   ========================================================= */
+
+.page-header {
+    width: 100%;
+    margin-bottom: 22px;
+}
+
+.page-header-info {
+    max-width: 900px;
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    margin-bottom: 7px;
+
+    color: var(--finance-muted);
+
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.breadcrumb-separator {
+    color: #a8b4bb;
+}
+
+.page-header h1 {
+    margin: 0;
+
+    color: #1d3546;
+
+    font-size: 27px;
+    line-height: 1.2;
+    font-weight: 750;
+}
+
+.page-header p {
+    margin: 7px 0 0;
+
+    color: var(--finance-muted);
+
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   ALERTA DE ERRO
+   ========================================================= */
+
+.alert {
+    width: 100%;
+
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+
+    margin-bottom: 18px;
+    padding: 13px 15px;
+
+    border-radius: 9px;
+
+    font-size: 12px;
+}
+
+.alert-icon {
+    width: 30px;
+    height: 30px;
+
+    flex: 0 0 30px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 8px;
+
+    font-size: 13px;
+}
+
+.alert-error {
+    background: var(--finance-red-light);
+    border: 1px solid #f2d7da;
+
+    color: #a94a51;
+}
+
+.alert-error .alert-icon {
+    background: #ffe1e4;
+    color: var(--finance-red);
+}
+
+.alert p {
+    margin: 2px 0;
+}
+
+
+/* =========================================================
+   CARD PRINCIPAL
+   ========================================================= */
+
+.form-card {
+    width: 100%;
+
+    background: var(--finance-surface);
+
+    border: 1px solid var(--finance-border);
+    border-radius: var(--finance-radius);
+
+    box-shadow: var(--finance-shadow);
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   SEÇÕES
+   ========================================================= */
+
+.form-section {
+    padding: 22px 24px;
+
+    border-bottom: 1px solid #edf1f4;
+}
+
+.form-section:last-of-type {
+    border-bottom: 0;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+
+    margin-bottom: 19px;
+}
+
+.section-icon {
+    width: 37px;
+    height: 37px;
+
+    flex: 0 0 37px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 9px;
+
+    background: var(--finance-primary-light);
+    color: var(--finance-primary);
+
+    font-size: 13px;
+}
+
+.section-header h2 {
+    margin: 0;
+
+    color: #284355;
+
+    font-size: 15px;
+    line-height: 1.2;
+    font-weight: 750;
+}
+
+.section-header p {
+    margin: 4px 0 0;
+
+    color: #8998a1;
+
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+
+/* =========================================================
+   TIPO - RECEITA / DESPESA
+   ========================================================= */
+
+.tipo-grid {
+    display: grid;
+
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    gap: 12px;
+}
+
+.tipo-option {
+    position: relative;
+
+    display: block;
+
+    cursor: pointer;
+}
+
+.tipo-option input {
+    position: absolute;
+
+    opacity: 0;
+    pointer-events: none;
+}
+
+.tipo-content {
+    min-height: 72px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 12px 14px;
+
+    border: 1px solid var(--finance-border);
+    border-radius: 9px;
+
+    background: #fff;
+
+    transition:
+        border-color .18s ease,
+        background .18s ease,
+        box-shadow .18s ease;
+}
+
+.tipo-option:hover .tipo-content {
+    border-color: #b9dfe6;
+    background: #fbfeff;
+}
+
+.tipo-option input:checked + .tipo-content {
+    border-color: var(--finance-primary);
+
+    background: var(--finance-primary-light);
+
+    box-shadow: 0 0 0 2px rgba(21, 151, 178, 0.08);
+}
+
+.tipo-icon {
+    width: 38px;
+    height: 38px;
+
+    flex: 0 0 38px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 9px;
+
+    font-size: 14px;
+}
+
+.tipo-option.receita .tipo-icon {
+    background: var(--finance-green-light);
+    color: var(--finance-green);
+}
+
+.tipo-option.despesa .tipo-icon {
+    background: var(--finance-red-light);
+    color: var(--finance-red);
+}
+
+.tipo-content strong,
+.tipo-content small {
+    display: block;
+}
+
+.tipo-content strong {
+    color: #405766;
+
+    font-size: 13px;
+    font-weight: 750;
+}
+
+.tipo-content small {
+    margin-top: 3px;
+
+    color: #8998a1;
+
+    font-size: 10px;
+}
+
+
+/* =========================================================
+   GRID DO FORMULÁRIO
+   ========================================================= */
+
+.form-grid {
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        minmax(0, 1fr);
+
+    gap: 17px 18px;
+}
+
+.form-group {
+    min-width: 0;
+
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group-full {
+    grid-column: 1 / -1;
+}
+
+
+/* =========================================================
+   LABELS
+   ========================================================= */
+
+.form-group label {
+    margin-bottom: 6px;
+
+    color: #526976;
+
+    font-size: 11px;
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   INPUTS
+   ========================================================= */
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+
+    border: 1px solid #dce6ea;
+    border-radius: 7px;
+
+    background: #fff;
+
+    color: #3c5361;
+
+    font-size: 12px;
+
+    outline: none;
+
+    transition:
+        border-color .18s ease,
+        box-shadow .18s ease,
+        background .18s ease;
+}
+
+.form-group input,
+.form-group select {
+    height: 40px;
+
+    padding: 0 11px;
+}
+
+.form-group textarea {
+    min-height: 105px;
+
+    padding: 10px 11px;
+
+    resize: vertical;
+
+    line-height: 1.5;
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+    color: #a7b2b8;
+}
+
+.form-group input:hover,
+.form-group select:hover,
+.form-group textarea:hover {
+    border-color: #cbdde2;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: var(--finance-primary);
+
+    box-shadow: 0 0 0 3px rgba(21, 151, 178, 0.09);
+
+    background: #fcfeff;
+}
+
+
+/* =========================================================
+   SELECT
+   ========================================================= */
+
+.form-group select {
+    cursor: pointer;
+
+    appearance: auto;
+}
+
+
+/* =========================================================
+   CAMPO DE DINHEIRO
+   ========================================================= */
+
+.input-money {
+    position: relative;
+
+    width: 100%;
+}
+
+.input-money > span {
+    position: absolute;
+
+    left: 11px;
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    color: #7b8d97;
+
+    font-size: 11px;
+    font-weight: 700;
+
+    pointer-events: none;
+}
+
+.input-money input {
+    padding-left: 32px;
+}
+
+
+/* =========================================================
+   OBSERVAÇÕES
+   ========================================================= */
+
+#observacoes {
+    min-height: 110px;
+}
+
+
+/* =========================================================
+   AÇÕES
+   ========================================================= */
+
+.form-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+
+    gap: 10px;
+
+    padding: 17px 24px;
+
+    background: #fbfcfd;
+
+    border-top: 1px solid #edf1f4;
+}
+
+.btn {
+    min-height: 39px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 7px;
+
+    padding: 0 15px;
+
+    border-radius: 7px;
+
+    font-size: 11px;
+    font-weight: 700;
+
+    text-decoration: none;
+
+    cursor: pointer;
+
+    transition:
+        background .18s ease,
+        border-color .18s ease,
+        color .18s ease,
+        transform .18s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   CANCELAR
+   ========================================================= */
+
+.btn-cancelar {
+    border: 1px solid #dce5e9;
+
+    background: #fff;
+
+    color: #687b86;
+}
+
+.btn-cancelar:hover {
+    background: #f5f8f9;
+
+    border-color: #ccd9de;
+
+    color: #526875;
+}
+
+
+/* =========================================================
+   SALVAR
+   ========================================================= */
+
+.btn-salvar {
+    border: 1px solid var(--finance-primary);
+
+    background: var(--finance-primary);
+
+    color: #fff;
+}
+
+.btn-salvar:hover {
+    background: var(--finance-primary-dark);
+
+    border-color: var(--finance-primary-dark);
+}
+
+
+/* =========================================================
+   RESPONSIVO
+   ========================================================= */
+
+@media (max-width: 1100px) {
+
+    .container {
+        padding: 25px 22px 35px;
+    }
+
+    .page-header h1 {
+        font-size: 25px;
+    }
+
+}
+
+
+@media (max-width: 760px) {
+
+    .container {
+        width: calc(100% - 72px);
+
+        margin-left: 72px;
+
+        padding: 20px 14px 30px;
+    }
+
+    .page-header h1 {
+        font-size: 23px;
+    }
+
+    .form-section {
+        padding: 19px 18px;
+    }
+
+    .section-header {
+        margin-bottom: 16px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+
+        gap: 15px;
+    }
+
+    .form-group-full {
+        grid-column: auto;
+    }
+
+    .tipo-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-actions {
+        padding: 15px 18px;
+    }
+
+}
+
+
+@media (max-width: 520px) {
+
+    .container {
+        padding: 17px 10px 25px;
+    }
+
+    .page-header {
+        margin-bottom: 17px;
+    }
+
+    .breadcrumb {
+        font-size: 10px;
+    }
+
+    .page-header h1 {
+        font-size: 21px;
+    }
+
+    .page-header p {
+        font-size: 11px;
+    }
+
+    .form-section {
+        padding: 17px 14px;
+    }
+
+    .section-header {
+        align-items: flex-start;
+    }
+
+    .section-icon {
+        width: 34px;
+        height: 34px;
+
+        flex-basis: 34px;
+    }
+
+    .section-header h2 {
+        font-size: 14px;
+    }
+
+    .section-header p {
+        font-size: 10px;
+    }
+
+    .tipo-content {
+        min-height: 65px;
+
+        padding: 10px 11px;
+    }
+
+    .tipo-icon {
+        width: 34px;
+        height: 34px;
+
+        flex-basis: 34px;
+    }
+
+    .form-actions {
+        flex-direction: column-reverse;
+
+        align-items: stretch;
+    }
+
+    .btn {
+        width: 100%;
+    }
+
+}
