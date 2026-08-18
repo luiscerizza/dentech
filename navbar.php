@@ -13,55 +13,73 @@ function menuAtivo($paginas)
 }
 ?>
 
-<link rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-
 <aside class="sidebar">
 
+    <!-- LOGO -->
     <div class="sidebar-logo">
         <a href="index.php">
             <img src="img/logo.png" alt="Dentech">
         </a>
     </div>
 
-    <nav class="sidebar-menu">
+    <!-- MENU -->
+    <nav class="sidebar-nav">
 
-        <a href="index.php"
-            class="menu-item <?= menuAtivo('index.php') ?>">
+        <!-- DASHBOARD -->
+        <a
+            href="index.php"
+            class="nav-link <?= menuAtivo('index.php') ?>">
             <i class="fa-solid fa-house"></i>
             <span>Dashboard</span>
         </a>
 
-        <a href="prontuarios.php"
-            class="menu-item <?= menuAtivo('prontuarios.php') ?>">
+        <!-- PRONTUÁRIOS -->
+        <a
+            href="prontuarios.php"
+            class="nav-link <?= menuAtivo([
+                                'prontuarios.php',
+                                'editar_prontuario.php',
+                                'visualizar_prontuario.php'
+                            ]) ?>">
             <i class="fa-regular fa-folder-open"></i>
             <span>Prontuários</span>
         </a>
 
-        <a href="agendamentos.php"
-            class="menu-item <?= menuAtivo('agendamentos.php') ?>">
+        <!-- AGENDAMENTOS -->
+        <a
+            href="agendamentos.php"
+            class="nav-link <?= menuAtivo([
+                                'agendamentos.php'
+                            ]) ?>">
             <i class="fa-regular fa-calendar"></i>
             <span>Agendamentos</span>
         </a>
 
-        <a href="financeiro.php"
-            class="menu-item <?= menuAtivo([
-                                    'financeiro.php',
-                                    'novo_lancamento.php',
-                                    'visualizar_lancamento.php',
-                                    'editar_lancamento.php'
-                                ]) ?>">
+        <!-- FINANCEIRO -->
+        <a
+            href="financeiro.php"
+            class="nav-link <?= menuAtivo([
+                                'financeiro.php',
+                                'novo_lancamento.php',
+                                'editar_lancamento.php',
+                                'visualizar_lancamento.php'
+                            ]) ?>">
             <i class="fa-solid fa-dollar-sign"></i>
             <span>Financeiro</span>
         </a>
 
-        <a href="inventario.php"
-            class="menu-item <?= menuAtivo('inventario.php') ?>">
+        <!-- ESTOQUE -->
+        <a
+            href="inventario.php"
+            class="nav-link <?= menuAtivo([
+                                'inventario.php'
+                            ]) ?>">
             <i class="fa-solid fa-box"></i>
             <span>Estoque</span>
         </a>
 
-        <div class="menu-item menu-disabled">
+        <!-- AJUDA -->
+        <div class="nav-link">
             <i class="fa-regular fa-circle-question"></i>
             <span>Ajuda</span>
         </div>
