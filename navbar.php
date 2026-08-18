@@ -13,45 +13,38 @@ function menuAtivo($paginas)
 }
 ?>
 
+<link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
 <aside class="sidebar">
 
-    <!-- LOGO -->
     <div class="sidebar-logo">
         <a href="index.php">
             <img src="img/logo.png" alt="Dentech">
         </a>
     </div>
 
-    <!-- MENU -->
     <nav class="sidebar-menu">
 
-        <!-- DASHBOARD -->
-        <a
-            href="index.php"
+        <a href="index.php"
             class="menu-item <?= menuAtivo('index.php') ?>">
             <i class="fa-solid fa-house"></i>
             <span>Dashboard</span>
         </a>
 
-        <!-- PRONTUÁRIOS -->
-        <a
-            href="prontuarios.php"
+        <a href="prontuarios.php"
             class="menu-item <?= menuAtivo('prontuarios.php') ?>">
             <i class="fa-regular fa-folder-open"></i>
             <span>Prontuários</span>
         </a>
 
-        <!-- AGENDAMENTOS -->
-        <a
-            href="agendamentos.php"
+        <a href="agendamentos.php"
             class="menu-item <?= menuAtivo('agendamentos.php') ?>">
             <i class="fa-regular fa-calendar"></i>
             <span>Agendamentos</span>
         </a>
 
-        <!-- FINANCEIRO -->
-        <a
-            href="financeiro.php"
+        <a href="financeiro.php"
             class="menu-item <?= menuAtivo([
                                     'financeiro.php',
                                     'novo_lancamento.php',
@@ -62,17 +55,12 @@ function menuAtivo($paginas)
             <span>Financeiro</span>
         </a>
 
-        <!-- ESTOQUE -->
-        <a
-            href="inventario.php"
-            class="menu-item <?= menuAtivo([
-                                    'inventario.php'
-                                ]) ?>">
+        <a href="inventario.php"
+            class="menu-item <?= menuAtivo('inventario.php') ?>">
             <i class="fa-solid fa-box"></i>
             <span>Estoque</span>
         </a>
 
-        <!-- AJUDA -->
         <div class="menu-item menu-disabled">
             <i class="fa-regular fa-circle-question"></i>
             <span>Ajuda</span>
