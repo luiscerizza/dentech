@@ -78,6 +78,9 @@ $orcamentos = $stmt->fetchAll();
     <title>Orçamentos - Dentech</title>
     <link rel="stylesheet" href="css/navbar.css">
     <link rel="stylesheet" href="css/orcamento.css">
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="icon" type="image/png" href="img/icon.PNG">
     <style>
         .filter-form {
@@ -88,109 +91,111 @@ $orcamentos = $stmt->fetchAll();
 
 <body>
     <?php include 'navbar.php'; ?>
-    <div class="container">
-        <h1>Orçamentos</h1>
+    <div class="content">
+        <div class="container">
+            <h1>Orçamentos</h1>
 
-        <!-- 🔽 BARRA DE FILTROS -->
-        <div class="filter-bar">
-            <form method="GET" class="filter-form">
-                <input type="text" name="busca" placeholder="Nome do paciente..." value="<?= htmlspecialchars($busca) ?>">
-                <select name="status">
-                    <option value="">Todos os status</option>
-                    <option value="pendente" <?= $status === 'pendente' ? 'selected' : '' ?>>Pendente</option>
-                    <option value="aceito" <?= $status === 'aceito' ? 'selected' : '' ?>>Aceito</option>
-                    <option value="recusado" <?= $status === 'recusado' ? 'selected' : '' ?>>Recusado</option>
-                </select>
-                <input type="date" name="data_ini" value="<?= htmlspecialchars($data_ini) ?>" title="Data inicial">
-                <button type="submit" class="btn-filter">🔍 Filtrar</button>
-                <a href="orcamento" class="btn-reset">✖ Limpar</a>
-            </form>
-            <?php if ($busca !== '' || $status !== '' || $data_ini !== '' || $data_fim !== ''): ?>
-                <div class="filter-info">
-                    ✅ Filtros ativos:
-                    <?php
-                    $ativos = [];
-                    if ($busca !== '') $ativos[] = "Paciente: '{$busca}'";
-                    if ($status !== '') $ativos[] = "Status: " . ucfirst($status);
-                    if ($data_ini !== '') $ativos[] = "De: " . date('d/m/Y', strtotime($data_ini));
-                    if ($data_fim !== '') $ativos[] = "Até: " . date('d/m/Y', strtotime($data_fim));
-                    echo implode(' • ', $ativos);
+            <!-- 🔽 BARRA DE FILTROS -->
+            <div class="filter-bar">
+                <form method="GET" class="filter-form">
+                    <input type="text" name="busca" placeholder="Nome do paciente..." value="<?= htmlspecialchars($busca) ?>">
+                    <select name="status">
+                        <option value="">Todos os status</option>
+                        <option value="pendente" <?= $status === 'pendente' ? 'selected' : '' ?>>Pendente</option>
+                        <option value="aceito" <?= $status === 'aceito' ? 'selected' : '' ?>>Aceito</option>
+                        <option value="recusado" <?= $status === 'recusado' ? 'selected' : '' ?>>Recusado</option>
+                    </select>
+                    <input type="date" name="data_ini" value="<?= htmlspecialchars($data_ini) ?>" title="Data inicial">
+                    <button type="submit" class="btn-filter">🔍 Filtrar</button>
+                    <a href="orcamento" class="btn-reset">✖ Limpar</a>
+                </form>
+                <?php if ($busca !== '' || $status !== '' || $data_ini !== '' || $data_fim !== ''): ?>
+                    <div class="filter-info">
+                        ✅ Filtros ativos:
+                        <?php
+                        $ativos = [];
+                        if ($busca !== '') $ativos[] = "Paciente: '{$busca}'";
+                        if ($status !== '') $ativos[] = "Status: " . ucfirst($status);
+                        if ($data_ini !== '') $ativos[] = "De: " . date('d/m/Y', strtotime($data_ini));
+                        if ($data_fim !== '') $ativos[] = "Até: " . date('d/m/Y', strtotime($data_fim));
+                        echo implode(' • ', $ativos);
+                        ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <!-- 🔼 FIM DA BARRA DE FILTROS -->
+
+            <a href="novo_orcamento" class="btn-add">+ Novo Orçamento</a>
+
+            <a href="<?= '?' . http_build_query(array_merge($_GET, ['exportar' => '1'])) ?>" class="btn-exportar">📥 Exportar CSV</a>
+
+            <?php if (empty($orcamentos)): ?>
+                <p style="text-align:center; padding:40px; color:#888;">
+                    <?= ($busca !== '' || $status !== '' || $data_ini !== '' || $data_fim !== '')
+                        ? 'Nenhum orçamento encontrado com os filtros aplicados.'
+                        : 'Nenhum orçamento cadastrado.'
                     ?>
-                </div>
+                </p>
+            <?php else: ?>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Paciente</th>
+                            <th>Data</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($orcamentos as $o): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($o['paciente']) ?></td>
+                                <td><?= date('d/m/Y', strtotime($o['data_criacao'])) ?></td>
+                                <td>
+                                    <span class="status-badge status-<?= htmlspecialchars($o['status']) ?>">
+                                        <?= ucfirst(htmlspecialchars($o['status'])) ?>
+                                    </span>
+                                </td>
+                                <td class="acoes">
+                                    <a href="visualizar_orcamento.php?id=<?= $o['id'] ?>">Visualizar</a>
+                                    <?php if ($o['status'] == 'pendente'): ?>
+                                        <a href="editar_orcamento.php?id=<?= $o['id'] ?>" style="color:var(--roxo-medio);">Editar</a>
+                                        <form method="POST" action="aceitar_orcamento.php" style="display:inline;"
+                                            onsubmit="return confirm('Aceitar este orçamento?')">
+
+                                            <?= csrf_field() ?>
+
+                                            <input type="hidden" name="id" value="<?= $o['id'] ?>">
+
+                                            <button type="submit"
+                                                style="color:var(--verde); background:none; border:0; cursor:pointer;">
+                                                Aceitar
+                                            </button>
+
+                                        </form>
+
+
+                                        <form method="POST" action="recusar_orcamento.php" style="display:inline;"
+                                            onsubmit="return confirm('Recusar este orçamento?')">
+
+                                            <?= csrf_field() ?>
+
+                                            <input type="hidden" name="id" value="<?= $o['id'] ?>">
+
+                                            <button type="submit"
+                                                style="color:var(--vermelho); background:none; border:0; cursor:pointer;">
+                                                Recusar
+                                            </button>
+
+                                        </form>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             <?php endif; ?>
         </div>
-        <!-- 🔼 FIM DA BARRA DE FILTROS -->
-
-        <a href="novo_orcamento" class="btn-add">+ Novo Orçamento</a>
-
-        <a href="<?= '?' . http_build_query(array_merge($_GET, ['exportar' => '1'])) ?>" class="btn-exportar">📥 Exportar CSV</a>
-
-        <?php if (empty($orcamentos)): ?>
-            <p style="text-align:center; padding:40px; color:#888;">
-                <?= ($busca !== '' || $status !== '' || $data_ini !== '' || $data_fim !== '')
-                    ? 'Nenhum orçamento encontrado com os filtros aplicados.'
-                    : 'Nenhum orçamento cadastrado.'
-                ?>
-            </p>
-        <?php else: ?>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Paciente</th>
-                        <th>Data</th>
-                        <th>Status</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($orcamentos as $o): ?>
-                        <tr>
-                            <td><?= htmlspecialchars($o['paciente']) ?></td>
-                            <td><?= date('d/m/Y', strtotime($o['data_criacao'])) ?></td>
-                            <td>
-                                <span class="status-badge status-<?= htmlspecialchars($o['status']) ?>">
-                                    <?= ucfirst(htmlspecialchars($o['status'])) ?>
-                                </span>
-                            </td>
-                            <td class="acoes">
-                                <a href="visualizar_orcamento.php?id=<?= $o['id'] ?>">Visualizar</a>
-                                <?php if ($o['status'] == 'pendente'): ?>
-                                    <a href="editar_orcamento.php?id=<?= $o['id'] ?>" style="color:var(--roxo-medio);">Editar</a>
-                                    <form method="POST" action="aceitar_orcamento.php" style="display:inline;"
-                                        onsubmit="return confirm('Aceitar este orçamento?')">
-
-                                        <?= csrf_field() ?>
-
-                                        <input type="hidden" name="id" value="<?= $o['id'] ?>">
-
-                                        <button type="submit"
-                                            style="color:var(--verde); background:none; border:0; cursor:pointer;">
-                                            Aceitar
-                                        </button>
-
-                                    </form>
-
-
-                                    <form method="POST" action="recusar_orcamento.php" style="display:inline;"
-                                        onsubmit="return confirm('Recusar este orçamento?')">
-
-                                        <?= csrf_field() ?>
-
-                                        <input type="hidden" name="id" value="<?= $o['id'] ?>">
-
-                                        <button type="submit"
-                                            style="color:var(--vermelho); background:none; border:0; cursor:pointer;">
-                                            Recusar
-                                        </button>
-
-                                    </form>
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        <?php endif; ?>
     </div>
 </body>
 

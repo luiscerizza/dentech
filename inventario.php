@@ -55,6 +55,9 @@ $materiais = $stmt->fetchAll();
     <title>Inventário - Dentech</title>
     <link rel="stylesheet" href="css/navbar.css">
     <link rel="stylesheet" href="css/inventario.css">
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="icon" type="image/png" href="img/icon.PNG">
 </head>
 
@@ -117,10 +120,10 @@ $materiais = $stmt->fetchAll();
                         <?php foreach ($materiais as $m): ?>
                             <tr class="<?= $m['estoque_baixo'] ? 'estoque-baixo' : '' ?>">
                                 <td class="col-excluir">
-                                    <button type="button" class="btn-excluir"  onclick="excluirMaterial(<?= $m['id'] ?>, '<?= htmlspecialchars($m['nome'], ENT_QUOTES)?>')"
-                                    title="Excluir material">
-                                X
-                                </button>
+                                    <button type="button" class="btn-excluir" onclick="excluirMaterial(<?= $m['id'] ?>, '<?= htmlspecialchars($m['nome'], ENT_QUOTES) ?>')"
+                                        title="Excluir material">
+                                        X
+                                    </button>
                                 </td>
                                 <td data-label="Material">
                                     <strong><?= htmlspecialchars($m['nome']) ?></strong><br>
@@ -155,98 +158,98 @@ $materiais = $stmt->fetchAll();
 
     <script>
         async function atualizarEstoque(materialId, tipo) {
-        const quantidade = prompt(`Digite a quantidade de ${tipo === 'entrada' ? 'entrada' : 'saída'}:`, "1");
-        if (quantidade === null || quantidade === "" || isNaN(quantidade) || parseFloat(quantidade) <= 0) {
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('csrf_token', '<?= htmlspecialchars($_SESSION['csrf_token']) ?>');
-        formData.append('id', materialId);
-        formData.append('tipo', tipo);
-        formData.append('quantidade', quantidade);
-
-        try {
-            const response = await fetch('atualizar_estoque.php', {
-                method: 'POST',
-                body: formData
-            });
-            const result = await response.json();
-            if (result.success) {
-                alert("Estoque atualizado com sucesso!");
-                location.reload();
-            } else {
-                alert("Erro: " + result.error);
+            const quantidade = prompt(`Digite a quantidade de ${tipo === 'entrada' ? 'entrada' : 'saída'}:`, "1");
+            if (quantidade === null || quantidade === "" || isNaN(quantidade) || parseFloat(quantidade) <= 0) {
+                return;
             }
-        } catch (err) {
-            alert("Erro de conexão.");
-        }
-    }
 
-    async function atualizarEstoqueMinimo(materialId) {
-        const novoMinimo = prompt("Digite o novo valor de estoque mínimo:", "0");
-        if (novoMinimo === null || novoMinimo === "" || isNaN(novoMinimo) || parseFloat(novoMinimo) < 0) {
-            return;
-        }
+            const formData = new FormData();
+            formData.append('csrf_token', '<?= htmlspecialchars($_SESSION['csrf_token']) ?>');
+            formData.append('id', materialId);
+            formData.append('tipo', tipo);
+            formData.append('quantidade', quantidade);
 
-        const formData = new FormData();
-        formData.append('id', materialId);
-        formData.append('estoque_minimo', novoMinimo);
-        formData.append('csrf_token', '<?= htmlspecialchars($_SESSION["csrf_token"]) ?>');
-
-        try {
-            const response = await fetch('atualizar_estoque_minimo.php', {
-                method: 'POST',
-                body: formData
-            });
-            const result = await response.json();
-            if (result.success) {
-                alert("Estoque mínimo atualizado com sucesso!");
-                location.reload();
-            } else {
-                alert("Erro: " + result.error);
+            try {
+                const response = await fetch('atualizar_estoque.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert("Estoque atualizado com sucesso!");
+                    location.reload();
+                } else {
+                    alert("Erro: " + result.error);
+                }
+            } catch (err) {
+                alert("Erro de conexão.");
             }
-        } catch (err) {
-            alert("Erro de conexão.");
-        }
-    }
-
-    async function excluirMaterial(materialId, nomeMaterial) {
-
-    const confirmar = confirm(
-        `Tem certeza que deseja excluir o material "${nomeMaterial}"?\n\n` +
-        `Essa ação não poderá ser desfeita.`
-    );
-
-    if (!confirmar) {
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('id', materialId);
-    formData.append('csrf_token', '<?= htmlspecialchars($_SESSION["csrf_token"]) ?>');
-
-    try {
-
-        const response = await fetch('excluir_material.php', {
-            method: 'POST',
-            body: formData
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            alert('Material excluído com sucesso!');
-            location.reload();
-        } else {
-            alert('Erro: ' + result.error);
         }
 
-    } catch (err) {
-        console.error(err);
-        alert('Erro de conexão ao excluir o material.');
-    }
-}
+        async function atualizarEstoqueMinimo(materialId) {
+            const novoMinimo = prompt("Digite o novo valor de estoque mínimo:", "0");
+            if (novoMinimo === null || novoMinimo === "" || isNaN(novoMinimo) || parseFloat(novoMinimo) < 0) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('id', materialId);
+            formData.append('estoque_minimo', novoMinimo);
+            formData.append('csrf_token', '<?= htmlspecialchars($_SESSION["csrf_token"]) ?>');
+
+            try {
+                const response = await fetch('atualizar_estoque_minimo.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert("Estoque mínimo atualizado com sucesso!");
+                    location.reload();
+                } else {
+                    alert("Erro: " + result.error);
+                }
+            } catch (err) {
+                alert("Erro de conexão.");
+            }
+        }
+
+        async function excluirMaterial(materialId, nomeMaterial) {
+
+            const confirmar = confirm(
+                `Tem certeza que deseja excluir o material "${nomeMaterial}"?\n\n` +
+                `Essa ação não poderá ser desfeita.`
+            );
+
+            if (!confirmar) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('id', materialId);
+            formData.append('csrf_token', '<?= htmlspecialchars($_SESSION["csrf_token"]) ?>');
+
+            try {
+
+                const response = await fetch('excluir_material.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Material excluído com sucesso!');
+                    location.reload();
+                } else {
+                    alert('Erro: ' + result.error);
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert('Erro de conexão ao excluir o material.');
+            }
+        }
     </script>
 </body>
 
