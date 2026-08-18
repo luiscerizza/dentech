@@ -76,7 +76,7 @@ $stmt = $pdo->prepare("
         p.cpf,
         p.telefone,
         p.email
-    FROM orcamento o
+    FROM orcamentos o
     JOIN prontuarios p
         ON o.paciente_id = p.id
     WHERE o.id = ?
