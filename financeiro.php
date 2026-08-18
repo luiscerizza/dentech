@@ -664,654 +664,471 @@ $tipos_nomes = [
 
     <?php include 'navbar.php'; ?>
 
-    <main class="container">
+    <div class="content">
 
-        <!-- =========================================================
+        <main class="container">
+
+            <!-- =========================================================
          CABEÇALHO
     ========================================================== -->
 
-        <div class="page-header">
-
-            <div>
-
-                <div class="breadcrumb">
-
-                    <span>Financeiro</span>
-
-                </div>
-
-                <h1>Financeiro</h1>
-
-                <p>
-                    Controle as receitas, despesas e movimentações
-                    financeiras da clínica.
-                </p>
-
-            </div>
-
-            <a
-                href="novo_lancamento.php"
-                class="btn-novo">
-
-                <i class="fa-solid fa-plus"></i>
-
-                Novo lançamento
-
-            </a>
-
-        </div>
-
-
-        <!-- =========================================================
-         ALERTA
-    ========================================================== -->
-
-        <?php if ($sucesso): ?>
-
-            <div class="alert-sucesso">
-
-                <i class="fa-solid fa-circle-check"></i>
-
-                Lançamento salvo com sucesso.
-
-            </div>
-
-        <?php endif; ?>
-
-
-        <!-- =========================================================
-         FILTROS
-    ========================================================== -->
-
-        <section class="filtros-card">
-
-            <form
-                method="GET"
-                class="filtros-form">
-
-                <div class="filtro-grupo">
-
-                    <label for="periodo">
-                        Período
-                    </label>
-
-                    <div class="select-wrapper">
-
-                        <i class="fa-regular fa-calendar"></i>
-
-                        <select
-                            id="periodo"
-                            name="periodo">
-
-                            <?php foreach ($periodos_nomes as $valor => $nome): ?>
-
-                                <option
-                                    value="<?= htmlspecialchars($valor) ?>"
-                                    <?= $periodo === $valor ? 'selected' : '' ?>>
-
-                                    <?= htmlspecialchars($nome) ?>
-
-                                </option>
-
-                            <?php endforeach; ?>
-
-                        </select>
-
-                    </div>
-
-                </div>
-
-
-                <div class="filtro-grupo">
-
-                    <label for="tipo">
-                        Tipo
-                    </label>
-
-                    <div class="select-wrapper">
-
-                        <i class="fa-solid fa-filter"></i>
-
-                        <select
-                            id="tipo"
-                            name="tipo">
-
-                            <?php foreach ($tipos_nomes as $valor => $nome): ?>
-
-                                <option
-                                    value="<?= htmlspecialchars($valor) ?>"
-                                    <?= $tipo_filtro === $valor ? 'selected' : '' ?>>
-
-                                    <?= htmlspecialchars($nome) ?>
-
-                                </option>
-
-                            <?php endforeach; ?>
-
-                        </select>
-
-                    </div>
-
-                </div>
-
-
-                <button
-                    type="submit"
-                    class="btn-filtrar">
-
-                    <i class="fa-solid fa-filter"></i>
-
-                    Filtrar
-
-                </button>
-
-
-                <?php if (
-                    $periodo !== 'mes' ||
-                    $tipo_filtro !== 'todos'
-                ): ?>
-
-                    <a
-                        href="financeiro.php"
-                        class="btn-limpar">
-
-                        Limpar
-
-                    </a>
-
-                <?php endif; ?>
-
-            </form>
-
-        </section>
-
-
-        <!-- =========================================================
-         CARDS RESUMO
-    ========================================================== -->
-
-        <section class="resumo-grid">
-
-
-            <!-- RECEITAS -->
-
-            <article class="resumo-card receita">
-
-                <div class="resumo-icon">
-
-                    <i class="fa-solid fa-arrow-trend-up"></i>
-
-                </div>
+            <div class="page-header">
 
                 <div>
 
-                    <span class="resumo-label">
-                        Receitas
-                    </span>
+                    <div class="breadcrumb">
 
-                    <strong>
-                        <?= moedaBR($receitas) ?>
-                    </strong>
-
-                </div>
-
-            </article>
-
-
-            <!-- DESPESAS -->
-
-            <article class="resumo-card despesa">
-
-                <div class="resumo-icon">
-
-                    <i class="fa-solid fa-arrow-trend-down"></i>
-
-                </div>
-
-                <div>
-
-                    <span class="resumo-label">
-                        Despesas
-                    </span>
-
-                    <strong>
-                        <?= moedaBR($despesas) ?>
-                    </strong>
-
-                </div>
-
-            </article>
-
-
-            <!-- LUCRO -->
-
-            <article class="resumo-card lucro">
-
-                <div class="resumo-icon">
-
-                    <i class="fa-solid fa-dollar-sign"></i>
-
-                </div>
-
-                <div>
-
-                    <span class="resumo-label">
-                        Lucro
-                    </span>
-
-                    <strong>
-                        <?= moedaBR($lucro) ?>
-                    </strong>
-
-                </div>
-
-            </article>
-
-
-            <!-- A RECEBER -->
-
-            <article class="resumo-card receber">
-
-                <div class="resumo-icon">
-
-                    <i class="fa-regular fa-credit-card"></i>
-
-                </div>
-
-                <div>
-
-                    <span class="resumo-label">
-                        A receber
-                    </span>
-
-                    <strong>
-                        <?= moedaBR($a_receber) ?>
-                    </strong>
-
-                </div>
-
-            </article>
-
-        </section>
-
-
-        <!-- =========================================================
-         CONTEÚDO
-    ========================================================== -->
-
-        <section class="conteudo-grid">
-
-
-            <!-- =====================================================
-             FLUXO DE CAIXA
-        ====================================================== -->
-
-            <div class="card fluxo-card">
-
-                <div class="card-header">
-
-                    <div>
-
-                        <h2>
-                            Fluxo de caixa
-                        </h2>
-
-                        <p>
-                            Movimentações financeiras do período selecionado.
-                        </p>
+                        <span>Financeiro</span>
 
                     </div>
 
-                </div>
-
-
-                <div class="legenda">
-
-                    <span>
-
-                        <i class="ponto receita"></i>
-
-                        Receitas
-
-                    </span>
-
-
-                    <span>
-
-                        <i class="ponto despesa"></i>
-
-                        Despesas
-
-                    </span>
-
-                </div>
-
-
-                <div class="grafico-wrapper">
-
-                    <?php if (!empty($dados_grafico)): ?>
-
-                        <div class="grafico-barras">
-
-                            <?php
-
-                            $maior_valor = 0;
-
-                            foreach ($dados_grafico as $dia) {
-
-                                $maior_valor = max(
-                                    $maior_valor,
-                                    (float)$dia['receitas'],
-                                    (float)$dia['despesas']
-                                );
-                            }
-
-                            $maior_valor =
-                                $maior_valor > 0
-                                ? $maior_valor
-                                : 1;
-
-                            ?>
-
-
-                            <?php foreach ($dados_grafico as $dia): ?>
-
-                                <?php
-
-                                $altura_receita =
-                                    ((float)$dia['receitas'] /
-                                        $maior_valor) * 100;
-
-                                $altura_despesa =
-                                    ((float)$dia['despesas'] /
-                                        $maior_valor) * 100;
-
-                                ?>
-
-                                <div
-                                    class="barra-coluna"
-                                    title="<?= dataBR($dia['dia']) ?>">
-
-                                    <div class="barras">
-
-                                        <div
-                                            class="barra barra-receita"
-                                            style="
-                                            height:
-                                            <?= max(2, $altura_receita) ?>%;">
-                                        </div>
-
-                                        <div
-                                            class="barra barra-despesa"
-                                            style="
-                                            height:
-                                            <?= max(2, $altura_despesa) ?>%;">
-                                        </div>
-
-                                    </div>
-
-                                    <span class="barra-label">
-
-                                        <?= date(
-                                            'd/m',
-                                            strtotime($dia['dia'])
-                                        ) ?>
-
-                                    </span>
-
-                                </div>
-
-                            <?php endforeach; ?>
-
-                        </div>
-
-                    <?php else: ?>
-
-                        <div class="sem-dados">
-
-                            <i class="fa-solid fa-chart-line"></i>
-
-                            <span>
-                                Não existem movimentações
-                                pagas no período selecionado.
-                            </span>
-
-                        </div>
-
-                    <?php endif; ?>
-
-                </div>
-
-            </div>
-
-
-            <!-- =====================================================
-             LANÇAMENTOS RECENTES
-        ====================================================== -->
-
-            <div class="card recentes-card">
-
-                <div class="card-header">
-
-                    <div>
-
-                        <h2>
-                            Lançamentos recentes
-                        </h2>
-
-                        <p>
-                            Últimas movimentações financeiras.
-                        </p>
-
-                    </div>
-
-                </div>
-
-
-                <?php if (!empty($lancamentos_recentes)): ?>
-
-                    <div class="lista-lancamentos">
-
-                        <?php foreach ($lancamentos_recentes as $lancamento): ?>
-
-                            <div class="lancamento-item">
-
-                                <div class="lancamento-data">
-
-                                    <?= date(
-                                        'd/m',
-                                        strtotime($lancamento['data'])
-                                    ) ?>
-
-                                </div>
-
-
-                                <div class="lancamento-info">
-
-                                    <strong>
-
-                                        <?= htmlspecialchars(
-                                            $lancamento['descricao']
-                                        ) ?>
-
-                                    </strong>
-
-                                    <span>
-
-                                        <?= htmlspecialchars(
-                                            $lancamento['categoria']
-                                        ) ?>
-
-                                        ·
-
-                                        <?= htmlspecialchars(
-                                            $lancamento['forma_pagamento']
-                                        ) ?>
-
-                                    </span>
-
-                                </div>
-
-
-                                <div
-                                    class="
-                                    lancamento-valor
-                                    <?= $lancamento['tipo'] === 'receita'
-                                        ? 'valor-receita'
-                                        : 'valor-despesa' ?>
-                                ">
-
-                                    <?= $lancamento['tipo'] === 'receita'
-                                        ? '+'
-                                        : '-' ?>
-
-                                    <?= moedaBR(
-                                        $lancamento['valor']
-                                    ) ?>
-
-                                </div>
-
-                            </div>
-
-                        <?php endforeach; ?>
-
-                    </div>
-
-                <?php else: ?>
-
-                    <div class="sem-lancamentos">
-
-                        <i class="fa-regular fa-file-lines"></i>
-
-                        <strong>
-                            Nenhum lançamento encontrado
-                        </strong>
-
-                        <span>
-                            Cadastre uma receita ou despesa
-                            para começar.
-                        </span>
-
-                        <a
-                            href="novo_lancamento.php"
-                            class="btn-novo-vazio">
-
-                            <i class="fa-solid fa-plus"></i>
-
-                            Novo lançamento
-
-                        </a>
-
-                    </div>
-
-                <?php endif; ?>
-
-            </div>
-
-        </section>
-
-
-        <!-- =========================================================
-         TABELA DE MOVIMENTAÇÕES
-    ========================================================== -->
-
-        <section class="card tabela-card">
-
-            <div class="card-header tabela-header">
-
-                <div>
-
-                    <h2>
-                        Movimentações
-                    </h2>
+                    <h1>Financeiro</h1>
 
                     <p>
-                        Lançamentos e parcelas de orçamentos aceitos.
+                        Controle as receitas, despesas e movimentações
+                        financeiras da clínica.
                     </p>
 
                 </div>
 
+                <a
+                    href="novo_lancamento.php"
+                    class="btn-novo">
 
-                <span class="contador">
+                    <i class="fa-solid fa-plus"></i>
 
-                    <?= count($lancamentos) ?>
+                    Novo lançamento
 
-                    movimentação<?= count($lancamentos) === 1
-                                    ? ''
-                                    : 's' ?>
-
-                </span>
+                </a>
 
             </div>
 
 
-            <?php if (!empty($lancamentos)): ?>
+            <!-- =========================================================
+         ALERTA
+    ========================================================== -->
 
-                <div class="tabela-scroll">
+            <?php if ($sucesso): ?>
 
-                    <table>
+                <div class="alert-sucesso">
 
-                        <thead>
+                    <i class="fa-solid fa-circle-check"></i>
 
-                            <tr>
+                    Lançamento salvo com sucesso.
 
-                                <th>
-                                    Data
-                                </th>
+                </div>
 
-                                <th>
-                                    Descrição
-                                </th>
-
-                                <th>
-                                    Categoria
-                                </th>
-
-                                <th>
-                                    Origem
-                                </th>
-
-                                <th>
-                                    Pagamento
-                                </th>
-
-                                <th>
-                                    Status
-                                </th>
-
-                                <th class="coluna-valor">
-                                    Valor
-                                </th>
-
-                                <th class="coluna-acoes">
-                                    Ações
-                                </th>
-
-                            </tr>
-
-                        </thead>
+            <?php endif; ?>
 
 
-                        <tbody>
+            <!-- =========================================================
+         FILTROS
+    ========================================================== -->
 
-                            <?php foreach ($lancamentos as $lancamento): ?>
+            <section class="filtros-card">
 
-                                <tr>
+                <form
+                    method="GET"
+                    class="filtros-form">
 
-                                    <!-- DATA -->
+                    <div class="filtro-grupo">
 
-                                    <td>
+                        <label for="periodo">
+                            Período
+                        </label>
 
-                                        <?= dataBR(
-                                            $lancamento['data']
+                        <div class="select-wrapper">
+
+                            <i class="fa-regular fa-calendar"></i>
+
+                            <select
+                                id="periodo"
+                                name="periodo">
+
+                                <?php foreach ($periodos_nomes as $valor => $nome): ?>
+
+                                    <option
+                                        value="<?= htmlspecialchars($valor) ?>"
+                                        <?= $periodo === $valor ? 'selected' : '' ?>>
+
+                                        <?= htmlspecialchars($nome) ?>
+
+                                    </option>
+
+                                <?php endforeach; ?>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="filtro-grupo">
+
+                        <label for="tipo">
+                            Tipo
+                        </label>
+
+                        <div class="select-wrapper">
+
+                            <i class="fa-solid fa-filter"></i>
+
+                            <select
+                                id="tipo"
+                                name="tipo">
+
+                                <?php foreach ($tipos_nomes as $valor => $nome): ?>
+
+                                    <option
+                                        value="<?= htmlspecialchars($valor) ?>"
+                                        <?= $tipo_filtro === $valor ? 'selected' : '' ?>>
+
+                                        <?= htmlspecialchars($nome) ?>
+
+                                    </option>
+
+                                <?php endforeach; ?>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+
+                    <button
+                        type="submit"
+                        class="btn-filtrar">
+
+                        <i class="fa-solid fa-filter"></i>
+
+                        Filtrar
+
+                    </button>
+
+
+                    <?php if (
+                        $periodo !== 'mes' ||
+                        $tipo_filtro !== 'todos'
+                    ): ?>
+
+                        <a
+                            href="financeiro.php"
+                            class="btn-limpar">
+
+                            Limpar
+
+                        </a>
+
+                    <?php endif; ?>
+
+                </form>
+
+            </section>
+
+
+            <!-- =========================================================
+         CARDS RESUMO
+    ========================================================== -->
+
+            <section class="resumo-grid">
+
+
+                <!-- RECEITAS -->
+
+                <article class="resumo-card receita">
+
+                    <div class="resumo-icon">
+
+                        <i class="fa-solid fa-arrow-trend-up"></i>
+
+                    </div>
+
+                    <div>
+
+                        <span class="resumo-label">
+                            Receitas
+                        </span>
+
+                        <strong>
+                            <?= moedaBR($receitas) ?>
+                        </strong>
+
+                    </div>
+
+                </article>
+
+
+                <!-- DESPESAS -->
+
+                <article class="resumo-card despesa">
+
+                    <div class="resumo-icon">
+
+                        <i class="fa-solid fa-arrow-trend-down"></i>
+
+                    </div>
+
+                    <div>
+
+                        <span class="resumo-label">
+                            Despesas
+                        </span>
+
+                        <strong>
+                            <?= moedaBR($despesas) ?>
+                        </strong>
+
+                    </div>
+
+                </article>
+
+
+                <!-- LUCRO -->
+
+                <article class="resumo-card lucro">
+
+                    <div class="resumo-icon">
+
+                        <i class="fa-solid fa-dollar-sign"></i>
+
+                    </div>
+
+                    <div>
+
+                        <span class="resumo-label">
+                            Lucro
+                        </span>
+
+                        <strong>
+                            <?= moedaBR($lucro) ?>
+                        </strong>
+
+                    </div>
+
+                </article>
+
+
+                <!-- A RECEBER -->
+
+                <article class="resumo-card receber">
+
+                    <div class="resumo-icon">
+
+                        <i class="fa-regular fa-credit-card"></i>
+
+                    </div>
+
+                    <div>
+
+                        <span class="resumo-label">
+                            A receber
+                        </span>
+
+                        <strong>
+                            <?= moedaBR($a_receber) ?>
+                        </strong>
+
+                    </div>
+
+                </article>
+
+            </section>
+
+
+            <!-- =========================================================
+         CONTEÚDO
+    ========================================================== -->
+
+            <section class="conteudo-grid">
+
+
+                <!-- =====================================================
+             FLUXO DE CAIXA
+        ====================================================== -->
+
+                <div class="card fluxo-card">
+
+                    <div class="card-header">
+
+                        <div>
+
+                            <h2>
+                                Fluxo de caixa
+                            </h2>
+
+                            <p>
+                                Movimentações financeiras do período selecionado.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="legenda">
+
+                        <span>
+
+                            <i class="ponto receita"></i>
+
+                            Receitas
+
+                        </span>
+
+
+                        <span>
+
+                            <i class="ponto despesa"></i>
+
+                            Despesas
+
+                        </span>
+
+                    </div>
+
+
+                    <div class="grafico-wrapper">
+
+                        <?php if (!empty($dados_grafico)): ?>
+
+                            <div class="grafico-barras">
+
+                                <?php
+
+                                $maior_valor = 0;
+
+                                foreach ($dados_grafico as $dia) {
+
+                                    $maior_valor = max(
+                                        $maior_valor,
+                                        (float)$dia['receitas'],
+                                        (float)$dia['despesas']
+                                    );
+                                }
+
+                                $maior_valor =
+                                    $maior_valor > 0
+                                    ? $maior_valor
+                                    : 1;
+
+                                ?>
+
+
+                                <?php foreach ($dados_grafico as $dia): ?>
+
+                                    <?php
+
+                                    $altura_receita =
+                                        ((float)$dia['receitas'] /
+                                            $maior_valor) * 100;
+
+                                    $altura_despesa =
+                                        ((float)$dia['despesas'] /
+                                            $maior_valor) * 100;
+
+                                    ?>
+
+                                    <div
+                                        class="barra-coluna"
+                                        title="<?= dataBR($dia['dia']) ?>">
+
+                                        <div class="barras">
+
+                                            <div
+                                                class="barra barra-receita"
+                                                style="
+                                            height:
+                                            <?= max(2, $altura_receita) ?>%;">
+                                            </div>
+
+                                            <div
+                                                class="barra barra-despesa"
+                                                style="
+                                            height:
+                                            <?= max(2, $altura_despesa) ?>%;">
+                                            </div>
+
+                                        </div>
+
+                                        <span class="barra-label">
+
+                                            <?= date(
+                                                'd/m',
+                                                strtotime($dia['dia'])
+                                            ) ?>
+
+                                        </span>
+
+                                    </div>
+
+                                <?php endforeach; ?>
+
+                            </div>
+
+                        <?php else: ?>
+
+                            <div class="sem-dados">
+
+                                <i class="fa-solid fa-chart-line"></i>
+
+                                <span>
+                                    Não existem movimentações
+                                    pagas no período selecionado.
+                                </span>
+
+                            </div>
+
+                        <?php endif; ?>
+
+                    </div>
+
+                </div>
+
+
+                <!-- =====================================================
+             LANÇAMENTOS RECENTES
+        ====================================================== -->
+
+                <div class="card recentes-card">
+
+                    <div class="card-header">
+
+                        <div>
+
+                            <h2>
+                                Lançamentos recentes
+                            </h2>
+
+                            <p>
+                                Últimas movimentações financeiras.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <?php if (!empty($lancamentos_recentes)): ?>
+
+                        <div class="lista-lancamentos">
+
+                            <?php foreach ($lancamentos_recentes as $lancamento): ?>
+
+                                <div class="lancamento-item">
+
+                                    <div class="lancamento-data">
+
+                                        <?= date(
+                                            'd/m',
+                                            strtotime($lancamento['data'])
                                         ) ?>
 
-                                    </td>
+                                    </div>
 
 
-                                    <!-- DESCRIÇÃO -->
-
-                                    <td>
+                                    <div class="lancamento-info">
 
                                         <strong>
 
@@ -1321,103 +1138,26 @@ $tipos_nomes = [
 
                                         </strong>
 
-                                    </td>
-
-
-                                    <!-- CATEGORIA -->
-
-                                    <td>
-
-                                        <?= htmlspecialchars(
-                                            $lancamento['categoria']
-                                        ) ?>
-
-                                    </td>
-
-
-                                    <!-- ORIGEM -->
-
-                                    <td>
-
-                                        <?php if (
-                                            $lancamento['origem'] ===
-                                            'orcamento'
-                                        ): ?>
-
-                                            <span
-                                                class="origem-orcamento">
-
-                                                <i
-                                                    class="
-                                                fa-solid
-                                                fa-file-invoice-dollar
-                                            ">
-                                                </i>
-
-                                                Orçamento
-
-                                            </span>
-
-                                        <?php else: ?>
-
-                                            <span
-                                                class="origem-lancamento">
-
-                                                <i
-                                                    class="
-                                                fa-solid
-                                                fa-money-bill-transfer
-                                            ">
-                                                </i>
-
-                                                Lançamento
-
-                                            </span>
-
-                                        <?php endif; ?>
-
-                                    </td>
-
-
-                                    <!-- PAGAMENTO -->
-
-                                    <td>
-
-                                        <?= htmlspecialchars(
-                                            $lancamento['forma_pagamento']
-                                        ) ?>
-
-                                    </td>
-
-
-                                    <!-- STATUS -->
-
-                                    <td>
-
-                                        <span
-                                            class="
-                                        status-badge
-                                        <?= classeStatus(
-                                            $lancamento['status']
-                                        ) ?>
-                                    ">
+                                        <span>
 
                                             <?= htmlspecialchars(
-                                                textoStatus(
-                                                    $lancamento['status']
-                                                )
+                                                $lancamento['categoria']
+                                            ) ?>
+
+                                            ·
+
+                                            <?= htmlspecialchars(
+                                                $lancamento['forma_pagamento']
                                             ) ?>
 
                                         </span>
 
-                                    </td>
+                                    </div>
 
 
-                                    <!-- VALOR -->
-
-                                    <td
+                                    <div
                                         class="
-                                    coluna-valor
+                                    lancamento-valor
                                     <?= $lancamento['tipo'] === 'receita'
                                         ? 'valor-receita'
                                         : 'valor-despesa' ?>
@@ -1431,126 +1171,392 @@ $tipos_nomes = [
                                             $lancamento['valor']
                                         ) ?>
 
-                                    </td>
+                                    </div>
+
+                                </div>
+
+                            <?php endforeach; ?>
+
+                        </div>
+
+                    <?php else: ?>
+
+                        <div class="sem-lancamentos">
+
+                            <i class="fa-regular fa-file-lines"></i>
+
+                            <strong>
+                                Nenhum lançamento encontrado
+                            </strong>
+
+                            <span>
+                                Cadastre uma receita ou despesa
+                                para começar.
+                            </span>
+
+                            <a
+                                href="novo_lancamento.php"
+                                class="btn-novo-vazio">
+
+                                <i class="fa-solid fa-plus"></i>
+
+                                Novo lançamento
+
+                            </a>
+
+                        </div>
+
+                    <?php endif; ?>
+
+                </div>
+
+            </section>
 
 
-                                    <!-- AÇÕES -->
+            <!-- =========================================================
+         TABELA DE MOVIMENTAÇÕES
+    ========================================================== -->
 
-                                    <td class="coluna-acoes">
+            <section class="card tabela-card">
 
-                                        <?php if (
-                                            $lancamento['origem'] ===
-                                            'orcamento'
-                                        ): ?>
+                <div class="card-header tabela-header">
 
-                                            <a
-                                                href="
-                                            visualizar_orcamento.php?id=
-                                            <?= (int)$lancamento['orcamento_id'] ?>
-                                        "
-                                                class="btn-acao"
-                                                title="
-                                            Visualizar orçamento
-                                        ">
+                    <div>
 
-                                                <i
-                                                    class="
-                                                fa-regular
-                                                fa-eye
-                                            ">
-                                                </i>
+                        <h2>
+                            Movimentações
+                        </h2>
 
-                                            </a>
+                        <p>
+                            Lançamentos e parcelas de orçamentos aceitos.
+                        </p>
 
-                                        <?php else: ?>
+                    </div>
+
+
+                    <span class="contador">
+
+                        <?= count($lancamentos) ?>
+
+                        movimentação<?= count($lancamentos) === 1
+                                        ? ''
+                                        : 's' ?>
+
+                    </span>
+
+                </div>
+
+
+                <?php if (!empty($lancamentos)): ?>
+
+                    <div class="tabela-scroll">
+
+                        <table>
+
+                            <thead>
+
+                                <tr>
+
+                                    <th>
+                                        Data
+                                    </th>
+
+                                    <th>
+                                        Descrição
+                                    </th>
+
+                                    <th>
+                                        Categoria
+                                    </th>
+
+                                    <th>
+                                        Origem
+                                    </th>
+
+                                    <th>
+                                        Pagamento
+                                    </th>
+
+                                    <th>
+                                        Status
+                                    </th>
+
+                                    <th class="coluna-valor">
+                                        Valor
+                                    </th>
+
+                                    <th class="coluna-acoes">
+                                        Ações
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+
+                            <tbody>
+
+                                <?php foreach ($lancamentos as $lancamento): ?>
+
+                                    <tr>
+
+                                        <!-- DATA -->
+
+                                        <td>
+
+                                            <?= dataBR(
+                                                $lancamento['data']
+                                            ) ?>
+
+                                        </td>
+
+
+                                        <!-- DESCRIÇÃO -->
+
+                                        <td>
+
+                                            <strong>
+
+                                                <?= htmlspecialchars(
+                                                    $lancamento['descricao']
+                                                ) ?>
+
+                                            </strong>
+
+                                        </td>
+
+
+                                        <!-- CATEGORIA -->
+
+                                        <td>
+
+                                            <?= htmlspecialchars(
+                                                $lancamento['categoria']
+                                            ) ?>
+
+                                        </td>
+
+
+                                        <!-- ORIGEM -->
+
+                                        <td>
 
                                             <?php if (
-                                                !empty($lancamento['id'])
+                                                $lancamento['origem'] ===
+                                                'orcamento'
+                                            ): ?>
+
+                                                <span
+                                                    class="origem-orcamento">
+
+                                                    <i
+                                                        class="
+                                                fa-solid
+                                                fa-file-invoice-dollar
+                                            ">
+                                                    </i>
+
+                                                    Orçamento
+
+                                                </span>
+
+                                            <?php else: ?>
+
+                                                <span
+                                                    class="origem-lancamento">
+
+                                                    <i
+                                                        class="
+                                                fa-solid
+                                                fa-money-bill-transfer
+                                            ">
+                                                    </i>
+
+                                                    Lançamento
+
+                                                </span>
+
+                                            <?php endif; ?>
+
+                                        </td>
+
+
+                                        <!-- PAGAMENTO -->
+
+                                        <td>
+
+                                            <?= htmlspecialchars(
+                                                $lancamento['forma_pagamento']
+                                            ) ?>
+
+                                        </td>
+
+
+                                        <!-- STATUS -->
+
+                                        <td>
+
+                                            <span
+                                                class="
+                                        status-badge
+                                        <?= classeStatus(
+                                            $lancamento['status']
+                                        ) ?>
+                                    ">
+
+                                                <?= htmlspecialchars(
+                                                    textoStatus(
+                                                        $lancamento['status']
+                                                    )
+                                                ) ?>
+
+                                            </span>
+
+                                        </td>
+
+
+                                        <!-- VALOR -->
+
+                                        <td
+                                            class="
+                                    coluna-valor
+                                    <?= $lancamento['tipo'] === 'receita'
+                                        ? 'valor-receita'
+                                        : 'valor-despesa' ?>
+                                ">
+
+                                            <?= $lancamento['tipo'] === 'receita'
+                                                ? '+'
+                                                : '-' ?>
+
+                                            <?= moedaBR(
+                                                $lancamento['valor']
+                                            ) ?>
+
+                                        </td>
+
+
+                                        <!-- AÇÕES -->
+
+                                        <td class="coluna-acoes">
+
+                                            <?php if (
+                                                $lancamento['origem'] ===
+                                                'orcamento'
                                             ): ?>
 
                                                 <a
                                                     href="
+                                            visualizar_orcamento.php?id=
+                                            <?= (int)$lancamento['orcamento_id'] ?>
+                                        "
+                                                    class="btn-acao"
+                                                    title="
+                                            Visualizar orçamento
+                                        ">
+
+                                                    <i
+                                                        class="
+                                                fa-regular
+                                                fa-eye
+                                            ">
+                                                    </i>
+
+                                                </a>
+
+                                            <?php else: ?>
+
+                                                <?php if (
+                                                    !empty($lancamento['id'])
+                                                ): ?>
+
+                                                    <a
+                                                        href="
                                                 visualizar_lancamento.php?id=
                                                 <?= (int)$lancamento['id'] ?>
                                             "
-                                                    class="btn-acao"
-                                                    title="Visualizar">
+                                                        class="btn-acao"
+                                                        title="Visualizar">
 
-                                                    <i
-                                                        class="
+                                                        <i
+                                                            class="
                                                     fa-regular
                                                     fa-eye
                                                 ">
-                                                    </i>
+                                                        </i>
 
-                                                </a>
+                                                    </a>
 
 
-                                                <a
-                                                    href="
+                                                    <a
+                                                        href="
                                                 editar_lancamento.php?id=
                                                 <?= (int)$lancamento['id'] ?>
                                             "
-                                                    class="btn-acao"
-                                                    title="Editar">
+                                                        class="btn-acao"
+                                                        title="Editar">
 
-                                                    <i
-                                                        class="
+                                                        <i
+                                                            class="
                                                     fa-solid
                                                     fa-pen
                                                 ">
-                                                    </i>
+                                                        </i>
 
-                                                </a>
+                                                    </a>
+
+                                                <?php endif; ?>
 
                                             <?php endif; ?>
 
-                                        <?php endif; ?>
+                                        </td>
 
-                                    </td>
+                                    </tr>
 
-                                </tr>
+                                <?php endforeach; ?>
 
-                            <?php endforeach; ?>
+                            </tbody>
 
-                        </tbody>
+                        </table>
 
-                    </table>
+                    </div>
 
-                </div>
+                <?php else: ?>
 
-            <?php else: ?>
+                    <div class="tabela-vazia">
 
-                <div class="tabela-vazia">
+                        <i class="fa-solid fa-wallet"></i>
 
-                    <i class="fa-solid fa-wallet"></i>
+                        <h3>
+                            Nenhuma movimentação cadastrada
+                        </h3>
 
-                    <h3>
-                        Nenhuma movimentação cadastrada
-                    </h3>
+                        <p>
+                            Comece cadastrando sua primeira
+                            receita ou despesa.
+                        </p>
 
-                    <p>
-                        Comece cadastrando sua primeira
-                        receita ou despesa.
-                    </p>
+                        <a
+                            href="novo_lancamento.php"
+                            class="btn-novo">
 
-                    <a
-                        href="novo_lancamento.php"
-                        class="btn-novo">
+                            <i class="fa-solid fa-plus"></i>
 
-                        <i class="fa-solid fa-plus"></i>
+                            Novo lançamento
 
-                        Novo lançamento
+                        </a>
 
-                    </a>
+                    </div>
 
-                </div>
+                <?php endif; ?>
 
-            <?php endif; ?>
+            </section>
 
-        </section>
 
-    </main>
+
+        </main>
+
+    </div>
 
 </body>
 
