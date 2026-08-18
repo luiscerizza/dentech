@@ -7,141 +7,35 @@ exigirLogin();
 
 require_once 'conexao/conexao.php';
 
-/*
-|--------------------------------------------------------------------------
-| ID DO ORÇAMENTO
-|--------------------------------------------------------------------------
-*/
 
-$id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+// ============================================================
+// ID DO ORÇAMENTO
+// ============================================================
+
+$id = (int)($_GET['id'] ?? 0);
 
 if ($id <= 0) {
     die("ID do orçamento não informado.");
 }
 
 
-/*
-|--------------------------------------------------------------------------
-| PROCESSAMENTO DOS POSTS
-|--------------------------------------------------------------------------
-*/
+// ============================================================
+// PROCESSAMENTO DOS POSTS
+// ============================================================
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    /*
-    |--------------------------------------------------------------------------
-    | VALIDAÇÃO CSRF
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-        empty($_POST['csrf_token']) ||
-        empty($_SESSION['csrf_token']) ||
-        !hash_equals(
-            $_SESSION['csrf_token'],
-            $_POST['csrf_token']
-        )
-    ) {
-        http_response_code(403);
-        die("Token de segurança inválido.");
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | AÇÃO SOLICITADA
-    |--------------------------------------------------------------------------
-    */
+    validar_csrf();
 
     $acao = $_POST['acao'] ?? '';
 
+    try {
 
-    /*
-    |--------------------------------------------------------------------------
-    | CONFIRMAR ORÇAMENTO
-    |--------------------------------------------------------------------------
-    */
+        // ====================================================
+        // CONFIRMAR ORÇAMENTO
+        // ====================================================
 
-    if ($acao === 'confirmar') {
-
-        $stmt = $pdo->prepare("
-            UPDATE orcamentos
-            SET status = 'aceito'
-            WHERE id = ?
-              AND status = 'pendente'
-        ");
-
-        $stmt->execute([$id]);
-
-        header("Location: visualizar_orcamento.php?id=" . $id);
-        exit;
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | RECUSAR ORÇAMENTO
-    |--------------------------------------------------------------------------
-    */
-
-    if ($acao === 'recusar') {
-
-        $stmt = $pdo->prepare("
-            UPDATE orcamentos
-            SET status = 'recusado'
-            WHERE id = ?
-              AND status = 'pendente'
-        ");
-
-        $stmt->execute([$id]);
-
-        header("Location: visualizar_orcamento.php?id=" . $id);
-        exit;
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | PAGAMENTO DE PARCELA
-    |
-    | Ao pagar uma parcela, o orçamento passa automaticamente
-    | para aceito.
-    |--------------------------------------------------------------------------
-    */
-
-    if ($acao === 'pagar_parcela') {
-
-        $parcela_id = (int) ($_POST['parcela_id'] ?? 0);
-
-        if ($parcela_id > 0) {
-
-            /*
-            |--------------------------------------------------------------------------
-            | Confirma o pagamento da parcela
-            |--------------------------------------------------------------------------
-            */
-
-            $stmt = $pdo->prepare("
-                UPDATE parcelas
-                SET
-                    status = 'paga',
-                    data_pagamento = CURDATE()
-                WHERE id = ?
-                  AND orcamento_id = ?
-                  AND status IN ('pendente', 'atrasada')
-            ");
-
-            $stmt->execute([
-                $parcela_id,
-                $id
-            ]);
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | Ao pagar, confirma automaticamente o orçamento
-            |--------------------------------------------------------------------------
-            */
+        if ($acao === 'confirmar_orcamento') {
 
             $stmt = $pdo->prepare("
                 UPDATE orcamentos
@@ -151,19 +45,116 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
 
             $stmt->execute([$id]);
+
+            header("Location: visualizar_orcamento.php?id=" . $id);
+            exit;
         }
 
-        header("Location: visualizar_orcamento.php?id=" . $id);
-        exit;
+
+        // ====================================================
+        // RECUSAR ORÇAMENTO
+        // ====================================================
+
+        if ($acao === 'recusar_orcamento') {
+
+            $stmt = $pdo->prepare("
+                UPDATE orcamentos
+                SET status = 'recusado'
+                WHERE id = ?
+                  AND status = 'pendente'
+            ");
+
+            $stmt->execute([$id]);
+
+            header("Location: visualizar_orcamento.php?id=" . $id);
+            exit;
+        }
+
+
+        // ====================================================
+        // PAGAMENTO DE PARCELA
+        // ====================================================
+
+        if ($acao === 'marcar_paga') {
+
+            $parcela_id = (int)($_POST['parcela_id'] ?? 0);
+
+            if ($parcela_id <= 0) {
+                die("Parcela inválida.");
+            }
+
+            /*
+             * Primeiro verifica se a parcela realmente pertence
+             * ao orçamento visualizado.
+             */
+            $stmt = $pdo->prepare("
+                SELECT id, status
+                FROM parcelas
+                WHERE id = ?
+                  AND orcamento_id = ?
+                LIMIT 1
+            ");
+
+            $stmt->execute([
+                $parcela_id,
+                $id
+            ]);
+
+            $parcela = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$parcela) {
+                die("Parcela não encontrada.");
+            }
+
+            /*
+             * Só permite pagar parcelas pendentes ou atrasadas.
+             */
+            if (
+                $parcela['status'] !== 'pendente' &&
+                $parcela['status'] !== 'atrasada'
+            ) {
+                header("Location: visualizar_orcamento.php?id=" . $id);
+                exit;
+            }
+
+            /*
+             * Marca como paga.
+             *
+             * O financeiro utiliza as parcelas pagas como
+             * receitas do orçamento.
+             */
+            $stmt = $pdo->prepare("
+                UPDATE parcelas
+                SET
+                    status = 'paga',
+                    data_pagamento = CURDATE()
+                WHERE id = ?
+                  AND orcamento_id = ?
+            ");
+
+            $stmt->execute([
+                $parcela_id,
+                $id
+            ]);
+
+            header("Location: visualizar_orcamento.php?id=" . $id);
+            exit;
+        }
+    } catch (PDOException $e) {
+
+        error_log(
+            "ERRO VISUALIZAR ORCAMENTO #{$id}: " .
+                $e->getMessage()
+        );
+
+        die("Ocorreu um erro ao processar a solicitação.");
     }
 }
 
 
-/*
-|--------------------------------------------------------------------------
-| BUSCAR ORÇAMENTO + DADOS DO PACIENTE
-|--------------------------------------------------------------------------
-*/
+// ============================================================
+// BUSCAR ORÇAMENTO + PACIENTE
+// ============================================================
 
 $stmt = $pdo->prepare("
     SELECT
@@ -173,9 +164,10 @@ $stmt = $pdo->prepare("
         p.telefone,
         p.email
     FROM orcamentos o
-    JOIN prontuarios p
+    INNER JOIN prontuarios p
         ON o.paciente_id = p.id
     WHERE o.id = ?
+    LIMIT 1
 ");
 
 $stmt->execute([$id]);
@@ -187,11 +179,23 @@ if (!$orc) {
 }
 
 
-/*
-|--------------------------------------------------------------------------
-| BUSCAR ITENS DO ORÇAMENTO
-|--------------------------------------------------------------------------
-*/
+// ============================================================
+// ATUALIZAR PARCELAS ATRASADAS
+// ============================================================
+
+$pdo->prepare("
+    UPDATE parcelas
+    SET status = 'atrasada'
+    WHERE orcamento_id = ?
+      AND status = 'pendente'
+      AND vencimento < CURDATE()
+")
+    ->execute([$id]);
+
+
+// ============================================================
+// BUSCAR ITENS
+// ============================================================
 
 $stmt_itens = $pdo->prepare("
     SELECT *
@@ -205,29 +209,9 @@ $stmt_itens->execute([$id]);
 $itens = $stmt_itens->fetchAll(PDO::FETCH_ASSOC);
 
 
-/*
-|--------------------------------------------------------------------------
-| ATUALIZAR PARCELAS VENCIDAS
-|--------------------------------------------------------------------------
-|
-| Somente parcelas ainda pendentes são alteradas para atrasada.
-|
-*/
-
-$pdo->prepare("
-    UPDATE parcelas
-    SET status = 'atrasada'
-    WHERE orcamento_id = ?
-      AND status = 'pendente'
-      AND vencimento < CURDATE()
-")->execute([$id]);
-
-
-/*
-|--------------------------------------------------------------------------
-| BUSCAR PARCELAS
-|--------------------------------------------------------------------------
-*/
+// ============================================================
+// BUSCAR PARCELAS
+// ============================================================
 
 $stmt_par = $pdo->prepare("
     SELECT *
@@ -241,28 +225,24 @@ $stmt_par->execute([$id]);
 $parcelas = $stmt_par->fetchAll(PDO::FETCH_ASSOC);
 
 
-/*
-|--------------------------------------------------------------------------
-| CALCULAR TOTAL DO ORÇAMENTO
-|--------------------------------------------------------------------------
-*/
+// ============================================================
+// CÁLCULO DO TOTAL
+// ============================================================
 
 $total_itens = 0;
 
 foreach ($itens as $item) {
 
-    $quantidade = (int) $item['quantidade'];
-    $valor = (float) $item['valor_unitario'];
+    $quantidade = (float)$item['quantidade'];
+    $valor = (float)$item['valor_unitario'];
 
     $total_itens += $quantidade * $valor;
 }
 
 
-/*
-|--------------------------------------------------------------------------
-| CALCULAR PROGRESSO DAS PARCELAS
-|--------------------------------------------------------------------------
-*/
+// ============================================================
+// CONTROLE DAS PARCELAS
+// ============================================================
 
 $qtd_total = count($parcelas);
 
@@ -280,18 +260,65 @@ $progresso = $qtd_total > 0
     : 0;
 
 
-/*
-|--------------------------------------------------------------------------
-| STATUS DO ORÇAMENTO
-|--------------------------------------------------------------------------
-*/
+// ============================================================
+// STATUS DO ORÇAMENTO
+// ============================================================
 
 $status_orcamento = $orc['status'] ?? 'pendente';
+
+
+// Alguns projetos usam "confirmado" e outros "aceito".
+// Consideramos ambos como orçamento confirmado.
+
+$orcamento_confirmado = in_array(
+    $status_orcamento,
+    ['aceito', 'confirmado'],
+    true
+);
+
+$orcamento_recusado = $status_orcamento === 'recusado';
+
+$orcamento_pendente = $status_orcamento === 'pendente';
+
+
+// ============================================================
+// TEXTO DO STATUS
+// ============================================================
+
+$status_texto = match ($status_orcamento) {
+
+    'aceito',
+    'confirmado'
+    => 'Confirmado',
+
+    'recusado'
+    => 'Recusado',
+
+    default
+    => 'Pendente'
+};
+
+
+// ============================================================
+// COR DO STATUS
+// ============================================================
+
+$status_classe = match ($status_orcamento) {
+
+    'aceito',
+    'confirmado'
+    => 'status-confirmado',
+
+    'recusado'
+    => 'status-recusado',
+
+    default
+    => 'status-pendente'
+};
 
 ?>
 
 <!DOCTYPE html>
-
 <html lang="pt-BR">
 
 <head>
@@ -303,7 +330,7 @@ $status_orcamento = $orc['status'] ?? 'pendente';
         content="width=device-width, initial-scale=1.0">
 
     <title>
-        Orçamento #<?= htmlspecialchars($id) ?> - Dentech
+        Orçamento #<?= $id ?> - Dentech
     </title>
 
     <link
@@ -318,11 +345,10 @@ $status_orcamento = $orc['status'] ?? 'pendente';
         rel="icon"
         type="image/png"
         href="img/icon.PNG">
+
 </head>
 
-
 <body>
-
 
     <?php include 'navbar.php'; ?>
 
@@ -332,105 +358,78 @@ $status_orcamento = $orc['status'] ?? 'pendente';
         <div class="orc-container">
 
 
-            <!--
-        |--------------------------------------------------------------------------
-        | CABEÇALHO
-        |--------------------------------------------------------------------------
-        -->
+            <!-- ==================================================
+             CABEÇALHO
+        =================================================== -->
 
             <div class="header-actions">
 
+                <div>
 
-                <h1>
+                    <h1>
+                        Orçamento #<?= $id ?>
 
-                    Orçamento #<?= htmlspecialchars($id) ?>
+                        <span
+                            class="status-badge <?= $status_classe ?>">
+                            <?= htmlspecialchars($status_texto) ?>
+                        </span>
 
-                    <span
-                        class="status-badge status-<?= htmlspecialchars($status_orcamento) ?>">
+                    </h1>
 
-                        <?php
+                </div>
 
-                        if ($status_orcamento === 'aceito') {
-                            echo 'Confirmado';
-                        } elseif ($status_orcamento === 'recusado') {
-                            echo 'Recusado';
-                        } else {
-                            echo 'Pendente';
-                        }
 
-                        ?>
-
-                    </span>
-
-                </h1>
-
+                <!-- ==================================================
+                 BOTÕES
+            =================================================== -->
 
                 <div class="btn-group">
 
 
-                    <!--
-                |--------------------------------------------------------------------------
-                | 1 - VOLTAR
-                |--------------------------------------------------------------------------
-                -->
+                    <!-- VOLTAR -->
 
                     <a
                         href="orcamento.php"
-                        class="btn btn-voltar">
+                        class="btn btn-outline">
                         ← Voltar
                     </a>
 
 
-                    <!--
-                |--------------------------------------------------------------------------
-                | 2 - BAIXAR PDF
-                |--------------------------------------------------------------------------
-                -->
+                    <!-- PDF -->
 
                     <a
                         href="gerar_orcamento_pdf.php?id=<?= $id ?>"
                         target="_blank"
-                        class="btn btn-pdf">
+                        class="btn btn-success">
                         📥 Baixar PDF
                     </a>
 
 
-                    <?php if ($status_orcamento === 'pendente'): ?>
+                    <?php if ($orcamento_pendente): ?>
 
 
-                        <!--
-                    |--------------------------------------------------------------------------
-                    | 3 - EDITAR
-                    |--------------------------------------------------------------------------
-                    -->
+                        <!-- EDITAR -->
 
                         <a
                             href="editar_orcamento.php?id=<?= $id ?>"
-                            class="btn btn-editar">
+                            class="btn btn-primary">
                             ✏️ Editar
                         </a>
 
 
-                        <!--
-                    |--------------------------------------------------------------------------
-                    | 4 - CONFIRMAR
-                    |--------------------------------------------------------------------------
-                    -->
+                        <!-- CONFIRMAR -->
 
                         <form
                             method="POST"
-                            style="display:inline;"
+                            class="form-acao"
                             onsubmit="return confirm('Confirmar este orçamento?');">
 
-                            <input
-                                type="hidden"
-                                name="csrf_token"
-                                value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                            <?= csrf_field() ?>
 
                             <input
                                 type="hidden"
                                 name="acao"
-                                value="confirmar">
+                                value="confirmar_orcamento">
 
                             <button
                                 type="submit"
@@ -441,26 +440,19 @@ $status_orcamento = $orc['status'] ?? 'pendente';
                         </form>
 
 
-                        <!--
-                    |--------------------------------------------------------------------------
-                    | 5 - RECUSAR
-                    |--------------------------------------------------------------------------
-                    -->
+                        <!-- RECUSAR -->
 
                         <form
                             method="POST"
-                            style="display:inline;"
-                            onsubmit="return confirm('Recusar este orçamento? Esta ação não poderá ser desfeita por esta tela.');">
+                            class="form-acao"
+                            onsubmit="return confirm('Recusar este orçamento?');">
 
-                            <input
-                                type="hidden"
-                                name="csrf_token"
-                                value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                            <?= csrf_field() ?>
 
                             <input
                                 type="hidden"
                                 name="acao"
-                                value="recusar">
+                                value="recusar_orcamento">
 
                             <button
                                 type="submit"
@@ -470,7 +462,6 @@ $status_orcamento = $orc['status'] ?? 'pendente';
 
                         </form>
 
-
                     <?php endif; ?>
 
 
@@ -479,20 +470,15 @@ $status_orcamento = $orc['status'] ?? 'pendente';
             </div>
 
 
-
-            <!--
-        |--------------------------------------------------------------------------
-        | DADOS DO PACIENTE
-        |--------------------------------------------------------------------------
-        -->
+            <!-- ==================================================
+             INFORMAÇÕES DO PACIENTE
+        =================================================== -->
 
             <h2>
                 👤 Dados do Paciente
             </h2>
 
-
             <div class="info-grid">
-
 
                 <div class="info-item">
 
@@ -546,16 +532,13 @@ $status_orcamento = $orc['status'] ?? 'pendente';
                 <div class="info-item">
 
                     <label>
-                        Validade
+                        E-mail
                     </label>
 
                     <span>
 
-                        <?= !empty($orc['validade'])
-                            ? date(
-                                'd/m/Y',
-                                strtotime($orc['validade'])
-                            )
+                        <?= !empty($orc['email'])
+                            ? htmlspecialchars($orc['email'])
                             : '—'
                         ?>
 
@@ -564,15 +547,29 @@ $status_orcamento = $orc['status'] ?? 'pendente';
                 </div>
 
 
+                <div class="info-item">
+
+                    <label>
+                        Validade
+                    </label>
+
+                    <span>
+
+                        <?= date(
+                            'd/m/Y',
+                            strtotime($orc['validade'])
+                        ) ?>
+
+                    </span>
+
+                </div>
+
             </div>
 
 
-
-            <!--
-        |--------------------------------------------------------------------------
-        | PROCEDIMENTOS
-        |--------------------------------------------------------------------------
-        -->
+            <!-- ==================================================
+             PROCEDIMENTOS
+        =================================================== -->
 
             <h2>
                 🦷 Procedimentos
@@ -581,137 +578,118 @@ $status_orcamento = $orc['status'] ?? 'pendente';
 
             <?php if (empty($itens)): ?>
 
-
-                <p style="color:#666; padding:10px 0;">
+                <p class="sem-itens">
                     Nenhum item registrado.
                 </p>
 
-
             <?php else: ?>
 
+                <div class="table-wrapper">
 
-                <table>
+                    <table>
 
-                    <thead>
-
-                        <tr>
-
-                            <th>
-                                Descrição
-                            </th>
-
-                            <th
-                                style="width:80px; text-align:center;">
-                                Qtd
-                            </th>
-
-                            <th
-                                style="width:120px; text-align:right;">
-                                Unitário
-                            </th>
-
-                            <th
-                                style="width:120px; text-align:right;">
-                                Subtotal
-                            </th>
-
-                        </tr>
-
-                    </thead>
-
-
-                    <tbody>
-
-
-                        <?php foreach ($itens as $item): ?>
-
-
-                            <?php
-
-                            $quantidade = (int) $item['quantidade'];
-
-                            $valor_unitario =
-                                (float) $item['valor_unitario'];
-
-                            $subtotal =
-                                $quantidade * $valor_unitario;
-
-                            ?>
-
+                        <thead>
 
                             <tr>
 
+                                <th>
+                                    Descrição
+                                </th>
 
-                                <td>
-                                    <?= htmlspecialchars($item['descricao']) ?>
-                                </td>
+                                <th class="col-qtd">
+                                    Qtd
+                                </th>
 
+                                <th class="col-valor">
+                                    Unitário
+                                </th>
 
-                                <td style="text-align:center;">
-
-                                    <?= $quantidade ?>
-
-                                </td>
-
-
-                                <td style="text-align:right;">
-
-                                    R$
-                                    <?= number_format(
-                                        $valor_unitario,
-                                        2,
-                                        ',',
-                                        '.'
-                                    ) ?>
-
-                                </td>
-
-
-                                <td
-                                    style="
-                                    text-align:right;
-                                    font-weight:500;
-                                ">
-
-                                    R$
-                                    <?= number_format(
-                                        $subtotal,
-                                        2,
-                                        ',',
-                                        '.'
-                                    ) ?>
-
-                                </td>
-
+                                <th class="col-valor">
+                                    Subtotal
+                                </th>
 
                             </tr>
 
+                        </thead>
 
-                        <?php endforeach; ?>
 
+                        <tbody>
 
-                    </tbody>
+                            <?php foreach ($itens as $item): ?>
 
-                </table>
+                                <?php
 
+                                $subtotal =
+                                    (float)$item['quantidade']
+                                    *
+                                    (float)$item['valor_unitario'];
+
+                                ?>
+
+                                <tr>
+
+                                    <td>
+                                        <?= htmlspecialchars(
+                                            $item['descricao']
+                                        ) ?>
+                                    </td>
+
+                                    <td class="text-center">
+
+                                        <?= (int)$item['quantidade'] ?>
+
+                                    </td>
+
+                                    <td class="text-right">
+
+                                        R$
+                                        <?= number_format(
+                                            $item['valor_unitario'],
+                                            2,
+                                            ',',
+                                            '.'
+                                        ) ?>
+
+                                    </td>
+
+                                    <td class="text-right">
+
+                                        <strong>
+
+                                            R$
+                                            <?= number_format(
+                                                $subtotal,
+                                                2,
+                                                ',',
+                                                '.'
+                                            ) ?>
+
+                                        </strong>
+
+                                    </td>
+
+                                </tr>
+
+                            <?php endforeach; ?>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
 
             <?php endif; ?>
 
 
-
-            <!--
-        |--------------------------------------------------------------------------
-        | TOTAL
-        |--------------------------------------------------------------------------
-        -->
+            <!-- ==================================================
+             TOTAL
+        =================================================== -->
 
             <div class="total-box">
-
 
                 <div class="total-label">
                     Valor Total do Orçamento
                 </div>
-
 
                 <div class="total-value">
 
@@ -725,35 +703,20 @@ $status_orcamento = $orc['status'] ?? 'pendente';
 
                 </div>
 
-
             </div>
 
 
-
-            <!--
-        |--------------------------------------------------------------------------
-        | OBSERVAÇÕES
-        |--------------------------------------------------------------------------
-        -->
+            <!-- ==================================================
+             OBSERVAÇÕES
+        =================================================== -->
 
             <?php if (!empty($orc['observacoes'])): ?>
-
 
                 <h2>
                     📝 Observações
                 </h2>
 
-
-                <div
-                    style="
-                    background:#fff;
-                    padding:12px;
-                    border-radius:8px;
-                    border:1px solid #e2e8f0;
-                    font-size:13px;
-                    color:#4a5568;
-                    white-space:pre-line;
-                ">
+                <div class="observacoes-box">
 
                     <?= nl2br(
                         htmlspecialchars(
@@ -763,281 +726,249 @@ $status_orcamento = $orc['status'] ?? 'pendente';
 
                 </div>
 
-
             <?php endif; ?>
 
 
-
-            <!--
-        |--------------------------------------------------------------------------
-        | PARCELAS
-        |--------------------------------------------------------------------------
-        -->
+            <!-- ==================================================
+             PARCELAS
+        =================================================== -->
 
             <?php if (!empty($parcelas)): ?>
-
 
                 <div class="parcelas-section">
 
 
-                    <h3>
+                    <div class="parcelas-header">
 
-                        💰 Controle de Parcelas
+                        <h3>
+                            💰 Controle de Parcelas
+                        </h3>
 
-                        <span
-                            style="
-                            font-size:12px;
-                            font-weight:normal;
-                            color:#718096;
-                            margin-left:auto;
-                        ">
+                        <span>
 
-                            (
                             <?= $qtd_pagas ?>
                             /
                             <?= $qtd_total ?>
                             pagas
-                            )
 
                         </span>
 
-                    </h3>
+                    </div>
 
 
-                    <table>
+                    <div class="table-wrapper">
 
+                        <table>
 
-                        <thead>
-
-                            <tr>
-
-                                <th>
-                                    #
-                                </th>
-
-                                <th>
-                                    Vencimento
-                                </th>
-
-                                <th
-                                    style="text-align:right;">
-                                    Valor
-                                </th>
-
-                                <th
-                                    style="text-align:center;">
-                                    Status
-                                </th>
-
-                                <th
-                                    style="text-align:center;">
-                                    Ação
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-
-                        <tbody>
-
-
-                            <?php foreach ($parcelas as $p): ?>
-
-
-                                <?php
-
-                                $badge_color = match ($p['status']) {
-
-                                    'paga' =>
-                                    '#198754',
-
-                                    'atrasada' =>
-                                    '#dc3545',
-
-                                    default =>
-                                    '#ef6c00'
-                                };
-
-                                ?>
-
+                            <thead>
 
                                 <tr>
 
+                                    <th>
+                                        Parcela
+                                    </th>
 
-                                    <td
-                                        style="font-weight:600;">
+                                    <th>
+                                        Vencimento
+                                    </th>
 
-                                        <?= (int) $p['numero_parcela'] ?>x
+                                    <th class="text-right">
+                                        Valor
+                                    </th>
 
-                                    </td>
+                                    <th class="text-center">
+                                        Status
+                                    </th>
 
+                                    <th class="text-center">
+                                        Ação
+                                    </th>
 
-                                    <td>
+                                </tr>
 
-                                        <?= date(
-                                            'd/m/Y',
-                                            strtotime(
-                                                $p['vencimento']
-                                            )
-                                        ) ?>
-
-                                    </td>
-
-
-                                    <td
-                                        style="
-                                        text-align:right;
-                                        font-weight:500;
-                                    ">
-
-                                        R$
-                                        <?= number_format(
-                                            $p['valor'],
-                                            2,
-                                            ',',
-                                            '.'
-                                        ) ?>
-
-                                    </td>
+                            </thead>
 
 
-                                    <td
-                                        style="text-align:center;">
+                            <tbody>
 
-                                        <span
-                                            class="status-badge"
-                                            style="
-                                            background:<?= $badge_color ?>;
-                                            color:#fff;
-                                        ">
+                                <?php foreach ($parcelas as $p): ?>
 
-                                            <?= ucfirst(
-                                                htmlspecialchars(
-                                                    $p['status']
+
+                                    <?php
+
+                                    switch ($p['status']) {
+
+                                        case 'paga':
+
+                                            $badge_class =
+                                                'parcela-paga';
+
+                                            $status_parcela =
+                                                'Paga';
+
+                                            break;
+
+
+                                        case 'atrasada':
+
+                                            $badge_class =
+                                                'parcela-atrasada';
+
+                                            $status_parcela =
+                                                'Atrasada';
+
+                                            break;
+
+
+                                        default:
+
+                                            $badge_class =
+                                                'parcela-pendente';
+
+                                            $status_parcela =
+                                                'Pendente';
+
+                                            break;
+                                    }
+
+                                    ?>
+
+
+                                    <tr>
+
+                                        <td>
+
+                                            <strong>
+                                                <?= (int)$p['numero_parcela'] ?>ª
+                                            </strong>
+
+                                        </td>
+
+
+                                        <td>
+
+                                            <?= date(
+                                                'd/m/Y',
+                                                strtotime(
+                                                    $p['vencimento']
                                                 )
                                             ) ?>
 
-                                        </span>
-
-                                    </td>
+                                        </td>
 
 
-                                    <td
-                                        style="text-align:center;">
+                                        <td class="text-right">
+
+                                            R$
+                                            <?= number_format(
+                                                $p['valor'],
+                                                2,
+                                                ',',
+                                                '.'
+                                            ) ?>
+
+                                        </td>
 
 
-                                        <?php if (
-                                            $p['status'] === 'pendente'
-                                            ||
-                                            $p['status'] === 'atrasada'
-                                        ): ?>
+                                        <td class="text-center">
 
+                                            <span
+                                                class="parcela-status <?= $badge_class ?>">
+                                                <?= $status_parcela ?>
+                                            </span>
+
+                                        </td>
+
+
+                                        <td class="text-center">
 
                                             <?php if (
-                                                $status_orcamento !== 'recusado'
+                                                $p['status'] === 'pendente' ||
+                                                $p['status'] === 'atrasada'
                                             ): ?>
 
 
                                                 <form
                                                     method="POST"
-                                                    style="display:inline;"
-                                                    onsubmit="return confirm('Confirmar pagamento desta parcela? O orçamento também será confirmado automaticamente.');">
+                                                    class="form-pagamento"
+                                                    onsubmit="return confirm('Confirmar pagamento desta parcela?');">
 
-                                                    <input
-                                                        type="hidden"
-                                                        name="csrf_token"
-                                                        value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                                                    <?= csrf_field() ?>
 
                                                     <input
                                                         type="hidden"
                                                         name="acao"
-                                                        value="pagar_parcela">
+                                                        value="marcar_paga">
 
                                                     <input
                                                         type="hidden"
                                                         name="parcela_id"
-                                                        value="<?= (int) $p['id'] ?>">
+                                                        value="<?= (int)$p['id'] ?>">
 
                                                     <button
                                                         type="submit"
                                                         class="btn-pagar">
-                                                        💳 Pagar parcela
+                                                        💳 Pagar
                                                     </button>
 
                                                 </form>
 
 
-                                            <?php else: ?>
+                                            <?php elseif (
+                                                $p['status'] === 'paga'
+                                            ): ?>
 
 
-                                                <small
-                                                    style="color:#dc3545;">
-                                                    Orçamento recusado
-                                                </small>
+                                                <span class="pagamento-confirmado">
+
+                                                    ✓ Pago
+
+                                                    <?php if (
+                                                        !empty($p['data_pagamento'])
+                                                    ): ?>
+
+                                                        <small>
+
+                                                            em
+                                                            <?= date(
+                                                                'd/m/Y',
+                                                                strtotime(
+                                                                    $p['data_pagamento']
+                                                                )
+                                                            ) ?>
+
+                                                        </small>
+
+                                                    <?php endif; ?>
+
+                                                </span>
 
 
                                             <?php endif; ?>
 
+                                        </td>
 
-                                        <?php elseif (
-                                            $p['status'] === 'paga'
-                                        ): ?>
-
-
-                                            <small
-                                                style="color:#198754;">
-
-                                                ✓ Pago
-
-                                                <?php if (
-                                                    !empty($p['data_pagamento'])
-                                                ): ?>
-
-                                                    em
-                                                    <?= date(
-                                                        'd/m/Y',
-                                                        strtotime(
-                                                            $p['data_pagamento']
-                                                        )
-                                                    ) ?>
-
-                                                <?php endif; ?>
-
-                                            </small>
+                                    </tr>
 
 
-                                        <?php endif; ?>
+                                <?php endforeach; ?>
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
 
 
-                                    </td>
-
-
-                                </tr>
-
-
-                            <?php endforeach; ?>
-
-
-                        </tbody>
-
-
-                    </table>
-
-
-
-                    <!--
-                |--------------------------------------------------------------------------
-                | BARRA DE PROGRESSO
-                |--------------------------------------------------------------------------
-                -->
+                    <!-- ==================================================
+                     PROGRESSO
+                =================================================== -->
 
                     <div class="progress-bar">
 
                         <div
                             class="progress-fill"
-                            style="
-                            width:<?= $progresso ?>%;"></div>
+                            style="width: <?= $progresso ?>%;"></div>
 
                     </div>
 
@@ -1045,7 +976,9 @@ $status_orcamento = $orc['status'] ?? 'pendente';
                     <div class="progress-text">
 
                         Progresso:
-                        <?= $progresso ?>%
+                        <strong>
+                            <?= $progresso ?>%
+                        </strong>
                         concluído
 
                     </div>
@@ -1053,16 +986,47 @@ $status_orcamento = $orc['status'] ?? 'pendente';
 
                 </div>
 
+            <?php endif; ?>
+
+
+            <!-- ==================================================
+             INFORMAÇÃO FINANCEIRA
+        =================================================== -->
+
+            <?php if ($orcamento_confirmado): ?>
+
+                <div class="financeiro-info">
+
+                    <div class="financeiro-info-icon">
+                        💰
+                    </div>
+
+                    <div>
+
+                        <strong>
+                            Orçamento integrado ao financeiro
+                        </strong>
+
+                        <p>
+                            As parcelas deste orçamento são
+                            consideradas automaticamente no
+                            controle financeiro.
+                        </p>
+
+                        <a href="financeiro.php">
+                            Ver financeiro →
+                        </a>
+
+                    </div>
+
+                </div>
 
             <?php endif; ?>
 
 
-
-            <!--
-        |--------------------------------------------------------------------------
-        | RODAPÉ
-        |--------------------------------------------------------------------------
-        -->
+            <!-- ==================================================
+             RODAPÉ
+        =================================================== -->
 
             <div class="footer-note">
 
@@ -1080,7 +1044,6 @@ $status_orcamento = $orc['status'] ?? 'pendente';
         </div>
 
     </main>
-
 
 </body>
 
