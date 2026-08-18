@@ -489,6 +489,11 @@ body {
 
 }
 
+/* Mantém todos os blocos dentro da mesma largura útil da página. */
+*, *:before, *:after {
+    box-sizing: border-box;
+}
+
 
 /* =====================================================
    CABEÇALHO
@@ -597,7 +602,7 @@ body {
 .document-info table {
 
     width: 100%;
-
+    table-layout: fixed;
     border-collapse: collapse;
 
 }
@@ -652,10 +657,9 @@ body {
 
 .section-title {
 
+    width: 100%;
     margin-top: 18px;
-
     margin-bottom: 0;
-
     padding: 8px 11px;
 
     background: #2563eb;
@@ -680,11 +684,9 @@ body {
 .info-table {
 
     width: 100%;
-
+    table-layout: fixed;
     border-collapse: collapse;
-
     border: 1px solid #e2e8f0;
-
     border-top: none;
 
 }
@@ -715,7 +717,7 @@ body {
 .items-table {
 
     width: 100%;
-
+    table-layout: fixed;
     border-collapse: collapse;
 
 }
@@ -737,6 +739,28 @@ body {
 
 }
 
+
+
+
+.items-table th:nth-child(1),
+.items-table td:nth-child(1) {
+    width: 48%;
+}
+
+.items-table th:nth-child(2),
+.items-table td:nth-child(2) {
+    width: 12%;
+}
+
+.items-table th:nth-child(3),
+.items-table td:nth-child(3) {
+    width: 20%;
+}
+
+.items-table th:nth-child(4),
+.items-table td:nth-child(4) {
+    width: 20%;
+}
 
 .items-table td {
 
@@ -816,11 +840,25 @@ body {
 .total-table {
 
     width: 100%;
-
+    table-layout: fixed;
     border-collapse: collapse;
 
 }
 
+
+
+.total-table td:first-child {
+    width: 60%;
+}
+
+.total-table td:last-child {
+    width: 40%;
+}
+
+.total-table td {
+    padding: 0;
+    border: 0;
+}
 
 .total-label {
 
