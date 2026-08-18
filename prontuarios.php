@@ -88,6 +88,7 @@ $prontuarios = $stmt->fetchAll();
     <link rel="stylesheet" href="css/variables.css">
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/prontuarios.css">
+    <link rel="stylesheet" href="css/navbar.css">
     <link rel="icon" type="image/png" href="img/icon.PNG">
 </head>
 
