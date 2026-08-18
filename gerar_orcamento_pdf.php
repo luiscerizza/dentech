@@ -820,19 +820,17 @@ body {
 
 .total-box {
 
-    width: 100%;
-
+    width: 97%;
+    max-width: 97%;
     margin-top: 12px;
-
     padding: 12px 15px;
-
     box-sizing: border-box;
 
     background: #eff6ff;
-
     border: 1px solid #bfdbfe;
-
     border-left: 4px solid #2563eb;
+
+    overflow: hidden;
 
 }
 
@@ -840,8 +838,12 @@ body {
 .total-table {
 
     width: 100%;
+    max-width: 100%;
     table-layout: fixed;
     border-collapse: collapse;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 
 }
 
