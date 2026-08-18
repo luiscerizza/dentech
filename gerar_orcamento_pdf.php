@@ -134,10 +134,23 @@ switch ($status_orcamento) {
 
 $logo_base64 = '';
 
-$logo_path = 'img/logo.jpg';
+/*
+ * O Dompdf deste ambiente não possui a extensão GD.
+ * Por isso, usamos JPG para o logo do PDF em vez de PNG.
+ *
+ * Crie o arquivo:
+ *     img/logo_pdf.jpg
+ *
+ * O ideal é que ele tenha fundo branco e o logo sem a caixa preta.
+ */
+$logo_path = 'img/logo_pdf.jpg';
+
+if (!file_exists($logo_path)) {
+    // Fallback para o logo antigo, caso logo_pdf.jpg ainda não exista.
+    $logo_path = 'img/logo.jpg';
+}
 
 if (file_exists($logo_path)) {
-
     $imageData = base64_encode(
         file_get_contents($logo_path)
     );
@@ -521,11 +534,9 @@ body {
 
 
 .logo {
-
-    max-width: 125px;
-
+    width: 125px;
     max-height: 65px;
-
+    object-fit: contain;
 }
 
 
