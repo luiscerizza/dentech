@@ -1,19 +1,58 @@
 <?php
-// agendamentos.php
+
 require_once 'config/auth.php';
 exigirLogin();
-require_once 'conexao/conexao.php'; // ajustado para o caminho correto
 
-// Buscar prontuários
-$stmt_pacientes = $pdo->query("SELECT id, paciente FROM prontuarios ORDER BY paciente");
-$prontuarios = $stmt_pacientes->fetchAll();
+require_once 'conexao/conexao.php';
 
-// Data do filtro
+/*
+|--------------------------------------------------------------------------
+| DATA SELECIONADA
+|--------------------------------------------------------------------------
+*/
+
 $data_filtro = $_GET['data'] ?? date('Y-m-d');
 
-// Buscar agendamentos do dia
+$dataAtual = DateTime::createFromFormat('Y-m-d', $data_filtro);
+
+if (!$dataAtual) {
+    $dataAtual = new DateTime();
+    $data_filtro = $dataAtual->format('Y-m-d');
+}
+
+/*
+|--------------------------------------------------------------------------
+| DATAS DE NAVEGAÇÃO
+|--------------------------------------------------------------------------
+*/
+
+$dataAnterior = (clone $dataAtual)->modify('-1 day')->format('Y-m-d');
+$dataProxima  = (clone $dataAtual)->modify('+1 day')->format('Y-m-d');
+
+$dataHoje = date('Y-m-d');
+
+/*
+|--------------------------------------------------------------------------
+| PACIENTES
+|--------------------------------------------------------------------------
+*/
+
+$stmt_pacientes = $pdo->query("
+    SELECT id, paciente
+    FROM prontuarios
+    ORDER BY paciente ASC
+");
+
+$prontuarios = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
+
+/*
+|--------------------------------------------------------------------------
+| AGENDAMENTOS DO DIA
+|--------------------------------------------------------------------------
+*/
+
 $stmt_agendamentos = $pdo->prepare("
-    SELECT 
+    SELECT
         a.id,
         a.paciente_id,
         COALESCE(p.paciente, a.paciente_nome) AS nome_paciente,
@@ -21,194 +60,978 @@ $stmt_agendamentos = $pdo->prepare("
         a.data,
         a.horario
     FROM agendamentos a
-    LEFT JOIN prontuarios p ON a.paciente_id = p.id
+    LEFT JOIN prontuarios p
+        ON a.paciente_id = p.id
     WHERE a.data = ?
-    ORDER BY a.horario
+    ORDER BY a.horario ASC
 ");
+
 $stmt_agendamentos->execute([$data_filtro]);
-$agendamentos = $stmt_agendamentos->fetchAll();
+
+$agendamentos = $stmt_agendamentos->fetchAll(PDO::FETCH_ASSOC);
+
+/*
+|--------------------------------------------------------------------------
+| PRÓXIMOS AGENDAMENTOS
+|--------------------------------------------------------------------------
+*/
+
+$stmt_proximos = $pdo->prepare("
+    SELECT
+        a.id,
+        a.paciente_id,
+        COALESCE(p.paciente, a.paciente_nome) AS nome_paciente,
+        a.procedimento,
+        a.data,
+        a.horario
+    FROM agendamentos a
+    LEFT JOIN prontuarios p
+        ON a.paciente_id = p.id
+    WHERE
+        a.data >= ?
+    ORDER BY
+        a.data ASC,
+        a.horario ASC
+    LIMIT 5
+");
+
+$stmt_proximos->execute([$dataHoje]);
+
+$proximos = $stmt_proximos->fetchAll(PDO::FETCH_ASSOC);
+
+/*
+|--------------------------------------------------------------------------
+| CALENDÁRIO DO MÊS
+|--------------------------------------------------------------------------
+*/
+
+$mesCalendario = (clone $dataAtual)->modify('first day of this month');
+
+$anoMes = (int)$mesCalendario->format('Y');
+$mesMes = (int)$mesCalendario->format('m');
+
+$primeiroDiaSemana = (int)$mesCalendario->format('N');
+$quantidadeDias = (int)$mesCalendario->format('t');
+
+$mesAnterior = (clone $mesCalendario)->modify('-1 month')->format('Y-m-d');
+$mesProximo  = (clone $mesCalendario)->modify('+1 month')->format('Y-m-d');
+
+$nomesMeses = [
+    1 => 'Janeiro',
+    2 => 'Fevereiro',
+    3 => 'Março',
+    4 => 'Abril',
+    5 => 'Maio',
+    6 => 'Junho',
+    7 => 'Julho',
+    8 => 'Agosto',
+    9 => 'Setembro',
+    10 => 'Outubro',
+    11 => 'Novembro',
+    12 => 'Dezembro'
+];
+
+$nomeMes = $nomesMeses[$mesMes];
+
+/*
+|--------------------------------------------------------------------------
+| ORGANIZAR AGENDAMENTOS POR HORÁRIO
+|--------------------------------------------------------------------------
+*/
+
+$agendamentosPorHorario = [];
+
+foreach ($agendamentos as $agendamento) {
+
+    $horario = substr($agendamento['horario'], 0, 5);
+
+    $agendamentosPorHorario[$horario][] = $agendamento;
+}
+
+/*
+|--------------------------------------------------------------------------
+| HORÁRIOS DA AGENDA
+|--------------------------------------------------------------------------
+*/
+
+$horarios = [];
+
+for ($hora = 8; $hora <= 18; $hora++) {
+    $horarios[] = sprintf('%02d:00', $hora);
+}
+
 ?>
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
+
     <meta charset="UTF-8">
-    <meta name="timezone" content="America/Sao_Paulo">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
     <title>Agendamentos - Dentech</title>
-    <link rel="stylesheet" href="css/navbar.css">
+
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/layout.css">
+
     <link rel="stylesheet" href="css/agendamento.css">
-    <link rel="icon" type="image/png" href="img/icon.PNG">
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <link
+        rel="icon"
+        type="image/png"
+        href="img/icon.PNG">
+
 </head>
 
 <body>
+
     <?php include 'navbar.php'; ?>
 
-    <div class="container" id="container">
-        <h1>Agendamentos</h1>
 
-        <!-- Mensagem de feedback -->
-        <div id="mensagem" style="display: none;"></div>
+    <div class="agenda-page">
 
-        <!-- Formulário de novo agendamento -->
-        <div class="form-agendamento">
-            <form id="formAgendamento">
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+        <!-- =========================================================
+         CABEÇALHO
+    ========================================================== -->
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="paciente_id">Paciente cadastrado</label>
-                        <select name="paciente_id" id="paciente_id">
-                            <option value="">Selecione</option>
-                            <?php foreach ($prontuarios as $p): ?>
-                                <option value="<?= htmlspecialchars($p['id']) ?>">
-                                    <?= htmlspecialchars($p['paciente']) ?>
-                                </option>
+        <header class="agenda-header">
+
+            <div>
+
+                <h1>Agendamentos</h1>
+
+            </div>
+
+            <button
+                type="button"
+                class="btn-novo-agendamento"
+                id="abrirModal">
+
+                <i class="fa-solid fa-plus"></i>
+
+                Novo agendamento
+
+            </button>
+
+        </header>
+
+
+        <!-- =========================================================
+         BARRA SUPERIOR
+    ========================================================== -->
+
+        <section class="agenda-toolbar">
+
+            <div class="agenda-navigation">
+
+                <a
+                    href="?data=<?= $dataHoje ?>"
+                    class="btn-hoje">
+
+                    Hoje
+
+                </a>
+
+
+                <div class="date-navigation">
+
+                    <a
+                        href="?data=<?= $dataAnterior ?>"
+                        class="date-arrow"
+                        title="Dia anterior">
+
+                        <i class="fa-solid fa-chevron-left"></i>
+
+                    </a>
+
+
+                    <div class="selected-date">
+
+                        <i class="fa-regular fa-calendar"></i>
+
+                        <span>
+                            <?= $dataAtual->format('d') ?>
+                            de
+                            <?= $nomeMes ?>
+                            de
+                            <?= $dataAtual->format('Y') ?>
+                        </span>
+
+                    </div>
+
+
+                    <a
+                        href="?data=<?= $dataProxima ?>"
+                        class="date-arrow"
+                        title="Próximo dia">
+
+                        <i class="fa-solid fa-chevron-right"></i>
+
+                    </a>
+
+                </div>
+
+            </div>
+
+
+            <div class="view-buttons">
+
+                <button
+                    type="button"
+                    class="view-button active">
+
+                    Dia
+
+                </button>
+
+                <button
+                    type="button"
+                    class="view-button"
+                    onclick="window.location.href='listar_mes.php?mes=<?= $dataAtual->format('Y-m') ?>'">
+
+                    Mês
+
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================================================
+         CONTEÚDO PRINCIPAL
+    ========================================================== -->
+
+        <div class="agenda-layout">
+
+
+            <!-- =====================================================
+             AGENDA DO DIA
+        ====================================================== -->
+
+            <section class="agenda-card">
+
+                <div class="agenda-grid">
+
+                    <div class="time-column">
+
+                        <?php foreach ($horarios as $horario): ?>
+
+                            <div class="time-slot">
+
+                                <?= $horario ?>
+
+                            </div>
+
+                        <?php endforeach; ?>
+
+                    </div>
+
+
+                    <div class="appointments-column">
+
+                        <?php foreach ($horarios as $index => $horario): ?>
+
+                            <div class="hour-row">
+
+                                <?php
+                                $agendamentosHorario =
+                                    $agendamentosPorHorario[$horario] ?? [];
+                                ?>
+
+
+                                <?php if (!empty($agendamentosHorario)): ?>
+
+                                    <?php foreach ($agendamentosHorario as $posicao => $ag): ?>
+
+                                        <?php
+                                        $classesEvento = [
+                                            'event-blue',
+                                            'event-green',
+                                            'event-purple'
+                                        ];
+
+                                        $classeEvento =
+                                            $classesEvento[($index + $posicao) %
+                                                count($classesEvento)];
+                                        ?>
+
+                                        <div class="appointment-event <?= $classeEvento ?>">
+
+                                            <div class="event-content">
+
+                                                <strong>
+                                                    <?= htmlspecialchars(
+                                                        $ag['nome_paciente']
+                                                    ) ?>
+                                                </strong>
+
+                                                <span>
+                                                    <?= htmlspecialchars(
+                                                        $ag['procedimento']
+                                                    ) ?>
+                                                </span>
+
+                                                <small>
+                                                    <?= htmlspecialchars(
+                                                        substr($ag['horario'], 0, 5)
+                                                    ) ?>
+                                                </small>
+
+                                            </div>
+
+
+                                            <div class="event-actions">
+
+                                                <?php if (!empty($ag['paciente_id'])): ?>
+
+                                                    <a
+                                                        href="visualizar_prontuario.php?id=<?= (int)$ag['paciente_id'] ?>"
+                                                        title="Visualizar prontuário">
+
+                                                        <i class="fa-regular fa-folder-open"></i>
+
+                                                    </a>
+
+                                                <?php endif; ?>
+
+
+                                                <form
+                                                    method="POST"
+                                                    action="registrar_atendimento.php"
+                                                    onsubmit="return confirm('Confirmar atendimento e registrar procedimento?')">
+
+                                                    <?= csrf_field() ?>
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="id"
+                                                        value="<?= (int)$ag['id'] ?>">
+
+                                                    <button
+                                                        type="submit"
+                                                        title="Confirmar atendimento">
+
+                                                        <i class="fa-solid fa-check"></i>
+
+                                                    </button>
+
+                                                </form>
+
+
+                                                <form
+                                                    method="POST"
+                                                    action="excluir_agendamento.php"
+                                                    onsubmit="return confirm('Excluir este agendamento?')">
+
+                                                    <?= csrf_field() ?>
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="id"
+                                                        value="<?= (int)$ag['id'] ?>">
+
+                                                    <button
+                                                        type="submit"
+                                                        title="Excluir agendamento">
+
+                                                        <i class="fa-solid fa-trash"></i>
+
+                                                    </button>
+
+                                                </form>
+
+                                            </div>
+
+                                        </div>
+
+                                    <?php endforeach; ?>
+
+                                <?php endif; ?>
+
+                            </div>
+
+                        <?php endforeach; ?>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =====================================================
+             COLUNA DIREITA
+        ====================================================== -->
+
+            <aside class="agenda-sidebar">
+
+
+                <!-- CALENDÁRIO -->
+
+                <section class="calendar-card">
+
+                    <div class="calendar-header">
+
+                        <a
+                            href="?data=<?= $mesAnterior ?>"
+                            class="calendar-arrow">
+
+                            <i class="fa-solid fa-chevron-left"></i>
+
+                        </a>
+
+
+                        <h2>
+                            <?= $nomeMes ?>
+                            <?= $anoMes ?>
+                        </h2>
+
+
+                        <a
+                            href="?data=<?= $mesProximo ?>"
+                            class="calendar-arrow">
+
+                            <i class="fa-solid fa-chevron-right"></i>
+
+                        </a>
+
+                    </div>
+
+
+                    <div class="calendar-weekdays">
+
+                        <span>D</span>
+                        <span>S</span>
+                        <span>T</span>
+                        <span>Q</span>
+                        <span>Q</span>
+                        <span>S</span>
+                        <span>S</span>
+
+                    </div>
+
+
+                    <div class="calendar-days">
+
+                        <?php
+
+                        $diasMesAnterior = (int)(
+                            (clone $mesCalendario)
+                            ->modify('-1 day')
+                            ->format('t')
+                        );
+
+                        for (
+                            $i = $primeiroDiaSemana - 1;
+                            $i > 0;
+                            $i--
+                        ):
+
+                            $diaAnterior =
+                                $diasMesAnterior - $i + 1;
+
+                        ?>
+
+                            <span class="other-month">
+                                <?= $diaAnterior ?>
+                            </span>
+
+                        <?php endfor; ?>
+
+
+                        <?php for ($dia = 1; $dia <= $quantidadeDias; $dia++): ?>
+
+                            <?php
+
+                            $dataDia = sprintf(
+                                '%04d-%02d-%02d',
+                                $anoMes,
+                                $mesMes,
+                                $dia
+                            );
+
+                            $classes = [];
+
+                            if ($dataDia === $data_filtro) {
+                                $classes[] = 'selected';
+                            }
+
+                            if ($dataDia === $dataHoje) {
+                                $classes[] = 'today';
+                            }
+
+                            ?>
+
+                            <a
+                                href="?data=<?= $dataDia ?>"
+                                class="<?= implode(' ', $classes) ?>">
+
+                                <?= $dia ?>
+
+                            </a>
+
+                        <?php endfor; ?>
+
+                    </div>
+
+                </section>
+
+
+                <!-- PRÓXIMOS AGENDAMENTOS -->
+
+                <section class="next-appointments-card">
+
+                    <div class="next-header">
+
+                        <h2>Próximos agendamentos</h2>
+
+                    </div>
+
+
+                    <?php if (empty($proximos)): ?>
+
+                        <div class="next-empty">
+
+                            <i class="fa-regular fa-calendar-xmark"></i>
+
+                            <span>
+                                Nenhum agendamento próximo.
+                            </span>
+
+                        </div>
+
+                    <?php else: ?>
+
+                        <div class="next-list">
+
+                            <?php foreach ($proximos as $proximo): ?>
+
+                                <a
+                                    href="?data=<?= htmlspecialchars($proximo['data']) ?>"
+                                    class="next-item">
+
+                                    <div class="next-date">
+
+                                        <strong>
+                                            <?= date(
+                                                'd/m',
+                                                strtotime($proximo['data'])
+                                            ) ?>
+                                        </strong>
+
+                                        <span>
+                                            <?= htmlspecialchars(
+                                                substr(
+                                                    $proximo['horario'],
+                                                    0,
+                                                    5
+                                                )
+                                            ) ?>
+                                        </span>
+
+                                    </div>
+
+
+                                    <div class="next-patient">
+
+                                        <strong>
+                                            <?= htmlspecialchars(
+                                                $proximo['nome_paciente']
+                                            ) ?>
+                                        </strong>
+
+                                        <span>
+                                            <?= htmlspecialchars(
+                                                $proximo['procedimento']
+                                            ) ?>
+                                        </span>
+
+                                    </div>
+
+                                </a>
+
                             <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="paciente_nome">Nome avulso (opcional)</label>
-                        <input type="text" name="paciente_nome" id="paciente_nome" placeholder="Ex: Visitante">
-                    </div>
-                </div>
 
-                <div class="form-group">
-                    <label for="procedimento">Procedimento</label>
-                    <input type="text" name="procedimento" required placeholder="Ex: Clareamento...">
-                </div>
+                        </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="data">Data</label>
-                        <input type="date" name="data" value="<?= htmlspecialchars($data_filtro) ?>" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="horario">Horário</label>
-                        <input type="time" name="horario" required>
-                    </div>
-                </div>
+                    <?php endif; ?>
 
-                <button type="submit">Agendar</button>
-            </form>
+                </section>
+
+            </aside>
+
         </div>
 
-        <!-- Filtro por data -->
-        <div class="filtro-data">
-            <form id="formFiltro" method="GET">
-                <label for="data">Filtrar por </label>
-                <input type="date" name="data" value="<?= htmlspecialchars($data_filtro) ?>" required>
-                <button type="submit">Aplicar</button>
-            </form>
-            <a href="listar_mes.php?mes=<?= date('Y-m') ?>">Ver mês</a>
-        </div>
-
-        <!-- Lista de agendamentos -->
-        <h2>Agendamentos em <?= date('d/m/Y', strtotime($data_filtro)) ?></h2>
-        <div id="lista-agendamentos">
-            <?php if (empty($agendamentos)): ?>
-                <div class="empty">Nenhum agendamento neste dia.</div>
-            <?php else: ?>
-                <div class="tabela-agendamentos">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Horário</th>
-                                <th>Paciente</th>
-                                <th>Procedimento</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($agendamentos as $ag): ?>
-                                <tr>
-                                    <td><?= htmlspecialchars($ag['horario']) ?></td>
-                                    <td><?= htmlspecialchars($ag['nome_paciente']) ?></td>
-                                    <td><?= htmlspecialchars($ag['procedimento']) ?></td>
-                                    <td class="acoes">
-                                        <?php if (!empty($ag['paciente_id'])): ?>
-                                            <form method="POST" action="registrar_atendimento.php" style="display:inline;"
-                                                onsubmit="return confirm('Confirmar atendimento e registrar procedimento?')">
-
-                                                <?= csrf_field() ?>
-
-                                                <input type="hidden" name="id" value="<?= $ag['id'] ?>">
-                                                <button type="submit" class="btn-confirmar">
-                                                    ✅
-                                                </button>
-                                            </form>
-                                        <?php else: ?>
-                                            <span class="avulso">(avulso)</span>
-                                        <?php endif; ?>
-                                        <form method="POST" action="excluir_agendamento.php" style="display:inline;"
-                                            onsubmit="return confirm('Excluir este agendamento?')">
-
-                                            <?= csrf_field() ?>
-
-                                            <input type="hidden" name="id" value="<?= $ag['id'] ?>">
-                                            <button type="submit" class="btn-excluir">
-                                                ❌
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php endif; ?>
-        </div>
     </div>
 
+
+    <!-- =============================================================
+     MODAL NOVO AGENDAMENTO
+============================================================== -->
+
+    <div
+        class="modal-overlay"
+        id="modalAgendamento">
+
+        <div class="modal-agendamento">
+
+            <div class="modal-header">
+
+                <div>
+
+                    <span class="modal-kicker">
+                        AGENDAMENTOS
+                    </span>
+
+                    <h2>
+                        Novo agendamento
+                    </h2>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    class="modal-close"
+                    id="fecharModal">
+
+                    <i class="fa-solid fa-xmark"></i>
+
+                </button>
+
+            </div>
+
+
+            <div
+                id="mensagem"
+                class="mensagem"
+                style="display:none;">
+            </div>
+
+
+            <form
+                id="formAgendamento">
+
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+
+
+                <div class="form-group">
+
+                    <label for="paciente_id">
+                        Paciente cadastrado
+                    </label>
+
+                    <select
+                        name="paciente_id"
+                        id="paciente_id">
+
+                        <option value="">
+                            Selecione o paciente
+                        </option>
+
+                        <?php foreach ($prontuarios as $p): ?>
+
+                            <option
+                                value="<?= htmlspecialchars($p['id']) ?>">
+
+                                <?= htmlspecialchars($p['paciente']) ?>
+
+                            </option>
+
+                        <?php endforeach; ?>
+
+                    </select>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="paciente_nome">
+                        Nome avulso
+                    </label>
+
+                    <input
+                        type="text"
+                        name="paciente_nome"
+                        id="paciente_nome"
+                        placeholder="Opcional">
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="procedimento">
+                        Procedimento
+                    </label>
+
+                    <input
+                        type="text"
+                        name="procedimento"
+                        id="procedimento"
+                        required
+                        placeholder="Ex.: Limpeza, Consulta, Clareamento">
+
+                </div>
+
+
+                <div class="form-row">
+
+                    <div class="form-group">
+
+                        <label for="data">
+                            Data
+                        </label>
+
+                        <input
+                            type="date"
+                            name="data"
+                            id="data"
+                            value="<?= htmlspecialchars($data_filtro) ?>"
+                            required>
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="horario">
+                            Horário
+                        </label>
+
+                        <input
+                            type="time"
+                            name="horario"
+                            id="horario"
+                            required>
+
+                    </div>
+
+                </div>
+
+
+                <div class="modal-actions">
+
+                    <button
+                        type="button"
+                        class="btn-cancelar"
+                        id="cancelarModal">
+
+                        Cancelar
+
+                    </button>
+
+
+                    <button
+                        type="submit"
+                        class="btn-salvar">
+
+                        <i class="fa-solid fa-check"></i>
+
+                        Agendar
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
     <script>
-        // Salvar novo agendamento via AJAX
-        document.getElementById('formAgendamento').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            formData.append('csrf_token', '<?= $_SESSION['csrf_token'] ?>');
-            try {
-                const response = await fetch('salvar_agendamento.php', {
-                    method: 'POST',
-                    body: formData
-                });
+        /*
+|--------------------------------------------------------------------------
+| MODAL
+|--------------------------------------------------------------------------
+*/
 
-                const result = await response.json();
-                const msgDiv = document.getElementById('mensagem');
+        const modal = document.getElementById('modalAgendamento');
 
-                if (result.success) {
-                    msgDiv.className = 'mensagem sucesso';
-                    msgDiv.textContent = 'Agendamento salvo com sucesso!';
-                    msgDiv.style.display = 'block';
-                    this.reset();
+        const abrirModal =
+            document.getElementById('abrirModal');
 
-                    // Atualiza a lista após 1s
-                    setTimeout(() => {
-                        const data = formData.get('data') || '<?= date('Y-m-d') ?>';
-                        window.location.search = 'data=' + encodeURIComponent(data);
-                    }, 1000);
-                } else {
-                    msgDiv.className = 'mensagem erro';
-                    msgDiv.textContent = 'Erro: ' + (result.error || 'Não foi possível salvar.');
-                    msgDiv.style.display = 'block';
-                    setTimeout(() => msgDiv.style.display = 'none', 4000);
-                }
-            } catch (err) {
-                console.error(err);
-                const msgDiv = document.getElementById('mensagem');
-                msgDiv.className = 'mensagem erro';
-                msgDiv.textContent = 'Erro de conexão. Tente novamente.';
-                msgDiv.style.display = 'block';
-                setTimeout(() => msgDiv.style.display = 'none', 4000);
+        const fecharModal =
+            document.getElementById('fecharModal');
+
+        const cancelarModal =
+            document.getElementById('cancelarModal');
+
+
+        function fecharModalAgendamento() {
+
+            modal.classList.remove('show');
+
+        }
+
+
+        abrirModal.addEventListener(
+            'click',
+            function() {
+
+                modal.classList.add('show');
+
             }
-        });
+        );
 
-        // Filtro de data
-        document.getElementById('formFiltro').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const data = this.querySelector('input[name="data"]').value;
-            window.location.search = 'data=' + encodeURIComponent(data);
-        });
+
+        fecharModal.addEventListener(
+            'click',
+            fecharModalAgendamento
+        );
+
+
+        cancelarModal.addEventListener(
+            'click',
+            fecharModalAgendamento
+        );
+
+
+        modal.addEventListener(
+            'click',
+            function(event) {
+
+                if (event.target === modal) {
+
+                    fecharModalAgendamento();
+
+                }
+
+            }
+        );
+
+
+        document.addEventListener(
+            'keydown',
+            function(event) {
+
+                if (event.key === 'Escape') {
+
+                    fecharModalAgendamento();
+
+                }
+
+            }
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | SALVAR AGENDAMENTO
+        |--------------------------------------------------------------------------
+        */
+
+        document
+            .getElementById('formAgendamento')
+            .addEventListener(
+                'submit',
+                async function(e) {
+
+                    e.preventDefault();
+
+                    const form = this;
+
+                    const formData =
+                        new FormData(form);
+
+                    const mensagem =
+                        document.getElementById('mensagem');
+
+
+                    try {
+
+                        const response =
+                            await fetch(
+                                'salvar_agendamento.php', {
+                                    method: 'POST',
+                                    body: formData
+                                }
+                            );
+
+
+                        const result =
+                            await response.json();
+
+
+                        if (result.success) {
+
+                            mensagem.className =
+                                'mensagem sucesso';
+
+                            mensagem.textContent =
+                                'Agendamento salvo com sucesso!';
+
+                            mensagem.style.display =
+                                'block';
+
+
+                            const data =
+                                formData.get('data');
+
+
+                            setTimeout(
+                                function() {
+
+                                    window.location.href =
+                                        '?data=' +
+                                        encodeURIComponent(data);
+
+                                },
+                                700
+                            );
+
+                        } else {
+
+                            mensagem.className =
+                                'mensagem erro';
+
+                            mensagem.textContent =
+                                'Erro: ' +
+                                (
+                                    result.error ||
+                                    'Não foi possível salvar.'
+                                );
+
+                            mensagem.style.display =
+                                'block';
+
+                        }
+
+                    } catch (error) {
+
+                        console.error(error);
+
+                        mensagem.className =
+                            'mensagem erro';
+
+                        mensagem.textContent =
+                            'Erro de conexão. Tente novamente.';
+
+                        mensagem.style.display =
+                            'block';
+
+                    }
+
+                }
+            );
     </script>
+
 </body>
 
 </html>
