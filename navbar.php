@@ -6,6 +6,10 @@
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
+<?php
+$pagina_atual = basename($_SERVER['PHP_SELF']);
+?>
+
 <aside class="sidebar">
 
     <div class="sidebar-logo">
@@ -14,32 +18,32 @@
 
     <nav class="sidebar-nav">
 
-        <a href="index" class="nav-link">
+        <a href="index" class="nav-link <?= $pagina_atual === 'index.php' ? 'active' : '' ?>">
             <i class="fa-solid fa-house"></i>
             <span>Dashboard</span>
         </a>
 
-        <a href="prontuarios" class="nav-link active">
+        <a href="prontuarios" class="nav-link <?= $pagina_atual === 'prontuarios.php' ? 'active' : '' ?>">
             <i class="fa-solid fa-user-group"></i>
             <span>Prontuários</span>
         </a>
 
-        <a href="agendamentos" class="nav-link">
+        <a href="agendamentos" class="nav-link <?= $pagina_atual === 'agendamentos.php' ? 'active' : '' ?>">
             <i class="fa-solid fa-calendar-check"></i>
             <span>Agenda</span>
         </a>
 
-        <a href="inventario" class="nav-link">
+        <a href="inventario" class="nav-link <?= $pagina_atual === 'inventario.php' ? 'active' : '' ?>">
             <i class="fa-solid fa-box"></i>
             <span>Estoque</span>
         </a>
 
-        <a href="orcamento" class="nav-link">
+        <a href="orcamento" class="nav-link <?= $pagina_atual === 'orcamento.php' ? 'active' : '' ?>">
             <i class="fa-solid fa-file-invoice-dollar"></i>
             <span>Orçamentos</span>
         </a>
 
-        <a href="restrito" class="nav-link restricted">
+        <a href="restrito" class="nav-link restricted <?= $pagina_atual === 'restrito.php' ? 'active' : '' ?>">
             <i class="fa-solid fa-lock"></i>
             <span>Área Restrita</span>
         </a>
