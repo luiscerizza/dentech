@@ -617,6 +617,60 @@
   text-decoration: none;
 }
 
+.financeiro-integracao {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 24px;
+  padding: 18px 20px;
+  border: 1px solid #cfe0f5;
+  border-left: 4px solid #2563eb;
+  border-radius: 10px;
+  background: #f4f8ff;
+}
+
+.financeiro-integracao-icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #dbeafe;
+  font-size: 18px;
+}
+
+.financeiro-integracao-conteudo {
+  flex: 1;
+}
+
+.financeiro-integracao strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #172554;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.financeiro-integracao p {
+  margin: 0 0 7px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.financeiro-integracao a {
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.financeiro-integracao a:hover {
+  text-decoration: underline;
+}
+
 /* =========================================================
    RESPONSIVIDADE
    ========================================================= */
@@ -765,205 +819,195 @@
   }
 }
 
-
- /*
+/*
         |--------------------------------------------------------------------------
         | BOTÕES DO CABEÇALHO
         |--------------------------------------------------------------------------
         */
 
-        .btn-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
+.btn-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 
-            min-height: 42px;
+  min-height: 42px;
 
-            padding: 10px 16px;
+  padding: 10px 16px;
 
-            border-radius: 8px;
+  border-radius: 8px;
 
-            text-decoration: none;
+  text-decoration: none;
 
-            font-size: 14px;
-            font-weight: 600;
+  font-size: 14px;
+  font-weight: 600;
 
-            border: 1px solid transparent;
+  border: 1px solid transparent;
 
-            cursor: pointer;
+  cursor: pointer;
 
-            transition: all 0.2s ease;
+  transition: all 0.2s ease;
 
-            box-sizing: border-box;
-        }
+  box-sizing: border-box;
+}
 
-
-        /*
+/*
         |--------------------------------------------------------------------------
         | VOLTAR
         |--------------------------------------------------------------------------
         */
 
-        .btn-voltar {
-            background: #ffffff;
-            color: #2d3748;
-            border-color: #cbd5e0;
-        }
+.btn-voltar {
+  background: #ffffff;
+  color: #2d3748;
+  border-color: #cbd5e0;
+}
 
-        .btn-voltar:hover {
-            background: #f7fafc;
-        }
+.btn-voltar:hover {
+  background: #f7fafc;
+}
 
-
-        /*
+/*
         |--------------------------------------------------------------------------
         | PDF
         |--------------------------------------------------------------------------
         */
 
-        .btn-pdf {
-            background: #ffffff;
-            color: #2b6cb0;
-            border-color: #2b6cb0;
-        }
+.btn-pdf {
+  background: #ffffff;
+  color: #2b6cb0;
+  border-color: #2b6cb0;
+}
 
-        .btn-pdf:hover {
-            background: #ebf8ff;
-        }
+.btn-pdf:hover {
+  background: #ebf8ff;
+}
 
-
-        /*
+/*
         |--------------------------------------------------------------------------
         | EDITAR
         |--------------------------------------------------------------------------
         */
 
-        .btn-editar {
-            background: #2563eb;
-            color: #ffffff;
-            border-color: #2563eb;
-        }
+.btn-editar {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
 
-        .btn-editar:hover {
-            background: #1d4ed8;
-        }
+.btn-editar:hover {
+  background: #1d4ed8;
+}
 
-
-        /*
+/*
         |--------------------------------------------------------------------------
         | CONFIRMAR
         |--------------------------------------------------------------------------
         */
 
-        .btn-confirmar {
-            background: #198754;
-            color: #ffffff;
-            border-color: #198754;
-        }
+.btn-confirmar {
+  background: #198754;
+  color: #ffffff;
+  border-color: #198754;
+}
 
-        .btn-confirmar:hover {
-            background: #157347;
-        }
+.btn-confirmar:hover {
+  background: #157347;
+}
 
-
-        /*
+/*
         |--------------------------------------------------------------------------
         | RECUSAR
         |--------------------------------------------------------------------------
         */
 
-        .btn-recusar {
-            background: #dc3545;
-            color: #ffffff;
-            border-color: #dc3545;
-        }
+.btn-recusar {
+  background: #dc3545;
+  color: #ffffff;
+  border-color: #dc3545;
+}
 
-        .btn-recusar:hover {
-            background: #bb2d3b;
-        }
+.btn-recusar:hover {
+  background: #bb2d3b;
+}
 
-
-        /*
+/*
         |--------------------------------------------------------------------------
         | BOTÃO PAGAR PARCELA
         |--------------------------------------------------------------------------
         */
 
-        .btn-pagar {
-            display: inline-flex;
+.btn-pagar {
+  display: inline-flex;
 
-            align-items: center;
-            justify-content: center;
+  align-items: center;
+  justify-content: center;
 
-            padding: 7px 12px;
+  padding: 7px 12px;
 
-            border: 0;
-            border-radius: 6px;
+  border: 0;
+  border-radius: 6px;
 
-            background: #198754;
-            color: #ffffff;
+  background: #198754;
+  color: #ffffff;
 
-            font-size: 12px;
-            font-weight: 600;
+  font-size: 12px;
+  font-weight: 600;
 
-            cursor: pointer;
+  cursor: pointer;
 
-            transition: 0.2s ease;
-        }
+  transition: 0.2s ease;
+}
 
-        .btn-pagar:hover {
-            background: #157347;
-        }
+.btn-pagar:hover {
+  background: #157347;
+}
 
-
-        /*
+/*
         |--------------------------------------------------------------------------
         | STATUS DO ORÇAMENTO
         |--------------------------------------------------------------------------
         */
 
-        .status-badge.status-pendente {
-            background: #fff3cd;
-            color: #856404;
-        }
+.status-badge.status-pendente {
+  background: #fff3cd;
+  color: #856404;
+}
 
-        .status-badge.status-aceito {
-            background: #d1e7dd;
-            color: #0f5132;
-        }
+.status-badge.status-aceito {
+  background: #d1e7dd;
+  color: #0f5132;
+}
 
-        .status-badge.status-recusado {
-            background: #f8d7da;
-            color: #842029;
-        }
+.status-badge.status-recusado {
+  background: #f8d7da;
+  color: #842029;
+}
 
-
-        /*
+/*
         |--------------------------------------------------------------------------
         | RESPONSIVO
         |--------------------------------------------------------------------------
         */
 
-        @media (max-width: 900px) {
+@media (max-width: 900px) {
+  .btn-group {
+    width: 100%;
+  }
 
-            .btn-group {
-                width: 100%;
-            }
+  .btn-group .btn,
+  .btn-group form {
+    flex: 1;
+  }
 
-            .btn-group .btn,
-            .btn-group form {
-                flex: 1;
-            }
-
-            .btn-group form .btn {
-                width: 100%;
-            }
-        }
+  .btn-group form .btn {
+    width: 100%;
+  }
+}

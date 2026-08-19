@@ -1148,37 +1148,21 @@ $status_classe = match ($status_orcamento) {
             <?php if ($orcamento_confirmado): ?>
 
 
-                <div class="financeiro-info">
+                <div class="financeiro-integracao">
+                    <div class="financeiro-integracao-icon">💰</div>
 
-
-                    <div class="financeiro-info-icon">
-                        💰
-                    </div>
-
-
-                    <div>
-
-                        <strong>
-                            Orçamento integrado ao financeiro
-                        </strong>
-
+                    <div class="financeiro-integracao-conteudo">
+                        <strong>Orçamento integrado ao financeiro</strong>
 
                         <p>
-
-                            As parcelas deste orçamento são
-                            consideradas automaticamente no
-                            controle financeiro.
-
+                            As parcelas deste orçamento são consideradas automaticamente
+                            no controle financeiro.
                         </p>
-
 
                         <a href="financeiro.php">
                             Ver financeiro →
                         </a>
-
                     </div>
-
-
                 </div>
 
 
