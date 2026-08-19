@@ -5,12 +5,9 @@ exigirLogin();
 
 require_once 'conexao/conexao.php';
 
-
-
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -20,12 +17,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 function moedaBR($valor): string
 {
-    return 'R$ ' . number_format(
-        (float)$valor,
-        2,
-        ',',
-        '.'
-    );
+    return 'R$ ' . number_format((float)$valor, 2, ',', '.');
 }
 
 function dataBR($data): string
@@ -43,40 +35,39 @@ function dataBR($data): string
 
 function classeStatus($status): string
 {
-    return match ($status) {
-        'pago',
-        'paga'
-        => 'status-pago',
+    switch ($status) {
+        case 'pago':
+        case 'paga':
+            return 'status-pago';
 
-        'pendente'
-        => 'status-pendente',
+        case 'pendente':
+            return 'status-pendente';
 
-        'atrasada'
-        => 'status-atrasada',
+        case 'atrasada':
+            return 'status-atrasada';
 
-        default
-        => 'status-outro'
-    };
+        default:
+            return 'status-outro';
+    }
 }
 
 function textoStatus($status): string
 {
-    return match ($status) {
-        'pago',
-        'paga'
-        => 'Pago',
+    switch ($status) {
+        case 'pago':
+        case 'paga':
+            return 'Pago';
 
-        'pendente'
-        => 'Pendente',
+        case 'pendente':
+            return 'Pendente';
 
-        'atrasada'
-        => 'Atrasada',
+        case 'atrasada':
+            return 'Atrasada';
 
-        default
-        => ucfirst((string)$status)
-    };
+        default:
+            return ucfirst((string)$status);
+    }
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -109,297 +100,99 @@ if (!in_array($tipo_filtro, $tipos_validos, true)) {
     $tipo_filtro = 'todos';
 }
 
-
 /*
 |--------------------------------------------------------------------------
-| PERÍODO
+| DEFINIR PERÍODO
+|--------------------------------------------------------------------------
+|
+| Usamos PHP para montar as datas.
+| Isso facilita usar exatamente o mesmo período
+| nos lançamentos manuais e nas parcelas dos orçamentos.
+|
 |--------------------------------------------------------------------------
 */
 
-$where = [];
-$params = [];
+$data_inicio = null;
+$data_fim = null;
 
 switch ($periodo) {
 
     case 'hoje':
 
-        $where[] = "DATE(data) = CURDATE()";
+        $data_inicio = date('Y-m-d');
+        $data_fim = date('Y-m-d');
 
         break;
-
 
     case '7dias':
 
-        $where[] =
-            "data >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)";
-
-        $where[] =
-            "data <= CURDATE()";
+        $data_inicio = date('Y-m-d', strtotime('-6 days'));
+        $data_fim = date('Y-m-d');
 
         break;
-
 
     case '30dias':
 
-        $where[] =
-            "data >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)";
-
-        $where[] =
-            "data <= CURDATE()";
+        $data_inicio = date('Y-m-d', strtotime('-29 days'));
+        $data_fim = date('Y-m-d');
 
         break;
-
 
     case 'todos':
 
+        $data_inicio = null;
+        $data_fim = null;
+
         break;
 
-
     case 'mes':
+
     default:
 
-        $where[] =
-            "YEAR(data) = YEAR(CURDATE())";
-
-        $where[] =
-            "MONTH(data) = MONTH(CURDATE())";
+        $data_inicio = date('Y-m-01');
+        $data_fim = date('Y-m-t');
 
         break;
 }
 
-
 /*
 |--------------------------------------------------------------------------
-| FILTRO DE TIPO PARA LANÇAMENTOS MANUAIS
+| CONDIÇÃO DOS LANÇAMENTOS MANUAIS
 |--------------------------------------------------------------------------
 */
+
+$where_manual = [];
+$params_manual = [];
+
+if ($data_inicio !== null && $data_fim !== null) {
+
+    $where_manual[] = "data BETWEEN :data_inicio AND :data_fim";
+
+    $params_manual[':data_inicio'] = $data_inicio;
+    $params_manual[':data_fim'] = $data_fim;
+}
 
 if ($tipo_filtro !== 'todos') {
 
-    $where[] =
-        "tipo = :tipo";
+    $where_manual[] = "tipo = :tipo";
 
-    $params[':tipo'] =
-        $tipo_filtro;
+    $params_manual[':tipo'] = $tipo_filtro;
 }
 
+$where_manual_sql = '';
 
-$where_sql =
-    $where
-    ? 'WHERE ' . implode(' AND ', $where)
-    : '';
-
-
-/*
-|--------------------------------------------------------------------------
-| ATUALIZAR PARCELAS ATRASADAS
-|--------------------------------------------------------------------------
-*/
-
-$pdo->exec("
-    UPDATE parcelas p
-
-    INNER JOIN orcamentos o
-        ON o.id = p.orcamento_id
-
-    SET p.status = 'atrasada'
-
-    WHERE o.status IN ('aceito', 'confirmado')
-      AND p.status = 'pendente'
-      AND p.vencimento < CURDATE()
-");
-
+if (!empty($where_manual)) {
+    $where_manual_sql = 'WHERE ' . implode(' AND ', $where_manual);
+}
 
 /*
 |--------------------------------------------------------------------------
-| RESUMO DOS LANÇAMENTOS MANUAIS
-|--------------------------------------------------------------------------
-|
-| Receitas:
-|   somente lançamentos pagos.
-|
-| Despesas:
-|   somente despesas pagas.
-|
-| A receber:
-|   lançamentos manuais pendentes.
-|
+| BUSCAR LANÇAMENTOS MANUAIS
 |--------------------------------------------------------------------------
 */
 
-$stmt_resumo_manual = $pdo->prepare("
+$stmt_manual = $pdo->prepare("
     SELECT
-
-        COALESCE(
-            SUM(
-                CASE
-                    WHEN tipo = 'receita'
-                     AND status = 'pago'
-                    THEN valor
-                    ELSE 0
-                END
-            ),
-            0
-        ) AS receitas,
-
-        COALESCE(
-            SUM(
-                CASE
-                    WHEN tipo = 'despesa'
-                     AND status = 'pago'
-                    THEN valor
-                    ELSE 0
-                END
-            ),
-            0
-        ) AS despesas,
-
-        COALESCE(
-            SUM(
-                CASE
-                    WHEN tipo = 'receita'
-                     AND status = 'pendente'
-                    THEN valor
-                    ELSE 0
-                END
-            ),
-            0
-        ) AS a_receber
-
-    FROM lancamentos_financeiros
-
-    $where_sql
-");
-
-$stmt_resumo_manual->execute($params);
-
-$resumo_manual =
-    $stmt_resumo_manual->fetch(PDO::FETCH_ASSOC)
-    ?: [
-        'receitas' => 0,
-        'despesas' => 0,
-        'a_receber' => 0
-    ];
-
-
-/*
-|--------------------------------------------------------------------------
-| VALORES MANUAIS
-|--------------------------------------------------------------------------
-*/
-
-$receitas =
-    (float)$resumo_manual['receitas'];
-
-$despesas =
-    (float)$resumo_manual['despesas'];
-
-$a_receber =
-    (float)$resumo_manual['a_receber'];
-
-
-/*
-|--------------------------------------------------------------------------
-| A RECEBER DOS ORÇAMENTOS
-|--------------------------------------------------------------------------
-|
-| IMPORTANTE:
-|
-| Não aplicamos o filtro de período aqui.
-|
-| O card "A receber" representa o total que a clínica
-| ainda tem para receber de todos os orçamentos aceitos.
-|
-| Portanto, uma parcela que vence mês que vem continua
-| aparecendo no A receber.
-|
-|--------------------------------------------------------------------------
-*/
-
-$stmt_a_receber_orcamentos = $pdo->query("
-    SELECT
-        COALESCE(SUM(p.valor), 0)
-
-    FROM parcelas p
-
-    INNER JOIN orcamentos o
-        ON o.id = p.orcamento_id
-
-    WHERE o.status IN ('aceito', 'confirmado')
-
-      AND p.status IN (
-          'pendente',
-          'atrasada'
-      )
-");
-
-$a_receber_orcamentos =
-    (float)$stmt_a_receber_orcamentos->fetchColumn();
-
-
-/*
-|--------------------------------------------------------------------------
-| SOMAR ORÇAMENTOS AO A RECEBER
-|--------------------------------------------------------------------------
-*/
-
-$a_receber +=
-    $a_receber_orcamentos;
-
-
-/*
-|--------------------------------------------------------------------------
-| RECEITAS JÁ PAGAS DOS ORÇAMENTOS
-|--------------------------------------------------------------------------
-*/
-
-$stmt_receitas_orcamentos = $pdo->query("
-    SELECT
-        COALESCE(SUM(p.valor), 0)
-
-    FROM parcelas p
-
-    INNER JOIN orcamentos o
-        ON o.id = p.orcamento_id
-
-    WHERE o.status IN ('aceito', 'confirmado')
-
-      AND p.status = 'paga'
-");
-
-$receitas_orcamentos =
-    (float)$stmt_receitas_orcamentos->fetchColumn();
-
-
-/*
-|--------------------------------------------------------------------------
-| SOMAR RECEITAS DOS ORÇAMENTOS
-|--------------------------------------------------------------------------
-*/
-
-$receitas +=
-    $receitas_orcamentos;
-
-
-/*
-|--------------------------------------------------------------------------
-| LUCRO
-|--------------------------------------------------------------------------
-*/
-
-$lucro =
-    $receitas - $despesas;
-
-
-/*
-|--------------------------------------------------------------------------
-| LANÇAMENTOS MANUAIS RECENTES
-|--------------------------------------------------------------------------
-*/
-
-$stmt_lancamentos = $pdo->prepare("
-    SELECT
-
         id,
         tipo,
         categoria,
@@ -411,342 +204,243 @@ $stmt_lancamentos = $pdo->prepare("
         status,
         observacoes,
         orcamento_id
-
     FROM lancamentos_financeiros
-
-    $where_sql
-
-    ORDER BY
-        data DESC,
-        id DESC
-
-    LIMIT 20
+    $where_manual_sql
+    ORDER BY data DESC, id DESC
 ");
 
-$stmt_lancamentos->execute($params);
+$stmt_manual->execute($params_manual);
 
-$lancamentos_manuais =
-    $stmt_lancamentos->fetchAll(PDO::FETCH_ASSOC);
-
+$lancamentos_manuais = $stmt_manual->fetchAll(PDO::FETCH_ASSOC);
 
 /*
 |--------------------------------------------------------------------------
-| PARCELAS DOS ORÇAMENTOS PARA A TABELA
+| BUSCAR PARCELAS DE ORÇAMENTOS ACEITOS
 |--------------------------------------------------------------------------
 |
-| Aqui SIM usamos o período selecionado.
+| Aqui acontece a integração entre:
 |
-| Assim o filtro controla quais movimentações aparecem
-| na lista, mas não interfere no total de "A receber".
+| orcamentos
+|       ↓
+| parcelas
+|       ↓
+| financeiro
+|
+| Somente orçamentos com status "aceito" entram.
 |
 |--------------------------------------------------------------------------
 */
 
-$where_parcelas = [
-    "o.status IN ('aceito', 'confirmado')"
+$where_orcamento = [
+    "LOWER(TRIM(o.status)) = 'aceito'"
 ];
 
-$params_parcelas = [];
-
+$params_orcamento = [];
 
 /*
 |--------------------------------------------------------------------------
-| FILTRO DE PERÍODO DAS PARCELAS
+| DATA DA MOVIMENTAÇÃO DO ORÇAMENTO
+|--------------------------------------------------------------------------
+|
+| Se a parcela já foi paga:
+|   usa data_pagamento
+|
+| Se ainda não foi paga:
+|   usa vencimento
+|
 |--------------------------------------------------------------------------
 */
 
-if ($periodo === 'hoje') {
+$data_movimentacao_sql = "
+    CASE
+        WHEN LOWER(TRIM(p.status)) = 'paga' AND p.data_pagamento IS NOT NULL
+            THEN p.data_pagamento
+        ELSE p.vencimento
+    END
+";
 
-    $where_parcelas[] = "
-        DATE(
-            CASE
-                WHEN p.status = 'paga'
-                     AND p.data_pagamento IS NOT NULL
-                THEN p.data_pagamento
-                ELSE p.vencimento
-            END
-        ) = CURDATE()
-    ";
-} elseif ($periodo === '7dias') {
+/*
+|--------------------------------------------------------------------------
+| FILTRO DE DATA DO ORÇAMENTO
+|--------------------------------------------------------------------------
+*/
 
-    $where_parcelas[] = "
-        DATE(
-            CASE
-                WHEN p.status = 'paga'
-                     AND p.data_pagamento IS NOT NULL
-                THEN p.data_pagamento
-                ELSE p.vencimento
-            END
-        )
-        BETWEEN DATE_SUB(CURDATE(), INTERVAL 6 DAY)
-        AND CURDATE()
-    ";
-} elseif ($periodo === '30dias') {
+if ($data_inicio !== null && $data_fim !== null) {
 
-    $where_parcelas[] = "
-        DATE(
-            CASE
-                WHEN p.status = 'paga'
-                     AND p.data_pagamento IS NOT NULL
-                THEN p.data_pagamento
-                ELSE p.vencimento
-            END
-        )
-        BETWEEN DATE_SUB(CURDATE(), INTERVAL 29 DAY)
-        AND CURDATE()
-    ";
-} elseif ($periodo === 'mes') {
-
-    $where_parcelas[] = "
-        YEAR(
-            CASE
-                WHEN p.status = 'paga'
-                     AND p.data_pagamento IS NOT NULL
-                THEN p.data_pagamento
-                ELSE p.vencimento
-            END
-        ) = YEAR(CURDATE())
+    $where_orcamento[] = "
+        DATE($data_movimentacao_sql) BETWEEN :orc_data_inicio AND :orc_data_fim
     ";
 
-    $where_parcelas[] = "
-        MONTH(
-            CASE
-                WHEN p.status = 'paga'
-                     AND p.data_pagamento IS NOT NULL
-                THEN p.data_pagamento
-                ELSE p.vencimento
-            END
-        ) = MONTH(CURDATE())
-    ";
+    $params_orcamento[':orc_data_inicio'] = $data_inicio;
+    $params_orcamento[':orc_data_fim'] = $data_fim;
 }
 
-
 /*
 |--------------------------------------------------------------------------
-| BUSCAR PARCELAS
+| TIPO
+|--------------------------------------------------------------------------
+|
+| Parcelas de orçamento sempre são RECEITAS.
+|
 |--------------------------------------------------------------------------
 */
 
-$where_parcelas_sql =
-    'WHERE ' . implode(
-        ' AND ',
-        $where_parcelas
-    );
+if ($tipo_filtro === 'despesa') {
 
+    /*
+     * Se o usuário filtrou somente despesas,
+     * não precisamos buscar orçamento.
+     */
+    $where_orcamento[] = "1 = 0";
+}
 
-$stmt_parcelas = $pdo->prepare("
+/*
+|--------------------------------------------------------------------------
+| SQL DOS ORÇAMENTOS
+|--------------------------------------------------------------------------
+*/
 
+$where_orcamento_sql = 'WHERE ' . implode(' AND ', $where_orcamento);
+
+$stmt_orcamentos = $pdo->prepare("
     SELECT
-
         p.id AS parcela_id,
-
         p.orcamento_id,
-
         p.numero_parcela,
-
         p.valor,
-
         p.vencimento,
-
-        p.status AS status_parcela,
-
+        LOWER(TRIM(p.status)) AS status_parcela,
         p.data_pagamento,
 
-        o.status AS status_orcamento,
+        o.id AS numero_orcamento,
+        LOWER(TRIM(o.status)) AS status_orcamento,
 
-        pr.paciente
+        COALESCE(pr.paciente, 'Paciente não encontrado') AS paciente
 
     FROM parcelas p
 
     INNER JOIN orcamentos o
         ON o.id = p.orcamento_id
 
-    INNER JOIN prontuarios pr
+    LEFT JOIN prontuarios pr
         ON pr.id = o.paciente_id
 
-    $where_parcelas_sql
+    $where_orcamento_sql
 
     ORDER BY
-
-        CASE
-            WHEN p.status = 'atrasada' THEN 1
-            WHEN p.status = 'pendente' THEN 2
-            WHEN p.status = 'paga' THEN 3
-            ELSE 4
-        END,
-
-        p.vencimento ASC
-
-    LIMIT 20
-
+        $data_movimentacao_sql DESC,
+        p.id DESC
 ");
 
-$stmt_parcelas->execute(
-    $params_parcelas
-);
+$stmt_orcamentos->execute($params_orcamento);
 
-$parcelas_orcamentos =
-    $stmt_parcelas->fetchAll(PDO::FETCH_ASSOC);
-
+$parcelas_orcamentos = $stmt_orcamentos->fetchAll(PDO::FETCH_ASSOC);
 
 /*
 |--------------------------------------------------------------------------
-| CONVERTER LANÇAMENTOS MANUAIS
+| TRANSFORMAR PARCELAS EM MOVIMENTAÇÕES FINANCEIRAS
+|--------------------------------------------------------------------------
+*/
+
+$lancamentos_orcamentos = [];
+
+foreach ($parcelas_orcamentos as $parcela) {
+
+    $status_parcela = strtolower(
+        trim((string)($parcela['status_parcela'] ?? ''))
+    );
+
+    if ($status_parcela === 'paga') {
+
+        $data_movimentacao = $parcela['data_pagamento'];
+        $status_financeiro = 'pago';
+    } elseif ($status_parcela === 'atrasada') {
+
+        $data_movimentacao = $parcela['vencimento'];
+        $status_financeiro = 'atrasada';
+    } else {
+
+        $data_movimentacao = $parcela['vencimento'];
+        $status_financeiro = 'pendente';
+    }
+
+    $numero_parcela = (int)$parcela['numero_parcela'];
+
+    $descricao = sprintf(
+        'Orçamento #%d - %s - Parcela %dx',
+        (int)$parcela['numero_orcamento'],
+        $parcela['paciente'],
+        $numero_parcela
+    );
+
+    $lancamentos_orcamentos[] = [
+        'id' => null,
+
+        'tipo' => 'receita',
+
+        'categoria' => 'Orçamento odontológico',
+
+        'descricao' => $descricao,
+
+        'data' => $data_movimentacao,
+
+        'forma_pagamento' => 'Orçamento',
+
+        'valor' => (float)$parcela['valor'],
+
+        'parcelas' => $numero_parcela,
+
+        'status' => $status_financeiro,
+
+        'observacoes' => null,
+
+        'orcamento_id' => (int)$parcela['orcamento_id'],
+
+        'origem' => 'orcamento',
+
+        'parcela_id' => (int)$parcela['parcela_id'],
+
+        'numero_orcamento' => (int)$parcela['numero_orcamento'],
+
+        'paciente' => $parcela['paciente']
+    ];
+}
+
+/*
+|--------------------------------------------------------------------------
+| TRANSFORMAR LANÇAMENTOS MANUAIS
 |--------------------------------------------------------------------------
 */
 
 $lancamentos = [];
 
-foreach (
-    $lancamentos_manuais
-    as $lancamento
-) {
+foreach ($lancamentos_manuais as $lancamento) {
 
-    $lancamento['origem'] =
-        'lancamento';
+    $lancamento['origem'] = 'lancamento';
 
-    $lancamento['parcela_id'] =
-        null;
+    $lancamento['parcela_id'] = null;
 
-    $lancamento['numero_orcamento'] =
-        null;
+    $lancamento['numero_orcamento'] = null;
 
-    $lancamento['paciente'] =
-        null;
+    $lancamento['paciente'] = null;
 
-    $lancamentos[] =
-        $lancamento;
+    $lancamentos[] = $lancamento;
 }
-
 
 /*
 |--------------------------------------------------------------------------
-| ADICIONAR PARCELAS DOS ORÇAMENTOS
+| ADICIONAR ORÇAMENTOS AO FINANCEIRO
 |--------------------------------------------------------------------------
 */
 
-if (
-    $tipo_filtro === 'todos'
-    ||
-    $tipo_filtro === 'receita'
-) {
+foreach ($lancamentos_orcamentos as $lancamento_orcamento) {
 
-    foreach (
-        $parcelas_orcamentos
-        as $parcela
-    ) {
-
-        /*
-        |--------------------------------------------------------------------------
-        | DATA DA MOVIMENTAÇÃO
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            $parcela['status_parcela'] === 'paga'
-            &&
-            !empty($parcela['data_pagamento'])
-        ) {
-
-            $data =
-                $parcela['data_pagamento'];
-
-            $status =
-                'paga';
-        } elseif (
-            $parcela['status_parcela'] === 'atrasada'
-        ) {
-
-            $data =
-                $parcela['vencimento'];
-
-            $status =
-                'atrasada';
-        } else {
-
-            $data =
-                $parcela['vencimento'];
-
-            $status =
-                'pendente';
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | DESCRIÇÃO
-        |--------------------------------------------------------------------------
-        */
-
-        $descricao =
-            'Orçamento #' .
-            (int)$parcela['orcamento_id'] .
-            ' - ' .
-            $parcela['paciente'] .
-            ' - Parcela ' .
-            (int)$parcela['numero_parcela'];
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | LANÇAMENTO VIRTUAL
-        |--------------------------------------------------------------------------
-        */
-
-        $lancamentos[] = [
-
-            'id' =>
-            null,
-
-            'tipo' =>
-            'receita',
-
-            'categoria' =>
-            'Orçamento',
-
-            'descricao' =>
-            $descricao,
-
-            'data' =>
-            $data,
-
-            'forma_pagamento' =>
-            'Orçamento',
-
-            'valor' =>
-            (float)$parcela['valor'],
-
-            'parcelas' =>
-            (int)$parcela['numero_parcela'],
-
-            'status' =>
-            $status,
-
-            'observacoes' =>
-            null,
-
-            'orcamento_id' =>
-            (int)$parcela['orcamento_id'],
-
-            'origem' =>
-            'orcamento',
-
-            'parcela_id' =>
-            (int)$parcela['parcela_id'],
-
-            'numero_orcamento' =>
-            (int)$parcela['orcamento_id'],
-
-            'paciente' =>
-            $parcela['paciente']
-        ];
-    }
+    $lancamentos[] = $lancamento_orcamento;
 }
-
 
 /*
 |--------------------------------------------------------------------------
-| ORDENAR
+| ORDENAR MOVIMENTAÇÕES
 |--------------------------------------------------------------------------
 */
 
@@ -754,334 +448,157 @@ usort(
     $lancamentos,
     function ($a, $b) {
 
-        $dataA =
-            strtotime(
-                $a['data'] ?? '1970-01-01'
-            );
+        $dataA = strtotime($a['data'] ?? '1970-01-01');
+        $dataB = strtotime($b['data'] ?? '1970-01-01');
 
-        $dataB =
-            strtotime(
-                $b['data'] ?? '1970-01-01'
-            );
+        if ($dataA === $dataB) {
+
+            $idA = (int)($a['id'] ?? 0);
+            $idB = (int)($b['id'] ?? 0);
+
+            return $idB <=> $idA;
+        }
 
         return $dataB <=> $dataA;
     }
 );
 
+/*
+|--------------------------------------------------------------------------
+| LIMITAR LANÇAMENTOS RECENTES
+|--------------------------------------------------------------------------
+*/
+
+$lancamentos_recentes = array_slice($lancamentos, 0, 20);
 
 /*
 |--------------------------------------------------------------------------
-| GRÁFICO
+| RESUMO FINANCEIRO
+|--------------------------------------------------------------------------
+*/
+
+$receitas = 0;
+$despesas = 0;
+$a_receber = 0;
+
+foreach ($lancamentos as $lancamento) {
+
+    $valor = (float)$lancamento['valor'];
+
+    $tipo = $lancamento['tipo'];
+
+    $status = $lancamento['status'];
+
+    /*
+    |--------------------------------------------------------------------------
+    | RECEITAS PAGAS
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        $tipo === 'receita' &&
+        $status === 'pago'
+    ) {
+
+        $receitas += $valor;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | DESPESAS PAGAS
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        $tipo === 'despesa' &&
+        $status === 'pago'
+    ) {
+
+        $despesas += $valor;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | A RECEBER
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        $tipo === 'receita' &&
+        (
+            $status === 'pendente' ||
+            $status === 'atrasada'
+        )
+    ) {
+
+        $a_receber += $valor;
+    }
+}
+
+$lucro = $receitas - $despesas;
+
+/*
+|--------------------------------------------------------------------------
+| FLUXO DE CAIXA
 |--------------------------------------------------------------------------
 |
-| O gráfico considera:
-|
-| - lançamentos manuais pagos;
-| - parcelas de orçamento pagas.
+| Somente valores efetivamente pagos entram no fluxo de caixa.
 |
 |--------------------------------------------------------------------------
 */
 
-$dados_grafico = [];
+$dados_grafico_array = [];
 
+foreach ($lancamentos as $lancamento) {
 
-/*
-|--------------------------------------------------------------------------
-| GRÁFICO DOS LANÇAMENTOS MANUAIS
-|--------------------------------------------------------------------------
-*/
+    if ($lancamento['status'] !== 'pago') {
+        continue;
+    }
 
-$where_grafico = [];
-$params_grafico = [];
+    if (
+        $lancamento['tipo'] !== 'receita' &&
+        $lancamento['tipo'] !== 'despesa'
+    ) {
+        continue;
+    }
 
-
-if ($periodo === 'mes') {
-
-    $where_grafico[] =
-        "YEAR(data) = YEAR(CURDATE())";
-
-    $where_grafico[] =
-        "MONTH(data) = MONTH(CURDATE())";
-} elseif ($periodo === 'hoje') {
-
-    $where_grafico[] =
-        "DATE(data) = CURDATE()";
-} elseif ($periodo === '7dias') {
-
-    $where_grafico[] =
-        "data >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)";
-
-    $where_grafico[] =
-        "data <= CURDATE()";
-} elseif ($periodo === '30dias') {
-
-    $where_grafico[] =
-        "data >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)";
-
-    $where_grafico[] =
-        "data <= CURDATE()";
-} else {
-
-    $where_grafico[] =
-        "data >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)";
-
-    $where_grafico[] =
-        "data <= CURDATE()";
-}
-
-
-if ($tipo_filtro !== 'todos') {
-
-    $where_grafico[] =
-        "tipo = :tipo_grafico";
-
-    $params_grafico[':tipo_grafico'] =
-        $tipo_filtro;
-}
-
-
-$where_grafico_sql =
-    'WHERE ' .
-    implode(
-        ' AND ',
-        $where_grafico
+    $dia = date(
+        'Y-m-d',
+        strtotime($lancamento['data'])
     );
 
+    if (!isset($dados_grafico_array[$dia])) {
 
-$stmt_grafico =
-    $pdo->prepare("
-
-        SELECT
-
-            DATE(data) AS dia,
-
-            COALESCE(
-                SUM(
-                    CASE
-                        WHEN tipo = 'receita'
-                             AND status = 'pago'
-                        THEN valor
-                        ELSE 0
-                    END
-                ),
-                0
-            ) AS receitas,
-
-            COALESCE(
-                SUM(
-                    CASE
-                        WHEN tipo = 'despesa'
-                             AND status = 'pago'
-                        THEN valor
-                        ELSE 0
-                    END
-                ),
-                0
-            ) AS despesas
-
-        FROM lancamentos_financeiros
-
-        $where_grafico_sql
-
-        GROUP BY DATE(data)
-
-        ORDER BY DATE(data) ASC
-
-    ");
-
-
-$stmt_grafico->execute(
-    $params_grafico
-);
-
-$dados_grafico_manual =
-    $stmt_grafico->fetchAll(PDO::FETCH_ASSOC);
-
-
-/*
-|--------------------------------------------------------------------------
-| INSERIR DADOS MANUAIS NO GRÁFICO
-|--------------------------------------------------------------------------
-*/
-
-foreach (
-    $dados_grafico_manual
-    as $dia
-) {
-
-    $data =
-        $dia['dia'];
-
-    $dados_grafico[$data] = [
-
-        'dia' =>
-        $data,
-
-        'receitas' =>
-        (float)$dia['receitas'],
-
-        'despesas' =>
-        (float)$dia['despesas']
-    ];
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| GRÁFICO DAS PARCELAS PAGAS
-|--------------------------------------------------------------------------
-*/
-
-$where_grafico_parcelas = [
-    "o.status IN ('aceito', 'confirmado')",
-    "p.status = 'paga'"
-];
-
-$params_grafico_parcelas = [];
-
-
-if ($periodo === 'mes') {
-
-    $where_grafico_parcelas[] = "
-        YEAR(p.data_pagamento) = YEAR(CURDATE())
-    ";
-
-    $where_grafico_parcelas[] = "
-        MONTH(p.data_pagamento) = MONTH(CURDATE())
-    ";
-} elseif ($periodo === 'hoje') {
-
-    $where_grafico_parcelas[] = "
-        DATE(p.data_pagamento) = CURDATE()
-    ";
-} elseif ($periodo === '7dias') {
-
-    $where_grafico_parcelas[] = "
-        p.data_pagamento >=
-        DATE_SUB(CURDATE(), INTERVAL 6 DAY)
-    ";
-
-    $where_grafico_parcelas[] = "
-        p.data_pagamento <= CURDATE()
-    ";
-} elseif ($periodo === '30dias') {
-
-    $where_grafico_parcelas[] = "
-        p.data_pagamento >=
-        DATE_SUB(CURDATE(), INTERVAL 29 DAY)
-    ";
-
-    $where_grafico_parcelas[] = "
-        p.data_pagamento <= CURDATE()
-    ";
-}
-
-
-$where_grafico_parcelas_sql =
-    'WHERE ' .
-    implode(
-        ' AND ',
-        $where_grafico_parcelas
-    );
-
-
-$stmt_grafico_parcelas =
-    $pdo->prepare("
-
-        SELECT
-
-            DATE(p.data_pagamento) AS dia,
-
-            COALESCE(
-                SUM(p.valor),
-                0
-            ) AS receitas
-
-        FROM parcelas p
-
-        INNER JOIN orcamentos o
-            ON o.id = p.orcamento_id
-
-        $where_grafico_parcelas_sql
-
-        GROUP BY
-            DATE(p.data_pagamento)
-
-        ORDER BY
-            DATE(p.data_pagamento) ASC
-
-    ");
-
-
-$stmt_grafico_parcelas->execute(
-    $params_grafico_parcelas
-);
-
-$dados_grafico_parcelas =
-    $stmt_grafico_parcelas->fetchAll(PDO::FETCH_ASSOC);
-
-
-/*
-|--------------------------------------------------------------------------
-| ADICIONAR PARCELAS AO GRÁFICO
-|--------------------------------------------------------------------------
-*/
-
-foreach (
-    $dados_grafico_parcelas
-    as $dia
-) {
-
-    $data =
-        $dia['dia'];
-
-
-    if (!isset($dados_grafico[$data])) {
-
-        $dados_grafico[$data] = [
-
-            'dia' =>
-            $data,
-
-            'receitas' =>
-            0,
-
-            'despesas' =>
-            0
+        $dados_grafico_array[$dia] = [
+            'dia' => $dia,
+            'receitas' => 0,
+            'despesas' => 0
         ];
     }
 
+    if ($lancamento['tipo'] === 'receita') {
 
-    $dados_grafico[$data]['receitas']
-        += (float)$dia['receitas'];
+        $dados_grafico_array[$dia]['receitas'] +=
+            (float)$lancamento['valor'];
+    } else {
+
+        $dados_grafico_array[$dia]['despesas'] +=
+            (float)$lancamento['valor'];
+    }
 }
 
+ksort($dados_grafico_array);
+
+$dados_grafico = array_values($dados_grafico_array);
 
 /*
 |--------------------------------------------------------------------------
-| ORDENAR GRÁFICO
+| MENSAGENS
 |--------------------------------------------------------------------------
 */
 
-ksort($dados_grafico);
-
-$dados_grafico =
-    array_values(
-        $dados_grafico
-    );
-
-
-/*
-|--------------------------------------------------------------------------
-| MENSAGEM DE SUCESSO
-|--------------------------------------------------------------------------
-*/
-
-$sucesso =
-    isset($_GET['sucesso'])
-    &&
+$sucesso = isset($_GET['sucesso']) &&
     $_GET['sucesso'] === '1';
-
 
 /*
 |--------------------------------------------------------------------------
@@ -1091,37 +608,27 @@ $sucesso =
 
 $periodos_nomes = [
 
-    'mes' =>
-    'Este mês',
+    'mes' => 'Este mês',
 
-    'hoje' =>
-    'Hoje',
+    'hoje' => 'Hoje',
 
-    '7dias' =>
-    'Últimos 7 dias',
+    '7dias' => 'Últimos 7 dias',
 
-    '30dias' =>
-    'Últimos 30 dias',
+    '30dias' => 'Últimos 30 dias',
 
-    'todos' =>
-    'Todo o período'
+    'todos' => 'Todo o período'
 ];
-
 
 $tipos_nomes = [
 
-    'todos' =>
-    'Todos os tipos',
+    'todos' => 'Todos os tipos',
 
-    'receita' =>
-    'Receitas',
+    'receita' => 'Receitas',
 
-    'despesa' =>
-    'Despesas'
+    'despesa' => 'Despesas'
 ];
 
 ?>
-
 <!DOCTYPE html>
 
 <html lang="pt-BR">
@@ -1136,12 +643,16 @@ $tipos_nomes = [
 
     <title>Financeiro | Dentech</title>
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="css/global.css">
     <link rel="stylesheet" href="css/variables.css">
     <link rel="stylesheet" href="css/layout.css">
-    <link rel="stylesheet" href="css/financeiro.css">
     <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/financeiro.css">
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
     <link rel="icon" type="image/png" href="img/icon.PNG">
 
 </head>
@@ -1151,31 +662,31 @@ $tipos_nomes = [
     <?php include 'navbar.php'; ?>
 
     <div class="content">
+
         <main class="container">
 
-
-            <!-- ======================================================
+            <!-- =========================================================
          CABEÇALHO
-    ======================================================= -->
+    ========================================================== -->
 
             <div class="page-header">
 
                 <div>
 
                     <div class="breadcrumb">
+
                         <span>Financeiro</span>
+
                     </div>
 
-                    <h1>
-                        Financeiro
-                    </h1>
+                    <h1>Financeiro</h1>
 
                     <p>
-                        Controle as receitas, despesas e movimentações financeiras da clínica.
+                        Controle as receitas, despesas e movimentações
+                        financeiras da clínica.
                     </p>
 
                 </div>
-
 
                 <a
                     href="novo_lancamento.php"
@@ -1190,9 +701,9 @@ $tipos_nomes = [
             </div>
 
 
-            <!-- ======================================================
-         SUCESSO
-    ======================================================= -->
+            <!-- =========================================================
+         ALERTA
+    ========================================================== -->
 
             <?php if ($sucesso): ?>
 
@@ -1200,23 +711,22 @@ $tipos_nomes = [
 
                     <i class="fa-solid fa-circle-check"></i>
 
-                    Operação realizada com sucesso.
+                    Lançamento salvo com sucesso.
 
                 </div>
 
             <?php endif; ?>
 
 
-            <!-- ======================================================
+            <!-- =========================================================
          FILTROS
-    ======================================================= -->
+    ========================================================== -->
 
             <section class="filtros-card">
 
                 <form
                     method="GET"
                     class="filtros-form">
-
 
                     <div class="filtro-grupo">
 
@@ -1232,16 +742,11 @@ $tipos_nomes = [
                                 id="periodo"
                                 name="periodo">
 
-                                <?php foreach (
-                                    $periodos_nomes
-                                    as $valor => $nome
-                                ): ?>
+                                <?php foreach ($periodos_nomes as $valor => $nome): ?>
 
                                     <option
                                         value="<?= htmlspecialchars($valor) ?>"
-                                        <?= $periodo === $valor
-                                            ? 'selected'
-                                            : '' ?>>
+                                        <?= $periodo === $valor ? 'selected' : '' ?>>
 
                                         <?= htmlspecialchars($nome) ?>
 
@@ -1270,16 +775,11 @@ $tipos_nomes = [
                                 id="tipo"
                                 name="tipo">
 
-                                <?php foreach (
-                                    $tipos_nomes
-                                    as $valor => $nome
-                                ): ?>
+                                <?php foreach ($tipos_nomes as $valor => $nome): ?>
 
                                     <option
                                         value="<?= htmlspecialchars($valor) ?>"
-                                        <?= $tipo_filtro === $valor
-                                            ? 'selected'
-                                            : '' ?>>
+                                        <?= $tipo_filtro === $valor ? 'selected' : '' ?>>
 
                                         <?= htmlspecialchars($nome) ?>
 
@@ -1306,8 +806,7 @@ $tipos_nomes = [
 
 
                     <?php if (
-                        $periodo !== 'mes'
-                        ||
+                        $periodo !== 'mes' ||
                         $tipo_filtro !== 'todos'
                     ): ?>
 
@@ -1326,9 +825,9 @@ $tipos_nomes = [
             </section>
 
 
-            <!-- ======================================================
-         RESUMO
-    ======================================================= -->
+            <!-- =========================================================
+         CARDS RESUMO
+    ========================================================== -->
 
             <section class="resumo-grid">
 
@@ -1435,16 +934,16 @@ $tipos_nomes = [
             </section>
 
 
-            <!-- ======================================================
+            <!-- =========================================================
          CONTEÚDO
-    ======================================================= -->
+    ========================================================== -->
 
             <section class="conteudo-grid">
 
 
-                <!-- ==================================================
+                <!-- =====================================================
              FLUXO DE CAIXA
-        =================================================== -->
+        ====================================================== -->
 
                 <div class="card fluxo-card">
 
@@ -1497,17 +996,13 @@ $tipos_nomes = [
 
                                 $maior_valor = 0;
 
-                                foreach (
-                                    $dados_grafico
-                                    as $dia
-                                ) {
+                                foreach ($dados_grafico as $dia) {
 
-                                    $maior_valor =
-                                        max(
-                                            $maior_valor,
-                                            (float)$dia['receitas'],
-                                            (float)$dia['despesas']
-                                        );
+                                    $maior_valor = max(
+                                        $maior_valor,
+                                        (float)$dia['receitas'],
+                                        (float)$dia['despesas']
+                                    );
                                 }
 
                                 $maior_valor =
@@ -1518,30 +1013,19 @@ $tipos_nomes = [
                                 ?>
 
 
-                                <?php foreach (
-                                    $dados_grafico
-                                    as $dia
-                                ): ?>
+                                <?php foreach ($dados_grafico as $dia): ?>
 
                                     <?php
 
                                     $altura_receita =
-                                        (
-                                            (float)$dia['receitas']
-                                            /
-                                            $maior_valor
-                                        ) * 100;
-
+                                        ((float)$dia['receitas'] /
+                                            $maior_valor) * 100;
 
                                     $altura_despesa =
-                                        (
-                                            (float)$dia['despesas']
-                                            /
-                                            $maior_valor
-                                        ) * 100;
+                                        ((float)$dia['despesas'] /
+                                            $maior_valor) * 100;
 
                                     ?>
-
 
                                     <div
                                         class="barra-coluna"
@@ -1551,17 +1035,19 @@ $tipos_nomes = [
 
                                             <div
                                                 class="barra barra-receita"
-                                                style="height: <?= max(2, $altura_receita) ?>%;">
+                                                style="
+                                            height:
+                                            <?= max(2, $altura_receita) ?>%;">
                                             </div>
-
 
                                             <div
                                                 class="barra barra-despesa"
-                                                style="height: <?= max(2, $altura_despesa) ?>%;">
+                                                style="
+                                            height:
+                                            <?= max(2, $altura_despesa) ?>%;">
                                             </div>
 
                                         </div>
-
 
                                         <span class="barra-label">
 
@@ -1585,7 +1071,8 @@ $tipos_nomes = [
                                 <i class="fa-solid fa-chart-line"></i>
 
                                 <span>
-                                    Não existem movimentações no período selecionado.
+                                    Não existem movimentações
+                                    pagas no período selecionado.
                                 </span>
 
                             </div>
@@ -1597,9 +1084,9 @@ $tipos_nomes = [
                 </div>
 
 
-                <!-- ==================================================
+                <!-- =====================================================
              LANÇAMENTOS RECENTES
-        =================================================== -->
+        ====================================================== -->
 
                 <div class="card recentes-card">
 
@@ -1620,18 +1107,11 @@ $tipos_nomes = [
                     </div>
 
 
-                    <?php if (!empty($lancamentos)): ?>
+                    <?php if (!empty($lancamentos_recentes)): ?>
 
                         <div class="lista-lancamentos">
 
-                            <?php foreach (
-                                array_slice(
-                                    $lancamentos,
-                                    0,
-                                    10
-                                )
-                                as $lancamento
-                            ): ?>
+                            <?php foreach ($lancamentos_recentes as $lancamento): ?>
 
                                 <div class="lancamento-item">
 
@@ -1655,7 +1135,6 @@ $tipos_nomes = [
 
                                         </strong>
 
-
                                         <span>
 
                                             <?= htmlspecialchars(
@@ -1674,9 +1153,12 @@ $tipos_nomes = [
 
 
                                     <div
-                                        class="lancamento-valor <?= $lancamento['tipo'] === 'receita'
-                                                                    ? 'valor-receita'
-                                                                    : 'valor-despesa' ?>">
+                                        class="
+                                    lancamento-valor
+                                    <?= $lancamento['tipo'] === 'receita'
+                                        ? 'valor-receita'
+                                        : 'valor-despesa' ?>
+                                ">
 
                                         <?= $lancamento['tipo'] === 'receita'
                                             ? '+'
@@ -1705,7 +1187,8 @@ $tipos_nomes = [
                             </strong>
 
                             <span>
-                                Cadastre uma receita ou despesa para começar.
+                                Cadastre uma receita ou despesa
+                                para começar.
                             </span>
 
                             <a
@@ -1722,25 +1205,14 @@ $tipos_nomes = [
 
                     <?php endif; ?>
 
-
-                    <a
-                        href="financeiro_lancamentos.php"
-                        class="ver-todos">
-
-                        Ver todos
-
-                        <i class="fa-solid fa-arrow-right"></i>
-
-                    </a>
-
                 </div>
 
             </section>
 
 
-            <!-- ======================================================
-         TABELA
-    ======================================================= -->
+            <!-- =========================================================
+         TABELA DE MOVIMENTAÇÕES
+    ========================================================== -->
 
             <section class="card tabela-card">
 
@@ -1753,7 +1225,7 @@ $tipos_nomes = [
                         </h2>
 
                         <p>
-                            Últimos lançamentos encontrados.
+                            Lançamentos e parcelas de orçamentos aceitos.
                         </p>
 
                     </div>
@@ -1763,7 +1235,7 @@ $tipos_nomes = [
 
                         <?= count($lancamentos) ?>
 
-                        lançamento<?= count($lancamentos) === 1
+                        movimentação<?= count($lancamentos) === 1
                                         ? ''
                                         : 's' ?>
 
@@ -1795,11 +1267,11 @@ $tipos_nomes = [
                                     </th>
 
                                     <th>
-                                        Pagamento
+                                        Origem
                                     </th>
 
                                     <th>
-                                        Parcelas
+                                        Pagamento
                                     </th>
 
                                     <th>
@@ -1821,13 +1293,9 @@ $tipos_nomes = [
 
                             <tbody>
 
-                                <?php foreach (
-                                    $lancamentos
-                                    as $lancamento
-                                ): ?>
+                                <?php foreach ($lancamentos as $lancamento): ?>
 
                                     <tr>
-
 
                                         <!-- DATA -->
 
@@ -1866,6 +1334,50 @@ $tipos_nomes = [
                                         </td>
 
 
+                                        <!-- ORIGEM -->
+
+                                        <td>
+
+                                            <?php if (
+                                                $lancamento['origem'] ===
+                                                'orcamento'
+                                            ): ?>
+
+                                                <span
+                                                    class="origem-orcamento">
+
+                                                    <i
+                                                        class="
+                                                fa-solid
+                                                fa-file-invoice-dollar
+                                            ">
+                                                    </i>
+
+                                                    Orçamento
+
+                                                </span>
+
+                                            <?php else: ?>
+
+                                                <span
+                                                    class="origem-lancamento">
+
+                                                    <i
+                                                        class="
+                                                fa-solid
+                                                fa-money-bill-transfer
+                                            ">
+                                                    </i>
+
+                                                    Lançamento
+
+                                                </span>
+
+                                            <?php endif; ?>
+
+                                        </td>
+
+
                                         <!-- PAGAMENTO -->
 
                                         <td>
@@ -1877,37 +1389,17 @@ $tipos_nomes = [
                                         </td>
 
 
-                                        <!-- PARCELAS -->
-
-                                        <td>
-
-                                            <?php if (
-                                                $lancamento['origem']
-                                                === 'orcamento'
-                                            ): ?>
-
-                                                Parcela
-                                                <?= (int)$lancamento['parcelas'] ?>
-
-                                            <?php else: ?>
-
-                                                <?= (int)$lancamento['parcelas'] === 1
-                                                    ? 'À vista'
-                                                    : (int)$lancamento['parcelas'] . 'x' ?>
-
-                                            <?php endif; ?>
-
-                                        </td>
-
-
                                         <!-- STATUS -->
 
                                         <td>
 
                                             <span
-                                                class="status-badge <?= classeStatus(
-                                                                        $lancamento['status']
-                                                                    ) ?>">
+                                                class="
+                                        status-badge
+                                        <?= classeStatus(
+                                            $lancamento['status']
+                                        ) ?>
+                                    ">
 
                                                 <?= htmlspecialchars(
                                                     textoStatus(
@@ -1923,9 +1415,12 @@ $tipos_nomes = [
                                         <!-- VALOR -->
 
                                         <td
-                                            class="coluna-valor <?= $lancamento['tipo'] === 'receita'
-                                                                    ? 'valor-receita'
-                                                                    : 'valor-despesa' ?>">
+                                            class="
+                                    coluna-valor
+                                    <?= $lancamento['tipo'] === 'receita'
+                                        ? 'valor-receita'
+                                        : 'valor-despesa' ?>
+                                ">
 
                                             <?= $lancamento['tipo'] === 'receita'
                                                 ? '+'
@@ -1942,101 +1437,74 @@ $tipos_nomes = [
 
                                         <td class="coluna-acoes">
 
-
                                             <?php if (
-                                                $lancamento['origem']
-                                                === 'orcamento'
+                                                $lancamento['origem'] ===
+                                                'orcamento'
                                             ): ?>
 
-
-                                                <!-- VISUALIZAR ORÇAMENTO -->
-
                                                 <a
-                                                    href="visualizar_orcamento.php?id=<?= (int)$lancamento['orcamento_id'] ?>"
+                                                    href="
+                                            visualizar_orcamento.php?id=
+                                            <?= (int)$lancamento['orcamento_id'] ?>
+                                        "
                                                     class="btn-acao"
-                                                    title="Visualizar orçamento">
+                                                    title="
+                                            Visualizar orçamento
+                                        ">
 
-                                                    <i class="fa-regular fa-eye"></i>
+                                                    <i
+                                                        class="
+                                                fa-regular
+                                                fa-eye
+                                            ">
+                                                    </i>
 
                                                 </a>
-
-
-                                                <!-- PAGAR PARCELA -->
-
-                                                <?php if (
-                                                    $lancamento['status']
-                                                    === 'pendente'
-                                                    ||
-                                                    $lancamento['status']
-                                                    === 'atrasada'
-                                                ): ?>
-
-                                                    <form
-                                                        method="POST"
-                                                        action="visualizar_orcamento.php?id=<?= (int)$lancamento['orcamento_id'] ?>"
-                                                        style="display:inline;"
-                                                        onsubmit="return confirm('Confirmar pagamento desta parcela?');">
-
-                                                        <input
-                                                            type="hidden"
-                                                            name="csrf_token"
-                                                            value="<?= htmlspecialchars(
-                                                                        $_SESSION['csrf_token'] ?? ''
-                                                                    ) ?>">
-
-                                                        <input
-                                                            type="hidden"
-                                                            name="parcela_id"
-                                                            value="<?= (int)$lancamento['parcela_id'] ?>">
-
-                                                        <input
-                                                            type="hidden"
-                                                            name="marcar_paga"
-                                                            value="1">
-
-                                                        <button
-                                                            type="submit"
-                                                            class="btn-acao btn-pagar-financeiro"
-                                                            title="Marcar parcela como paga">
-
-                                                            <i class="fa-solid fa-check"></i>
-
-                                                        </button>
-
-                                                    </form>
-
-                                                <?php endif; ?>
-
 
                                             <?php else: ?>
 
+                                                <?php if (
+                                                    !empty($lancamento['id'])
+                                                ): ?>
 
-                                                <!-- VISUALIZAR LANÇAMENTO -->
+                                                    <a
+                                                        href="
+                                                visualizar_lancamento.php?id=
+                                                <?= (int)$lancamento['id'] ?>
+                                            "
+                                                        class="btn-acao"
+                                                        title="Visualizar">
 
-                                                <a
-                                                    href="visualizar_orcamento.php?id=<?= (int)$lancamento['id'] ?>"
-                                                    class="btn-acao"
-                                                    title="Visualizar">
+                                                        <i
+                                                            class="
+                                                    fa-regular
+                                                    fa-eye
+                                                ">
+                                                        </i>
 
-                                                    <i class="fa-regular fa-eye"></i>
-
-                                                </a>
+                                                    </a>
 
 
-                                                <!-- EDITAR -->
+                                                    <a
+                                                        href="
+                                                editar_lancamento.php?id=
+                                                <?= (int)$lancamento['id'] ?>
+                                            "
+                                                        class="btn-acao"
+                                                        title="Editar">
 
-                                                <a
-                                                    href="editar_orcamento.php?id=<?= (int)$lancamento['id'] ?>"
-                                                    class="btn-acao"
-                                                    title="Editar">
+                                                        <i
+                                                            class="
+                                                    fa-solid
+                                                    fa-pen
+                                                ">
+                                                        </i>
 
-                                                    <i class="fa-solid fa-pen"></i>
+                                                    </a>
 
-                                                </a>
-
+                                                <?php endif; ?>
 
                                             <?php endif; ?>
-
 
                                         </td>
 
@@ -2050,22 +1518,20 @@ $tipos_nomes = [
 
                     </div>
 
-
                 <?php else: ?>
-
 
                     <div class="tabela-vazia">
 
                         <i class="fa-solid fa-wallet"></i>
 
                         <h3>
-                            Nenhum lançamento cadastrado
+                            Nenhuma movimentação cadastrada
                         </h3>
 
                         <p>
-                            Comece cadastrando sua primeira receita ou despesa.
+                            Comece cadastrando sua primeira
+                            receita ou despesa.
                         </p>
-
 
                         <a
                             href="novo_lancamento.php"
@@ -2079,20 +1545,15 @@ $tipos_nomes = [
 
                     </div>
 
-
                 <?php endif; ?>
-
 
             </section>
 
+
+
         </main>
+
     </div>
-
-
-        <style>
-       
-        </style>
-
 
 </body>
 
