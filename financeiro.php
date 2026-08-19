@@ -1435,68 +1435,76 @@ $tipos_nomes = [
 
                                         <td class="coluna-acoes">
 
-                                            <?php if (
-                                                $lancamento['origem'] ===
-                                                'orcamento'
-                                            ): ?>
+                                            <?php if ($lancamento['origem'] === 'orcamento'): ?>
+
+                                                <!-- VISUALIZAR ORÇAMENTO -->
 
                                                 <a
-                                                    href="
-                                            visualizar_orcamento.php?id=
-                                            <?= (int)$lancamento['orcamento_id'] ?>
-                                        "
+                                                    href="visualizar_orcamento.php?id=<?= (int)$lancamento['orcamento_id'] ?>"
                                                     class="btn-acao"
-                                                    title="
-                                            Visualizar orçamento
-                                        ">
+                                                    title="Visualizar orçamento">
 
-                                                    <i
-                                                        class="
-                                                fa-regular
-                                                fa-eye
-                                            ">
-                                                    </i>
+                                                    <i class="fa-regular fa-eye"></i>
 
                                                 </a>
 
-                                            <?php else: ?>
+
+                                                <!-- PAGAR PARCELA -->
 
                                                 <?php if (
-                                                    !empty($lancamento['id'])
+                                                    $lancamento['status'] === 'pendente' ||
+                                                    $lancamento['status'] === 'atrasada'
                                                 ): ?>
 
+                                                    <form
+                                                        method="POST"
+                                                        action="pagar_parcela.php"
+                                                        class="form-pagar-parcela"
+                                                        onsubmit="return confirm('Confirmar o pagamento desta parcela?');">
+
+                                                        <?= csrf_field() ?>
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="parcela_id"
+                                                            value="<?= (int)$lancamento['parcela_id'] ?>">
+
+                                                        <button
+                                                            type="submit"
+                                                            class="btn-acao btn-pagar-financeiro"
+                                                            title="Pagar parcela">
+
+                                                            <i class="fa-solid fa-check"></i>
+
+                                                        </button>
+
+                                                    </form>
+
+                                                <?php endif; ?>
+
+
+                                            <?php else: ?>
+
+                                                <!-- LANÇAMENTO MANUAL -->
+
+                                                <?php if (!empty($lancamento['id'])): ?>
+
                                                     <a
-                                                        href="
-                                                visualizar_lancamento.php?id=
-                                                <?= (int)$lancamento['id'] ?>
-                                            "
+                                                        href="visualizar_lancamento.php?id=<?= (int)$lancamento['id'] ?>"
                                                         class="btn-acao"
                                                         title="Visualizar">
 
-                                                        <i
-                                                            class="
-                                                    fa-regular
-                                                    fa-eye
-                                                ">
-                                                        </i>
+                                                        <i class="fa-regular fa-eye"></i>
 
                                                     </a>
 
 
                                                     <a
-                                                        href="
-                                                editar_lancamento.php?id=
-                                                <?= (int)$lancamento['id'] ?>
-                                            "
+                                                        href="editar_lancamento.php?id=<?= (int)$lancamento['id'] ?>"
                                                         class="btn-acao"
                                                         title="Editar">
 
-                                                        <i
-                                                            class="
-                                                    fa-solid
-                                                    fa-pen
-                                                ">
-                                                        </i>
+                                                        <i class="fa-solid fa-pen"></i>
 
                                                     </a>
 
