@@ -466,7 +466,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="css/variables.css">
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/navbar.css">
-    <link rel="stylesheet" href="css/vis_orcamento.css">
+    <link rel="stylesheet" href="css/new_orcamento.css">
 
     <link
         rel="stylesheet"
