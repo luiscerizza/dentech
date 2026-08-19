@@ -700,6 +700,42 @@ body {
   transform: translateY(0);
 }
 
+/* =========================================================
+   PARCELAS DE ORÇAMENTO
+   ========================================================= */
+
+.status-atrasada {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+/* =========================================================
+   BOTÃO PAGAR PARCELA
+   ========================================================= */
+
+.form-pagar-parcela {
+  display: inline-flex;
+  margin: 0;
+  padding: 0;
+}
+
+.btn-pagar-financeiro {
+  border: 0;
+  cursor: pointer;
+  background: #16a34a;
+  color: #ffffff;
+}
+
+.btn-pagar-financeiro:hover {
+  background: #15803d;
+  transform: translateY(-1px);
+}
+
+.btn-pagar-financeiro:active {
+  transform: translateY(0);
+}
+
 @media (max-width: 1200px) {
   .resumo-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

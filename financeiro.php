@@ -9,6 +9,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+
 /*
 |--------------------------------------------------------------------------
 | FUNÇÕES
@@ -17,7 +18,12 @@ if (session_status() === PHP_SESSION_NONE) {
 
 function moedaBR($valor): string
 {
-    return 'R$ ' . number_format((float)$valor, 2, ',', '.');
+    return 'R$ ' . number_format(
+        (float)$valor,
+        2,
+        ',',
+        '.'
+    );
 }
 
 function dataBR($data): string
@@ -35,39 +41,24 @@ function dataBR($data): string
 
 function classeStatus($status): string
 {
-    switch ($status) {
-        case 'pago':
-        case 'paga':
-            return 'status-pago';
-
-        case 'pendente':
-            return 'status-pendente';
-
-        case 'atrasada':
-            return 'status-atrasada';
-
-        default:
-            return 'status-outro';
-    }
+    return match ($status) {
+        'pago' => 'status-pago',
+        'pendente' => 'status-pendente',
+        'atrasada' => 'status-atrasada',
+        default => 'status-outro'
+    };
 }
 
 function textoStatus($status): string
 {
-    switch ($status) {
-        case 'pago':
-        case 'paga':
-            return 'Pago';
-
-        case 'pendente':
-            return 'Pendente';
-
-        case 'atrasada':
-            return 'Atrasada';
-
-        default:
-            return ucfirst((string)$status);
-    }
+    return match ($status) {
+        'pago' => 'Pago',
+        'pendente' => 'Pendente',
+        'atrasada' => 'Atrasada',
+        default => ucfirst((string)$status)
+    };
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -100,15 +91,10 @@ if (!in_array($tipo_filtro, $tipos_validos, true)) {
     $tipo_filtro = 'todos';
 }
 
+
 /*
 |--------------------------------------------------------------------------
 | DEFINIR PERÍODO
-|--------------------------------------------------------------------------
-|
-| Usamos PHP para montar as datas.
-| Isso facilita usar exatamente o mesmo período
-| nos lançamentos manuais e nas parcelas dos orçamentos.
-|
 |--------------------------------------------------------------------------
 */
 
@@ -124,19 +110,30 @@ switch ($periodo) {
 
         break;
 
+
     case '7dias':
 
-        $data_inicio = date('Y-m-d', strtotime('-6 days'));
+        $data_inicio = date(
+            'Y-m-d',
+            strtotime('-6 days')
+        );
+
         $data_fim = date('Y-m-d');
 
         break;
+
 
     case '30dias':
 
-        $data_inicio = date('Y-m-d', strtotime('-29 days'));
+        $data_inicio = date(
+            'Y-m-d',
+            strtotime('-29 days')
+        );
+
         $data_fim = date('Y-m-d');
 
         break;
+
 
     case 'todos':
 
@@ -145,8 +142,8 @@ switch ($periodo) {
 
         break;
 
-    case 'mes':
 
+    case 'mes':
     default:
 
         $data_inicio = date('Y-m-01');
@@ -155,35 +152,84 @@ switch ($periodo) {
         break;
 }
 
+
 /*
 |--------------------------------------------------------------------------
-| CONDIÇÃO DOS LANÇAMENTOS MANUAIS
+| ATUALIZAR PARCELAS ATRASADAS
+|--------------------------------------------------------------------------
+|
+| Somente parcelas de orçamentos aceitos entram no financeiro.
+|
+*/
+
+$pdo->exec("
+    UPDATE parcelas p
+
+    INNER JOIN orcamentos o
+        ON o.id = p.orcamento_id
+
+    SET p.status = 'atrasada'
+
+    WHERE o.status = 'aceito'
+      AND p.status = 'pendente'
+      AND p.vencimento < CURDATE()
+");
+
+
+/*
+|--------------------------------------------------------------------------
+| LANÇAMENTOS MANUAIS
 |--------------------------------------------------------------------------
 */
 
 $where_manual = [];
 $params_manual = [];
 
-if ($data_inicio !== null && $data_fim !== null) {
 
-    $where_manual[] = "data BETWEEN :data_inicio AND :data_fim";
+/*
+|--------------------------------------------------------------------------
+| FILTRO DE DATA DOS LANÇAMENTOS MANUAIS
+|--------------------------------------------------------------------------
+*/
 
-    $params_manual[':data_inicio'] = $data_inicio;
-    $params_manual[':data_fim'] = $data_fim;
+if ($data_inicio !== null) {
+
+    $where_manual[] =
+        "DATE(data) BETWEEN :data_inicio AND :data_fim";
+
+    $params_manual[':data_inicio'] =
+        $data_inicio;
+
+    $params_manual[':data_fim'] =
+        $data_fim;
 }
+
+
+/*
+|--------------------------------------------------------------------------
+| FILTRO DE TIPO
+|--------------------------------------------------------------------------
+*/
 
 if ($tipo_filtro !== 'todos') {
 
-    $where_manual[] = "tipo = :tipo";
+    $where_manual[] =
+        "tipo = :tipo";
 
-    $params_manual[':tipo'] = $tipo_filtro;
+    $params_manual[':tipo'] =
+        $tipo_filtro;
 }
+
 
 $where_manual_sql = '';
 
 if (!empty($where_manual)) {
-    $where_manual_sql = 'WHERE ' . implode(' AND ', $where_manual);
+
+    $where_manual_sql =
+        'WHERE ' .
+        implode(' AND ', $where_manual);
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -204,115 +250,110 @@ $stmt_manual = $pdo->prepare("
         status,
         observacoes,
         orcamento_id
+
     FROM lancamentos_financeiros
+
     $where_manual_sql
-    ORDER BY data DESC, id DESC
+
+    ORDER BY
+        data DESC,
+        id DESC
 ");
 
-$stmt_manual->execute($params_manual);
+$stmt_manual->execute(
+    $params_manual
+);
 
-$lancamentos_manuais = $stmt_manual->fetchAll(PDO::FETCH_ASSOC);
+$lancamentos_manuais =
+    $stmt_manual->fetchAll(PDO::FETCH_ASSOC);
+
 
 /*
 |--------------------------------------------------------------------------
-| BUSCAR PARCELAS DE ORÇAMENTOS ACEITOS
-|--------------------------------------------------------------------------
-|
-| Aqui acontece a integração entre:
-|
-| orcamentos
-|       ↓
-| parcelas
-|       ↓
-| financeiro
-|
-| Somente orçamentos com status "aceito" entram.
-|
+| BUSCAR PARCELAS DOS ORÇAMENTOS
 |--------------------------------------------------------------------------
 */
 
-$where_orcamento = [
+$where_parcelas = [
     "o.status = 'aceito'"
 ];
 
-$params_orcamento = [];
+$params_parcelas = [];
+
 
 /*
 |--------------------------------------------------------------------------
-| DATA DA MOVIMENTAÇÃO DO ORÇAMENTO
+| FILTRO DE DATA DAS PARCELAS
 |--------------------------------------------------------------------------
 |
-| Se a parcela já foi paga:
+| Se estiver paga:
 |   usa data_pagamento
 |
-| Se ainda não foi paga:
+| Se estiver pendente/atrasada:
 |   usa vencimento
 |
-|--------------------------------------------------------------------------
 */
 
-$data_movimentacao_sql = "
-    CASE
-        WHEN p.status = 'paga' AND p.data_pagamento IS NOT NULL
-            THEN p.data_pagamento
-        ELSE p.vencimento
-    END
-";
+if ($data_inicio !== null) {
 
-/*
-|--------------------------------------------------------------------------
-| FILTRO DE DATA DO ORÇAMENTO
-|--------------------------------------------------------------------------
-*/
+    $where_parcelas[] = "
+        (
+            CASE
+                WHEN p.status = 'paga'
+                     AND p.data_pagamento IS NOT NULL
+                THEN DATE(p.data_pagamento)
 
-if ($data_inicio !== null && $data_fim !== null) {
-
-    $where_orcamento[] = "
-        $data_movimentacao_sql BETWEEN :orc_data_inicio AND :orc_data_fim
+                ELSE DATE(p.vencimento)
+            END
+        ) BETWEEN :data_inicio_parcela
+          AND :data_fim_parcela
     ";
 
-    $params_orcamento[':orc_data_inicio'] = $data_inicio;
-    $params_orcamento[':orc_data_fim'] = $data_fim;
+    $params_parcelas[':data_inicio_parcela'] =
+        $data_inicio;
+
+    $params_parcelas[':data_fim_parcela'] =
+        $data_fim;
 }
+
 
 /*
 |--------------------------------------------------------------------------
-| TIPO
-|--------------------------------------------------------------------------
-|
-| Parcelas de orçamento sempre são RECEITAS.
-|
+| MONTAR WHERE
 |--------------------------------------------------------------------------
 */
 
-if ($tipo_filtro === 'despesa') {
+$where_parcelas_sql =
+    'WHERE ' .
+    implode(' AND ', $where_parcelas);
 
-    /*
-     * Se o usuário filtrou somente despesas,
-     * não precisamos buscar orçamento.
-     */
-    $where_orcamento[] = "1 = 0";
-}
 
 /*
 |--------------------------------------------------------------------------
-| SQL DOS ORÇAMENTOS
+| BUSCAR PARCELAS
 |--------------------------------------------------------------------------
 */
 
-$where_orcamento_sql = 'WHERE ' . implode(' AND ', $where_orcamento);
+$sql_parcelas = "
 
-$stmt_orcamentos = $pdo->prepare("
     SELECT
+
         p.id AS parcela_id,
+
         p.orcamento_id,
+
         p.numero_parcela,
+
         p.valor,
+
         p.vencimento,
+
         p.status AS status_parcela,
+
         p.data_pagamento,
 
         o.id AS numero_orcamento,
+
         o.status AS status_orcamento,
 
         pr.paciente
@@ -325,20 +366,35 @@ $stmt_orcamentos = $pdo->prepare("
     INNER JOIN prontuarios pr
         ON pr.id = o.paciente_id
 
-    $where_orcamento_sql
+    $where_parcelas_sql
 
     ORDER BY
-        $data_movimentacao_sql DESC,
-        p.id DESC
-");
 
-$stmt_orcamentos->execute($params_orcamento);
+        CASE
+            WHEN p.status = 'atrasada' THEN 1
+            WHEN p.status = 'pendente' THEN 2
+            WHEN p.status = 'paga' THEN 3
+            ELSE 4
+        END,
 
-$parcelas_orcamentos = $stmt_orcamentos->fetchAll(PDO::FETCH_ASSOC);
+        p.vencimento ASC
+";
+
+
+$stmt_parcelas =
+    $pdo->prepare($sql_parcelas);
+
+$stmt_parcelas->execute(
+    $params_parcelas
+);
+
+$parcelas_orcamentos =
+    $stmt_parcelas->fetchAll(PDO::FETCH_ASSOC);
+
 
 /*
 |--------------------------------------------------------------------------
-| TRANSFORMAR PARCELAS EM MOVIMENTAÇÕES FINANCEIRAS
+| CONVERTER PARCELAS PARA O FORMATO DO FINANCEIRO
 |--------------------------------------------------------------------------
 */
 
@@ -346,67 +402,112 @@ $lancamentos_orcamentos = [];
 
 foreach ($parcelas_orcamentos as $parcela) {
 
+    /*
+    |--------------------------------------------------------------------------
+    | STATUS
+    |--------------------------------------------------------------------------
+    */
+
     if ($parcela['status_parcela'] === 'paga') {
 
-        $data_movimentacao = $parcela['data_pagamento'];
+        $data_movimentacao =
+            $parcela['data_pagamento'];
 
-        $status_financeiro = 'pago';
+        $status_financeiro =
+            'pago';
+    } elseif (
+        $parcela['status_parcela'] === 'atrasada'
+    ) {
+
+        $data_movimentacao =
+            $parcela['vencimento'];
+
+        $status_financeiro =
+            'atrasada';
     } else {
 
-        $data_movimentacao = $parcela['vencimento'];
+        $data_movimentacao =
+            $parcela['vencimento'];
 
-        if ($parcela['status_parcela'] === 'atrasada') {
-            $status_financeiro = 'atrasada';
-        } else {
-            $status_financeiro = 'pendente';
-        }
+        $status_financeiro =
+            'pendente';
     }
 
-    $numero_parcela = (int)$parcela['numero_parcela'];
+
+    /*
+    |--------------------------------------------------------------------------
+    | DESCRIÇÃO
+    |--------------------------------------------------------------------------
+    */
 
     $descricao = sprintf(
-        'Orçamento #%d - %s - Parcela %dx',
+        'Orçamento #%d - %s - Parcela %d',
         (int)$parcela['numero_orcamento'],
         $parcela['paciente'],
-        $numero_parcela
+        (int)$parcela['numero_parcela']
     );
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | CRIAR LANÇAMENTO VIRTUAL
+    |--------------------------------------------------------------------------
+    |
+    | Não gravamos isso em lancamentos_financeiros.
+    |
+    */
+
     $lancamentos_orcamentos[] = [
+
         'id' => null,
 
         'tipo' => 'receita',
 
-        'categoria' => 'Orçamento odontológico',
+        'categoria' =>
+        'Orçamento odontológico',
 
-        'descricao' => $descricao,
+        'descricao' =>
+        $descricao,
 
-        'data' => $data_movimentacao,
+        'data' =>
+        $data_movimentacao,
 
-        'forma_pagamento' => 'Orçamento',
+        'forma_pagamento' =>
+        'Orçamento',
 
-        'valor' => (float)$parcela['valor'],
+        'valor' =>
+        (float)$parcela['valor'],
 
-        'parcelas' => $numero_parcela,
+        'parcelas' =>
+        (int)$parcela['numero_parcela'],
 
-        'status' => $status_financeiro,
+        'status' =>
+        $status_financeiro,
 
-        'observacoes' => null,
+        'observacoes' =>
+        null,
 
-        'orcamento_id' => (int)$parcela['orcamento_id'],
+        'orcamento_id' =>
+        (int)$parcela['orcamento_id'],
 
-        'origem' => 'orcamento',
+        'origem' =>
+        'orcamento',
 
-        'parcela_id' => (int)$parcela['parcela_id'],
+        'parcela_id' =>
+        (int)$parcela['parcela_id'],
 
-        'numero_orcamento' => (int)$parcela['numero_orcamento'],
+        'numero_orcamento' =>
+        (int)$parcela['numero_orcamento'],
 
-        'paciente' => $parcela['paciente']
+        'paciente' =>
+        $parcela['paciente']
     ];
 }
 
+
 /*
 |--------------------------------------------------------------------------
-| TRANSFORMAR LANÇAMENTOS MANUAIS
+| UNIFICAR LANÇAMENTOS MANUAIS
 |--------------------------------------------------------------------------
 */
 
@@ -414,31 +515,48 @@ $lancamentos = [];
 
 foreach ($lancamentos_manuais as $lancamento) {
 
-    $lancamento['origem'] = 'lancamento';
+    $lancamento['origem'] =
+        'lancamento';
 
-    $lancamento['parcela_id'] = null;
+    $lancamento['parcela_id'] =
+        null;
 
-    $lancamento['numero_orcamento'] = null;
+    $lancamento['numero_orcamento'] =
+        null;
 
-    $lancamento['paciente'] = null;
+    $lancamento['paciente'] =
+        null;
 
-    $lancamentos[] = $lancamento;
+    $lancamentos[] =
+        $lancamento;
 }
+
 
 /*
 |--------------------------------------------------------------------------
-| ADICIONAR ORÇAMENTOS AO FINANCEIRO
+| ADICIONAR PARCELAS
 |--------------------------------------------------------------------------
 */
 
-foreach ($lancamentos_orcamentos as $lancamento_orcamento) {
+if (
+    $tipo_filtro === 'todos' ||
+    $tipo_filtro === 'receita'
+) {
 
-    $lancamentos[] = $lancamento_orcamento;
+    foreach (
+        $lancamentos_orcamentos
+        as $lancamento_orcamento
+    ) {
+
+        $lancamentos[] =
+            $lancamento_orcamento;
+    }
 }
+
 
 /*
 |--------------------------------------------------------------------------
-| ORDENAR MOVIMENTAÇÕES
+| ORDENAR POR DATA
 |--------------------------------------------------------------------------
 */
 
@@ -446,28 +564,43 @@ usort(
     $lancamentos,
     function ($a, $b) {
 
-        $dataA = strtotime($a['data'] ?? '1970-01-01');
-        $dataB = strtotime($b['data'] ?? '1970-01-01');
+        $dataA =
+            strtotime(
+                $a['data'] ?? '1970-01-01'
+            );
+
+        $dataB =
+            strtotime(
+                $b['data'] ?? '1970-01-01'
+            );
+
 
         if ($dataA === $dataB) {
 
-            $idA = (int)($a['id'] ?? 0);
-            $idB = (int)($b['id'] ?? 0);
-
-            return $idB <=> $idA;
+            return ((int)($b['id'] ?? 0))
+                <=>
+                ((int)($a['id'] ?? 0));
         }
+
 
         return $dataB <=> $dataA;
     }
 );
 
+
 /*
 |--------------------------------------------------------------------------
-| LIMITAR LANÇAMENTOS RECENTES
+| LIMITAR LANÇAMENTOS EXIBIDOS
 |--------------------------------------------------------------------------
 */
 
-$lancamentos_recentes = array_slice($lancamentos, 0, 20);
+$lancamentos =
+    array_slice(
+        $lancamentos,
+        0,
+        20
+    );
+
 
 /*
 |--------------------------------------------------------------------------
@@ -479,124 +612,163 @@ $receitas = 0;
 $despesas = 0;
 $a_receber = 0;
 
-foreach ($lancamentos as $lancamento) {
-
-    $valor = (float)$lancamento['valor'];
-
-    $tipo = $lancamento['tipo'];
-
-    $status = $lancamento['status'];
-
-    /*
-    |--------------------------------------------------------------------------
-    | RECEITAS PAGAS
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-        $tipo === 'receita' &&
-        $status === 'pago'
-    ) {
-
-        $receitas += $valor;
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | DESPESAS PAGAS
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-        $tipo === 'despesa' &&
-        $status === 'pago'
-    ) {
-
-        $despesas += $valor;
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | A RECEBER
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-        $tipo === 'receita' &&
-        (
-            $status === 'pendente' ||
-            $status === 'atrasada'
-        )
-    ) {
-
-        $a_receber += $valor;
-    }
-}
-
-$lucro = $receitas - $despesas;
-
-/*
-|--------------------------------------------------------------------------
-| FLUXO DE CAIXA
-|--------------------------------------------------------------------------
-|
-| Somente valores efetivamente pagos entram no fluxo de caixa.
-|
-|--------------------------------------------------------------------------
-*/
-
-$dados_grafico_array = [];
 
 foreach ($lancamentos as $lancamento) {
 
-    if ($lancamento['status'] !== 'pago') {
-        continue;
-    }
+    $valor =
+        (float)$lancamento['valor'];
 
-    if (
-        $lancamento['tipo'] !== 'receita' &&
-        $lancamento['tipo'] !== 'despesa'
-    ) {
-        continue;
-    }
 
-    $dia = date(
-        'Y-m-d',
-        strtotime($lancamento['data'])
-    );
-
-    if (!isset($dados_grafico_array[$dia])) {
-
-        $dados_grafico_array[$dia] = [
-            'dia' => $dia,
-            'receitas' => 0,
-            'despesas' => 0
-        ];
-    }
+    /*
+    |--------------------------------------------------------------------------
+    | RECEITAS
+    |--------------------------------------------------------------------------
+    */
 
     if ($lancamento['tipo'] === 'receita') {
 
-        $dados_grafico_array[$dia]['receitas'] +=
-            (float)$lancamento['valor'];
-    } else {
+        if (
+            $lancamento['status'] === 'pago'
+        ) {
 
-        $dados_grafico_array[$dia]['despesas'] +=
-            (float)$lancamento['valor'];
+            $receitas += $valor;
+        } else {
+
+            $a_receber += $valor;
+        }
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | DESPESAS
+    |--------------------------------------------------------------------------
+    */
+
+    if ($lancamento['tipo'] === 'despesa') {
+
+        if (
+            $lancamento['status'] === 'pago'
+        ) {
+
+            $despesas += $valor;
+        }
     }
 }
 
-ksort($dados_grafico_array);
-
-$dados_grafico = array_values($dados_grafico_array);
 
 /*
 |--------------------------------------------------------------------------
-| MENSAGENS
+| LUCRO
 |--------------------------------------------------------------------------
 */
 
-$sucesso = isset($_GET['sucesso']) &&
-    $_GET['sucesso'] === '1';
+$lucro =
+    $receitas - $despesas;
+
+
+/*
+|--------------------------------------------------------------------------
+| DADOS PARA O GRÁFICO
+|--------------------------------------------------------------------------
+|
+| O gráfico usa os lançamentos já unificados.
+|
+*/
+
+$dados_grafico = [];
+
+foreach ($lancamentos as $lancamento) {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Somente movimentações efetivamente recebidas/pagas
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        $lancamento['status'] !== 'pago'
+    ) {
+        continue;
+    }
+
+
+    $dia =
+        date(
+            'Y-m-d',
+            strtotime($lancamento['data'])
+        );
+
+
+    if (!isset($dados_grafico[$dia])) {
+
+        $dados_grafico[$dia] = [
+
+            'dia' =>
+            $dia,
+
+            'receitas' =>
+            0,
+
+            'despesas' =>
+            0
+        ];
+    }
+
+
+    if (
+        $lancamento['tipo'] === 'receita'
+    ) {
+
+        $dados_grafico[$dia]['receitas']
+            += (float)$lancamento['valor'];
+    } elseif (
+        $lancamento['tipo'] === 'despesa'
+    ) {
+
+        $dados_grafico[$dia]['despesas']
+            += (float)$lancamento['valor'];
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| ORDENAR GRÁFICO
+|--------------------------------------------------------------------------
+*/
+
+ksort($dados_grafico);
+
+$dados_grafico =
+    array_values($dados_grafico);
+
+
+/*
+|--------------------------------------------------------------------------
+| PEGAR ÚLTIMOS 30 DIAS
+|--------------------------------------------------------------------------
+*/
+
+if (count($dados_grafico) > 30) {
+
+    $dados_grafico =
+        array_slice(
+            $dados_grafico,
+            -30
+        );
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| MENSAGEM DE SUCESSO
+|--------------------------------------------------------------------------
+*/
+
+$sucesso =
+    $_GET['sucesso'] ?? null;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -606,27 +778,37 @@ $sucesso = isset($_GET['sucesso']) &&
 
 $periodos_nomes = [
 
-    'mes' => 'Este mês',
+    'mes' =>
+    'Este mês',
 
-    'hoje' => 'Hoje',
+    'hoje' =>
+    'Hoje',
 
-    '7dias' => 'Últimos 7 dias',
+    '7dias' =>
+    'Últimos 7 dias',
 
-    '30dias' => 'Últimos 30 dias',
+    '30dias' =>
+    'Últimos 30 dias',
 
-    'todos' => 'Todo o período'
+    'todos' =>
+    'Todo o período'
 ];
+
 
 $tipos_nomes = [
 
-    'todos' => 'Todos os tipos',
+    'todos' =>
+    'Todos os tipos',
 
-    'receita' => 'Receitas',
+    'receita' =>
+    'Receitas',
 
-    'despesa' => 'Despesas'
+    'despesa' =>
+    'Despesas'
 ];
 
 ?>
+
 <!DOCTYPE html>
 
 <html lang="pt-BR">
@@ -641,17 +823,22 @@ $tipos_nomes = [
 
     <title>Financeiro | Dentech</title>
 
-    <link rel="stylesheet" href="css/global.css">
-    <link rel="stylesheet" href="css/variables.css">
-    <link rel="stylesheet" href="css/layout.css">
-    <link rel="stylesheet" href="css/navbar.css">
-    <link rel="stylesheet" href="css/financeiro.css">
+    <link
+        rel="icon"
+        type="image/png"
+        href="img/icon.PNG">
+
+    <link
+        rel="stylesheet"
+        href="css/navbar.css">
+
+    <link
+        rel="stylesheet"
+        href="css/financeiro.css">
 
     <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-
-    <link rel="icon" type="image/png" href="img/icon.PNG">
 
 </head>
 
@@ -663,18 +850,16 @@ $tipos_nomes = [
 
         <main class="container">
 
-            <!-- =========================================================
-         CABEÇALHO
-    ========================================================== -->
+            <!-- ==================================================
+             CABEÇALHO
+        =================================================== -->
 
             <div class="page-header">
 
                 <div>
 
                     <div class="breadcrumb">
-
                         <span>Financeiro</span>
-
                     </div>
 
                     <h1>Financeiro</h1>
@@ -685,6 +870,7 @@ $tipos_nomes = [
                     </p>
 
                 </div>
+
 
                 <a
                     href="novo_lancamento.php"
@@ -699,9 +885,9 @@ $tipos_nomes = [
             </div>
 
 
-            <!-- =========================================================
-         ALERTA
-    ========================================================== -->
+            <!-- ==================================================
+             MENSAGEM DE SUCESSO
+        =================================================== -->
 
             <?php if ($sucesso): ?>
 
@@ -709,16 +895,24 @@ $tipos_nomes = [
 
                     <i class="fa-solid fa-circle-check"></i>
 
-                    Lançamento salvo com sucesso.
+                    <?php if ($sucesso === 'pagamento'): ?>
+
+                        Pagamento da parcela registrado com sucesso.
+
+                    <?php else: ?>
+
+                        Lançamento salvo com sucesso.
+
+                    <?php endif; ?>
 
                 </div>
 
             <?php endif; ?>
 
 
-            <!-- =========================================================
-         FILTROS
-    ========================================================== -->
+            <!-- ==================================================
+             FILTROS
+        =================================================== -->
 
             <section class="filtros-card">
 
@@ -740,11 +934,16 @@ $tipos_nomes = [
                                 id="periodo"
                                 name="periodo">
 
-                                <?php foreach ($periodos_nomes as $valor => $nome): ?>
+                                <?php foreach (
+                                    $periodos_nomes
+                                    as $valor => $nome
+                                ): ?>
 
                                     <option
                                         value="<?= htmlspecialchars($valor) ?>"
-                                        <?= $periodo === $valor ? 'selected' : '' ?>>
+                                        <?= $periodo === $valor
+                                            ? 'selected'
+                                            : '' ?>>
 
                                         <?= htmlspecialchars($nome) ?>
 
@@ -773,11 +972,16 @@ $tipos_nomes = [
                                 id="tipo"
                                 name="tipo">
 
-                                <?php foreach ($tipos_nomes as $valor => $nome): ?>
+                                <?php foreach (
+                                    $tipos_nomes
+                                    as $valor => $nome
+                                ): ?>
 
                                     <option
                                         value="<?= htmlspecialchars($valor) ?>"
-                                        <?= $tipo_filtro === $valor ? 'selected' : '' ?>>
+                                        <?= $tipo_filtro === $valor
+                                            ? 'selected'
+                                            : '' ?>>
 
                                         <?= htmlspecialchars($nome) ?>
 
@@ -823,9 +1027,9 @@ $tipos_nomes = [
             </section>
 
 
-            <!-- =========================================================
-         CARDS RESUMO
-    ========================================================== -->
+            <!-- ==================================================
+             RESUMO
+        =================================================== -->
 
             <section class="resumo-grid">
 
@@ -932,16 +1136,16 @@ $tipos_nomes = [
             </section>
 
 
-            <!-- =========================================================
-         CONTEÚDO
-    ========================================================== -->
+            <!-- ==================================================
+             CONTEÚDO PRINCIPAL
+        =================================================== -->
 
             <section class="conteudo-grid">
 
 
-                <!-- =====================================================
-             FLUXO DE CAIXA
-        ====================================================== -->
+                <!-- ==================================================
+                 FLUXO DE CAIXA
+            =================================================== -->
 
                 <div class="card fluxo-card">
 
@@ -994,13 +1198,17 @@ $tipos_nomes = [
 
                                 $maior_valor = 0;
 
-                                foreach ($dados_grafico as $dia) {
+                                foreach (
+                                    $dados_grafico
+                                    as $dia
+                                ) {
 
-                                    $maior_valor = max(
-                                        $maior_valor,
-                                        (float)$dia['receitas'],
-                                        (float)$dia['despesas']
-                                    );
+                                    $maior_valor =
+                                        max(
+                                            $maior_valor,
+                                            (float)$dia['receitas'],
+                                            (float)$dia['despesas']
+                                        );
                                 }
 
                                 $maior_valor =
@@ -1011,19 +1219,30 @@ $tipos_nomes = [
                                 ?>
 
 
-                                <?php foreach ($dados_grafico as $dia): ?>
+                                <?php foreach (
+                                    $dados_grafico
+                                    as $dia
+                                ): ?>
 
                                     <?php
 
                                     $altura_receita =
-                                        ((float)$dia['receitas'] /
-                                            $maior_valor) * 100;
+                                        (
+                                            (float)$dia['receitas']
+                                            /
+                                            $maior_valor
+                                        ) * 100;
+
 
                                     $altura_despesa =
-                                        ((float)$dia['despesas'] /
-                                            $maior_valor) * 100;
+                                        (
+                                            (float)$dia['despesas']
+                                            /
+                                            $maior_valor
+                                        ) * 100;
 
                                     ?>
+
 
                                     <div
                                         class="barra-coluna"
@@ -1033,19 +1252,17 @@ $tipos_nomes = [
 
                                             <div
                                                 class="barra barra-receita"
-                                                style="
-                                            height:
-                                            <?= max(2, $altura_receita) ?>%;">
+                                                style="height: <?= max(2, $altura_receita) ?>%;">
                                             </div>
+
 
                                             <div
                                                 class="barra barra-despesa"
-                                                style="
-                                            height:
-                                            <?= max(2, $altura_despesa) ?>%;">
+                                                style="height: <?= max(2, $altura_despesa) ?>%;">
                                             </div>
 
                                         </div>
+
 
                                         <span class="barra-label">
 
@@ -1069,8 +1286,7 @@ $tipos_nomes = [
                                 <i class="fa-solid fa-chart-line"></i>
 
                                 <span>
-                                    Não existem movimentações
-                                    pagas no período selecionado.
+                                    Não existem movimentações no período selecionado.
                                 </span>
 
                             </div>
@@ -1082,9 +1298,9 @@ $tipos_nomes = [
                 </div>
 
 
-                <!-- =====================================================
-             LANÇAMENTOS RECENTES
-        ====================================================== -->
+                <!-- ==================================================
+                 LANÇAMENTOS RECENTES
+            =================================================== -->
 
                 <div class="card recentes-card">
 
@@ -1105,11 +1321,14 @@ $tipos_nomes = [
                     </div>
 
 
-                    <?php if (!empty($lancamentos_recentes)): ?>
+                    <?php if (!empty($lancamentos)): ?>
 
                         <div class="lista-lancamentos">
 
-                            <?php foreach ($lancamentos_recentes as $lancamento): ?>
+                            <?php foreach (
+                                $lancamentos
+                                as $lancamento
+                            ): ?>
 
                                 <div class="lancamento-item">
 
@@ -1133,6 +1352,7 @@ $tipos_nomes = [
 
                                         </strong>
 
+
                                         <span>
 
                                             <?= htmlspecialchars(
@@ -1151,12 +1371,9 @@ $tipos_nomes = [
 
 
                                     <div
-                                        class="
-                                    lancamento-valor
-                                    <?= $lancamento['tipo'] === 'receita'
-                                        ? 'valor-receita'
-                                        : 'valor-despesa' ?>
-                                ">
+                                        class="lancamento-valor <?= $lancamento['tipo'] === 'receita'
+                                                                    ? 'valor-receita'
+                                                                    : 'valor-despesa' ?>">
 
                                         <?= $lancamento['tipo'] === 'receita'
                                             ? '+'
@@ -1185,9 +1402,9 @@ $tipos_nomes = [
                             </strong>
 
                             <span>
-                                Cadastre uma receita ou despesa
-                                para começar.
+                                Cadastre uma receita ou despesa para começar.
                             </span>
+
 
                             <a
                                 href="novo_lancamento.php"
@@ -1203,14 +1420,25 @@ $tipos_nomes = [
 
                     <?php endif; ?>
 
+
+                    <a
+                        href="financeiro_lancamentos.php"
+                        class="ver-todos">
+
+                        Ver todos
+
+                        <i class="fa-solid fa-arrow-right"></i>
+
+                    </a>
+
                 </div>
 
             </section>
 
 
-            <!-- =========================================================
-         TABELA DE MOVIMENTAÇÕES
-    ========================================================== -->
+            <!-- ==================================================
+             TABELA DE MOVIMENTAÇÕES
+        =================================================== -->
 
             <section class="card tabela-card">
 
@@ -1223,7 +1451,7 @@ $tipos_nomes = [
                         </h2>
 
                         <p>
-                            Lançamentos e parcelas de orçamentos aceitos.
+                            Últimos lançamentos encontrados.
                         </p>
 
                     </div>
@@ -1233,7 +1461,7 @@ $tipos_nomes = [
 
                         <?= count($lancamentos) ?>
 
-                        movimentação<?= count($lancamentos) === 1
+                        lançamento<?= count($lancamentos) === 1
                                         ? ''
                                         : 's' ?>
 
@@ -1265,11 +1493,11 @@ $tipos_nomes = [
                                     </th>
 
                                     <th>
-                                        Origem
+                                        Pagamento
                                     </th>
 
                                     <th>
-                                        Pagamento
+                                        Parcelas
                                     </th>
 
                                     <th>
@@ -1291,9 +1519,13 @@ $tipos_nomes = [
 
                             <tbody>
 
-                                <?php foreach ($lancamentos as $lancamento): ?>
+                                <?php foreach (
+                                    $lancamentos
+                                    as $lancamento
+                                ): ?>
 
                                     <tr>
+
 
                                         <!-- DATA -->
 
@@ -1332,50 +1564,6 @@ $tipos_nomes = [
                                         </td>
 
 
-                                        <!-- ORIGEM -->
-
-                                        <td>
-
-                                            <?php if (
-                                                $lancamento['origem'] ===
-                                                'orcamento'
-                                            ): ?>
-
-                                                <span
-                                                    class="origem-orcamento">
-
-                                                    <i
-                                                        class="
-                                                fa-solid
-                                                fa-file-invoice-dollar
-                                            ">
-                                                    </i>
-
-                                                    Orçamento
-
-                                                </span>
-
-                                            <?php else: ?>
-
-                                                <span
-                                                    class="origem-lancamento">
-
-                                                    <i
-                                                        class="
-                                                fa-solid
-                                                fa-money-bill-transfer
-                                            ">
-                                                    </i>
-
-                                                    Lançamento
-
-                                                </span>
-
-                                            <?php endif; ?>
-
-                                        </td>
-
-
                                         <!-- PAGAMENTO -->
 
                                         <td>
@@ -1387,17 +1575,37 @@ $tipos_nomes = [
                                         </td>
 
 
+                                        <!-- PARCELAS -->
+
+                                        <td>
+
+                                            <?php if (
+                                                $lancamento['origem']
+                                                === 'orcamento'
+                                            ): ?>
+
+                                                Parcela
+                                                <?= (int)$lancamento['parcelas'] ?>
+
+                                            <?php else: ?>
+
+                                                <?= (int)$lancamento['parcelas'] === 1
+                                                    ? 'À vista'
+                                                    : (int)$lancamento['parcelas'] . 'x' ?>
+
+                                            <?php endif; ?>
+
+                                        </td>
+
+
                                         <!-- STATUS -->
 
                                         <td>
 
                                             <span
-                                                class="
-                                        status-badge
-                                        <?= classeStatus(
-                                            $lancamento['status']
-                                        ) ?>
-                                    ">
+                                                class="status-badge <?= classeStatus(
+                                                                        $lancamento['status']
+                                                                    ) ?>">
 
                                                 <?= htmlspecialchars(
                                                     textoStatus(
@@ -1413,12 +1621,9 @@ $tipos_nomes = [
                                         <!-- VALOR -->
 
                                         <td
-                                            class="
-                                    coluna-valor
-                                    <?= $lancamento['tipo'] === 'receita'
-                                        ? 'valor-receita'
-                                        : 'valor-despesa' ?>
-                                ">
+                                            class="coluna-valor <?= $lancamento['tipo'] === 'receita'
+                                                                    ? 'valor-receita'
+                                                                    : 'valor-despesa' ?>">
 
                                             <?= $lancamento['tipo'] === 'receita'
                                                 ? '+'
@@ -1435,7 +1640,12 @@ $tipos_nomes = [
 
                                         <td class="coluna-acoes">
 
-                                            <?php if ($lancamento['origem'] === 'orcamento'): ?>
+
+                                            <?php if (
+                                                $lancamento['origem']
+                                                === 'orcamento'
+                                            ): ?>
+
 
                                                 <!-- VISUALIZAR ORÇAMENTO -->
 
@@ -1452,8 +1662,11 @@ $tipos_nomes = [
                                                 <!-- PAGAR PARCELA -->
 
                                                 <?php if (
-                                                    $lancamento['status'] === 'pendente' ||
-                                                    $lancamento['status'] === 'atrasada'
+                                                    $lancamento['status']
+                                                    === 'pendente'
+                                                    ||
+                                                    $lancamento['status']
+                                                    === 'atrasada'
                                                 ): ?>
 
                                                     <form
@@ -1462,12 +1675,30 @@ $tipos_nomes = [
                                                         class="form-pagar-parcela"
                                                         onsubmit="return confirm('Confirmar o pagamento desta parcela?');">
 
-                                                        <?= csrf_field() ?>
+
+                                                        <?php if (
+                                                            function_exists('csrf_field')
+                                                        ): ?>
+
+                                                            <?= csrf_field() ?>
+
+                                                        <?php else: ?>
+
+                                                            <input
+                                                                type="hidden"
+                                                                name="csrf_token"
+                                                                value="<?= htmlspecialchars(
+                                                                            $_SESSION['csrf_token'] ?? ''
+                                                                        ) ?>">
+
+                                                        <?php endif; ?>
+
 
                                                         <input
                                                             type="hidden"
                                                             name="parcela_id"
                                                             value="<?= (int)$lancamento['parcela_id'] ?>">
+
 
                                                         <button
                                                             type="submit"
@@ -1485,32 +1716,33 @@ $tipos_nomes = [
 
                                             <?php else: ?>
 
-                                                <!-- LANÇAMENTO MANUAL -->
 
-                                                <?php if (!empty($lancamento['id'])): ?>
+                                                <!-- VISUALIZAR LANÇAMENTO MANUAL -->
 
-                                                    <a
-                                                        href="visualizar_lancamento.php?id=<?= (int)$lancamento['id'] ?>"
-                                                        class="btn-acao"
-                                                        title="Visualizar">
+                                                <a
+                                                    href="visualizar_lancamento.php?id=<?= (int)$lancamento['id'] ?>"
+                                                    class="btn-acao"
+                                                    title="Visualizar">
 
-                                                        <i class="fa-regular fa-eye"></i>
+                                                    <i class="fa-regular fa-eye"></i>
 
-                                                    </a>
+                                                </a>
 
 
-                                                    <a
-                                                        href="editar_lancamento.php?id=<?= (int)$lancamento['id'] ?>"
-                                                        class="btn-acao"
-                                                        title="Editar">
+                                                <!-- EDITAR LANÇAMENTO MANUAL -->
 
-                                                        <i class="fa-solid fa-pen"></i>
+                                                <a
+                                                    href="editar_lancamento.php?id=<?= (int)$lancamento['id'] ?>"
+                                                    class="btn-acao"
+                                                    title="Editar">
 
-                                                    </a>
+                                                    <i class="fa-solid fa-pen"></i>
 
-                                                <?php endif; ?>
+                                                </a>
+
 
                                             <?php endif; ?>
+
 
                                         </td>
 
@@ -1524,20 +1756,22 @@ $tipos_nomes = [
 
                     </div>
 
+
                 <?php else: ?>
+
 
                     <div class="tabela-vazia">
 
                         <i class="fa-solid fa-wallet"></i>
 
                         <h3>
-                            Nenhuma movimentação cadastrada
+                            Nenhum lançamento cadastrado
                         </h3>
 
                         <p>
-                            Comece cadastrando sua primeira
-                            receita ou despesa.
+                            Comece cadastrando sua primeira receita ou despesa.
                         </p>
+
 
                         <a
                             href="novo_lancamento.php"
@@ -1551,11 +1785,11 @@ $tipos_nomes = [
 
                     </div>
 
+
                 <?php endif; ?>
 
+
             </section>
-
-
 
         </main>
 
