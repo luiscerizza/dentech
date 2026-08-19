@@ -1,0 +1,253 @@
+/* =========================================================
+   DENTECH - TELA DE LOGIN
+   ========================================================= */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 24px;
+
+  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+
+  background: #f4f7fb;
+
+  color: #1f2937;
+}
+
+/* =========================================================
+   CARD
+   ========================================================= */
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+
+  padding: 42px 40px;
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+
+  text-align: center;
+}
+
+/* =========================================================
+   LOGO / TÍTULO
+   ========================================================= */
+
+.login-card h2 {
+  margin-bottom: 8px;
+
+  font-size: 30px;
+  font-weight: 700;
+
+  color: #1f2937;
+}
+
+.subtitle {
+  margin-bottom: 32px;
+
+  font-size: 14px;
+  line-height: 1.5;
+
+  color: #6b7280;
+}
+
+/* =========================================================
+   ERRO
+   ========================================================= */
+
+.error {
+  width: 100%;
+
+  margin-bottom: 20px;
+  padding: 12px 14px;
+
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+
+  background: #fef2f2;
+
+  color: #b91c1c;
+
+  font-size: 14px;
+  line-height: 1.4;
+
+  text-align: left;
+}
+
+/* =========================================================
+   FORMULÁRIO
+   ========================================================= */
+
+form {
+  width: 100%;
+}
+
+.form-group {
+  width: 100%;
+
+  margin-bottom: 20px;
+
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+
+  margin-bottom: 8px;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  color: #374151;
+}
+
+/* =========================================================
+   INPUTS
+   ========================================================= */
+
+.form-group input {
+  display: block;
+
+  width: 100%;
+  height: 46px;
+
+  padding: 0 14px;
+
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+
+  outline: none;
+
+  background: #ffffff;
+
+  color: #1f2937;
+
+  font-family: inherit;
+  font-size: 15px;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.form-group input::placeholder {
+  color: #9ca3af;
+}
+
+.form-group input:hover {
+  border-color: #9ca3af;
+}
+
+.form-group input:focus {
+  border-color: #2563eb;
+
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* =========================================================
+   BOTÃO
+   ========================================================= */
+
+.login-card button {
+  display: block;
+
+  width: 100%;
+  height: 46px;
+
+  margin-top: 8px;
+
+  padding: 0 20px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: #2563eb;
+
+  color: #ffffff;
+
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    transform 0.1s ease,
+    box-shadow 0.2s ease;
+}
+
+.login-card button:hover {
+  background: #1d4ed8;
+
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+.login-card button:active {
+  transform: translateY(1px);
+}
+
+.login-card button:focus-visible {
+  outline: none;
+
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+/* =========================================================
+   RESPONSIVO
+   ========================================================= */
+
+@media (max-width: 480px) {
+  body {
+    padding: 16px;
+  }
+
+  .login-card {
+    padding: 32px 24px;
+
+    border-radius: 14px;
+  }
+
+  .login-card h2 {
+    font-size: 26px;
+  }
+
+  .subtitle {
+    margin-bottom: 26px;
+  }
+}
+
+/* =========================================================
+   TELAS MUITO PEQUENAS
+   ========================================================= */
+
+@media (max-height: 600px) {
+  body {
+    align-items: flex-start;
+
+    padding-top: 30px;
+    padding-bottom: 30px;
+  }
+}
