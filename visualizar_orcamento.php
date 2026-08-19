@@ -46,7 +46,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $stmt->execute([$id]);
 
-            header("Location: visualizar_orcamento.php?id=" . $id);
+            header(
+                "Location: visualizar_orcamento.php?id=" . $id
+            );
+
             exit;
         }
 
@@ -66,7 +69,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $stmt->execute([$id]);
 
-            header("Location: visualizar_orcamento.php?id=" . $id);
+            header(
+                "Location: visualizar_orcamento.php?id=" . $id
+            );
+
             exit;
         }
 
@@ -83,12 +89,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 die("Parcela inválida.");
             }
 
-            /*
-             * Primeiro verifica se a parcela realmente pertence
-             * ao orçamento visualizado.
-             */
+
+            // =================================================
+            // INICIAR TRANSAÇÃO
+            // =================================================
+
+            $pdo->beginTransaction();
+
+
+            // =================================================
+            // VERIFICAR PARCELA
+            // =================================================
+
             $stmt = $pdo->prepare("
-                SELECT id, status
+                SELECT
+                    id,
+                    valor,
+                    status
                 FROM parcelas
                 WHERE id = ?
                   AND orcamento_id = ?
@@ -103,26 +120,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $parcela = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$parcela) {
+
+                $pdo->rollBack();
+
                 die("Parcela não encontrada.");
             }
 
-            /*
-             * Só permite pagar parcelas pendentes ou atrasadas.
-             */
+
+            // =================================================
+            // SÓ PERMITE PAGAR PENDENTE OU ATRASADA
+            // =================================================
+
             if (
                 $parcela['status'] !== 'pendente' &&
                 $parcela['status'] !== 'atrasada'
             ) {
-                header("Location: visualizar_orcamento.php?id=" . $id);
+
+                $pdo->rollBack();
+
+                header(
+                    "Location: visualizar_orcamento.php?id=" . $id
+                );
+
                 exit;
             }
 
-            /*
-             * Marca como paga.
-             *
-             * O financeiro utiliza as parcelas pagas como
-             * receitas do orçamento.
-             */
+
+            // =================================================
+            // MARCAR PARCELA COMO PAGA
+            // =================================================
+
             $stmt = $pdo->prepare("
                 UPDATE parcelas
                 SET
@@ -137,10 +164,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $id
             ]);
 
-            header("Location: visualizar_orcamento.php?id=" . $id);
+
+            // =================================================
+            // ATUALIZAR LANÇAMENTO FINANCEIRO
+            // =================================================
+            //
+            // Cada parcela possui um lançamento financeiro
+            // vinculado através de parcela_id.
+            //
+
+            $stmt = $pdo->prepare("
+                UPDATE lancamentos_financeiros
+                SET
+                    status = 'pago',
+                    data = CURDATE()
+                WHERE parcela_id = ?
+                  AND orcamento_id = ?
+            ");
+
+            $stmt->execute([
+                $parcela_id,
+                $id
+            ]);
+
+
+            // =================================================
+            // CONFIRMAR TRANSAÇÃO
+            // =================================================
+
+            $pdo->commit();
+
+
+            // =================================================
+            // VOLTAR PARA O ORÇAMENTO
+            // =================================================
+
+            header(
+                "Location: visualizar_orcamento.php?id=" . $id
+            );
+
             exit;
         }
-    } catch (PDOException $e) {
+    } catch (Throwable $e) {
+
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
 
         error_log(
             "ERRO VISUALIZAR ORCAMENTO #{$id}: " .
@@ -267,8 +336,8 @@ $progresso = $qtd_total > 0
 $status_orcamento = $orc['status'] ?? 'pendente';
 
 
-// Alguns projetos usam "confirmado" e outros "aceito".
-// Consideramos ambos como orçamento confirmado.
+// Alguns projetos utilizam "aceito"
+// e outros "confirmado".
 
 $orcamento_confirmado = in_array(
     $status_orcamento,
@@ -276,9 +345,11 @@ $orcamento_confirmado = in_array(
     true
 );
 
-$orcamento_recusado = $status_orcamento === 'recusado';
+$orcamento_recusado =
+    $status_orcamento === 'recusado';
 
-$orcamento_pendente = $status_orcamento === 'pendente';
+$orcamento_pendente =
+    $status_orcamento === 'pendente';
 
 
 // ============================================================
@@ -333,19 +404,40 @@ $status_classe = match ($status_orcamento) {
         Orçamento #<?= $id ?> - Dentech
     </title>
 
+
+    <!-- CSS GLOBAL -->
+
     <link rel="stylesheet" href="css/global.css">
+
     <link rel="stylesheet" href="css/variables.css">
+
     <link rel="stylesheet" href="css/layout.css">
+
+    <!-- NAVBAR -->
+
     <link rel="stylesheet" href="css/navbar.css">
+
+    <!-- CSS DA PÁGINA -->
+
     <link rel="stylesheet" href="css/vis_orcamento.css">
+
+
+    <!-- FONT AWESOME -->
 
     <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
-    <link rel="icon" type="image/png" href="img/icon.PNG">
+
+    <!-- FAVICON -->
+
+    <link
+        rel="icon"
+        type="image/png"
+        href="img/icon.PNG">
 
 </head>
+
 
 <body>
 
@@ -358,19 +450,22 @@ $status_classe = match ($status_orcamento) {
 
 
             <!-- ==================================================
-             CABEÇALHO
-        =================================================== -->
+                 CABEÇALHO
+            =================================================== -->
 
             <div class="header-actions">
 
                 <div>
 
                     <h1>
+
                         Orçamento #<?= $id ?>
 
                         <span
                             class="status-badge <?= $status_classe ?>">
+
                             <?= htmlspecialchars($status_texto) ?>
+
                         </span>
 
                     </h1>
@@ -379,8 +474,8 @@ $status_classe = match ($status_orcamento) {
 
 
                 <!-- ==================================================
-                 BOTÕES
-            =================================================== -->
+                     BOTÕES
+                =================================================== -->
 
                 <div class="btn-group">
 
@@ -390,7 +485,9 @@ $status_classe = match ($status_orcamento) {
                     <a
                         href="orcamento.php"
                         class="btn btn-outline">
+
                         ← Voltar
+
                     </a>
 
 
@@ -400,7 +497,9 @@ $status_classe = match ($status_orcamento) {
                         href="gerar_orcamento_pdf.php?id=<?= $id ?>"
                         target="_blank"
                         class="btn btn-success">
+
                         📥 Baixar PDF
+
                     </a>
 
 
@@ -412,7 +511,9 @@ $status_classe = match ($status_orcamento) {
                         <a
                             href="editar_orcamento.php?id=<?= $id ?>"
                             class="btn btn-primary">
+
                             ✏️ Editar
+
                         </a>
 
 
@@ -433,7 +534,9 @@ $status_classe = match ($status_orcamento) {
                             <button
                                 type="submit"
                                 class="btn btn-confirmar">
+
                                 ✓ Confirmar
+
                             </button>
 
                         </form>
@@ -456,10 +559,13 @@ $status_classe = match ($status_orcamento) {
                             <button
                                 type="submit"
                                 class="btn btn-recusar">
+
                                 ✕ Recusar
+
                             </button>
 
                         </form>
+
 
                     <?php endif; ?>
 
@@ -470,14 +576,16 @@ $status_classe = match ($status_orcamento) {
 
 
             <!-- ==================================================
-             INFORMAÇÕES DO PACIENTE
-        =================================================== -->
+                 INFORMAÇÕES DO PACIENTE
+            =================================================== -->
 
             <h2>
                 👤 Dados do Paciente
             </h2>
 
+
             <div class="info-grid">
+
 
                 <div class="info-item">
 
@@ -563,12 +671,13 @@ $status_classe = match ($status_orcamento) {
 
                 </div>
 
+
             </div>
 
 
             <!-- ==================================================
-             PROCEDIMENTOS
-        =================================================== -->
+                 PROCEDIMENTOS
+            =================================================== -->
 
             <h2>
                 🦷 Procedimentos
@@ -582,6 +691,7 @@ $status_classe = match ($status_orcamento) {
                 </p>
 
             <?php else: ?>
+
 
                 <div class="table-wrapper">
 
@@ -614,6 +724,7 @@ $status_classe = match ($status_orcamento) {
 
                         <tbody>
 
+
                             <?php foreach ($itens as $item): ?>
 
                                 <?php
@@ -625,13 +736,17 @@ $status_classe = match ($status_orcamento) {
 
                                 ?>
 
+
                                 <tr>
 
                                     <td>
+
                                         <?= htmlspecialchars(
                                             $item['descricao']
                                         ) ?>
+
                                     </td>
+
 
                                     <td class="text-center">
 
@@ -639,9 +754,11 @@ $status_classe = match ($status_orcamento) {
 
                                     </td>
 
+
                                     <td class="text-right">
 
                                         R$
+
                                         <?= number_format(
                                             $item['valor_unitario'],
                                             2,
@@ -651,11 +768,13 @@ $status_classe = match ($status_orcamento) {
 
                                     </td>
 
+
                                     <td class="text-right">
 
                                         <strong>
 
                                             R$
+
                                             <?= number_format(
                                                 $subtotal,
                                                 2,
@@ -669,7 +788,9 @@ $status_classe = match ($status_orcamento) {
 
                                 </tr>
 
+
                             <?php endforeach; ?>
+
 
                         </tbody>
 
@@ -677,12 +798,13 @@ $status_classe = match ($status_orcamento) {
 
                 </div>
 
+
             <?php endif; ?>
 
 
             <!-- ==================================================
-             TOTAL
-        =================================================== -->
+                 TOTAL
+            =================================================== -->
 
             <div class="total-box">
 
@@ -693,6 +815,7 @@ $status_classe = match ($status_orcamento) {
                 <div class="total-value">
 
                     R$
+
                     <?= number_format(
                         $total_itens,
                         2,
@@ -706,14 +829,15 @@ $status_classe = match ($status_orcamento) {
 
 
             <!-- ==================================================
-             OBSERVAÇÕES
-        =================================================== -->
+                 OBSERVAÇÕES
+            =================================================== -->
 
             <?php if (!empty($orc['observacoes'])): ?>
 
                 <h2>
                     📝 Observações
                 </h2>
+
 
                 <div class="observacoes-box">
 
@@ -729,8 +853,8 @@ $status_classe = match ($status_orcamento) {
 
 
             <!-- ==================================================
-             PARCELAS
-        =================================================== -->
+                 PARCELAS
+            =================================================== -->
 
             <?php if (!empty($parcelas)): ?>
 
@@ -746,8 +870,11 @@ $status_classe = match ($status_orcamento) {
                         <span>
 
                             <?= $qtd_pagas ?>
+
                             /
+
                             <?= $qtd_total ?>
+
                             pagas
 
                         </span>
@@ -789,6 +916,7 @@ $status_classe = match ($status_orcamento) {
 
 
                             <tbody>
+
 
                                 <?php foreach ($parcelas as $p): ?>
 
@@ -835,10 +963,13 @@ $status_classe = match ($status_orcamento) {
 
                                     <tr>
 
+
                                         <td>
 
                                             <strong>
+
                                                 <?= (int)$p['numero_parcela'] ?>ª
+
                                             </strong>
 
                                         </td>
@@ -859,6 +990,7 @@ $status_classe = match ($status_orcamento) {
                                         <td class="text-right">
 
                                             R$
+
                                             <?= number_format(
                                                 $p['valor'],
                                                 2,
@@ -873,13 +1005,16 @@ $status_classe = match ($status_orcamento) {
 
                                             <span
                                                 class="parcela-status <?= $badge_class ?>">
+
                                                 <?= $status_parcela ?>
+
                                             </span>
 
                                         </td>
 
 
                                         <td class="text-center">
+
 
                                             <?php if (
                                                 $p['status'] === 'pendente' ||
@@ -892,23 +1027,30 @@ $status_classe = match ($status_orcamento) {
                                                     class="form-pagamento"
                                                     onsubmit="return confirm('Confirmar pagamento desta parcela?');">
 
+
                                                     <?= csrf_field() ?>
+
 
                                                     <input
                                                         type="hidden"
                                                         name="acao"
                                                         value="marcar_paga">
 
+
                                                     <input
                                                         type="hidden"
                                                         name="parcela_id"
                                                         value="<?= (int)$p['id'] ?>">
 
+
                                                     <button
                                                         type="submit"
                                                         class="btn-pagar">
+
                                                         💳 Pagar
+
                                                     </button>
+
 
                                                 </form>
 
@@ -918,9 +1060,11 @@ $status_classe = match ($status_orcamento) {
                                             ): ?>
 
 
-                                                <span class="pagamento-confirmado">
+                                                <span
+                                                    class="pagamento-confirmado">
 
                                                     ✓ Pago
+
 
                                                     <?php if (
                                                         !empty($p['data_pagamento'])
@@ -929,6 +1073,7 @@ $status_classe = match ($status_orcamento) {
                                                         <small>
 
                                                             em
+
                                                             <?= date(
                                                                 'd/m/Y',
                                                                 strtotime(
@@ -940,17 +1085,21 @@ $status_classe = match ($status_orcamento) {
 
                                                     <?php endif; ?>
 
+
                                                 </span>
 
 
                                             <?php endif; ?>
 
+
                                         </td>
+
 
                                     </tr>
 
 
                                 <?php endforeach; ?>
+
 
                             </tbody>
 
@@ -960,14 +1109,16 @@ $status_classe = match ($status_orcamento) {
 
 
                     <!-- ==================================================
-                     PROGRESSO
-                =================================================== -->
+                         PROGRESSO
+                    =================================================== -->
 
                     <div class="progress-bar">
 
                         <div
                             class="progress-fill"
-                            style="width: <?= $progresso ?>%;"></div>
+                            style="width: <?= $progresso ?>%;">
+
+                        </div>
 
                     </div>
 
@@ -975,9 +1126,11 @@ $status_classe = match ($status_orcamento) {
                     <div class="progress-text">
 
                         Progresso:
+
                         <strong>
                             <?= $progresso ?>%
                         </strong>
+
                         concluído
 
                     </div>
@@ -989,16 +1142,19 @@ $status_classe = match ($status_orcamento) {
 
 
             <!-- ==================================================
-             INFORMAÇÃO FINANCEIRA
-        =================================================== -->
+                 INFORMAÇÃO FINANCEIRA
+            =================================================== -->
 
             <?php if ($orcamento_confirmado): ?>
 
+
                 <div class="financeiro-info">
+
 
                     <div class="financeiro-info-icon">
                         💰
                     </div>
+
 
                     <div>
 
@@ -1006,11 +1162,15 @@ $status_classe = match ($status_orcamento) {
                             Orçamento integrado ao financeiro
                         </strong>
 
+
                         <p>
+
                             As parcelas deste orçamento são
                             consideradas automaticamente no
                             controle financeiro.
+
                         </p>
+
 
                         <a href="financeiro.php">
                             Ver financeiro →
@@ -1018,14 +1178,16 @@ $status_classe = match ($status_orcamento) {
 
                     </div>
 
+
                 </div>
+
 
             <?php endif; ?>
 
 
             <!-- ==================================================
-             RODAPÉ
-        =================================================== -->
+                 RODAPÉ
+            =================================================== -->
 
             <div class="footer-note">
 
@@ -1043,6 +1205,7 @@ $status_classe = match ($status_orcamento) {
         </div>
 
     </main>
+
 
 </body>
 

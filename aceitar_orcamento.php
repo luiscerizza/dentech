@@ -2,10 +2,9 @@
 
 require_once 'config/auth.php';
 require_once 'config/csrf.php';
+require_once 'conexao/conexao.php';
 
 exigirLogin();
-
-require_once 'conexao/conexao.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: orcamento.php');
@@ -14,9 +13,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 validar_csrf();
 
-$id_orcamento = (int)($_POST['id'] ?? 0);
+$orcamento_id = (int)($_POST['id'] ?? 0);
 
-if ($id_orcamento <= 0) {
+if ($orcamento_id <= 0) {
     die('Orçamento inválido.');
 }
 
@@ -26,24 +25,18 @@ try {
 
     /*
     |--------------------------------------------------------------------------
-    | Buscar orçamento
+    | 1. Buscar orçamento
     |--------------------------------------------------------------------------
     */
 
     $stmt = $pdo->prepare("
-        SELECT
-            o.id,
-            o.status,
-            o.paciente_id,
-            p.paciente
-        FROM orcamentos o
-        INNER JOIN prontuarios p
-            ON p.id = o.paciente_id
-        WHERE o.id = ?
-        FOR UPDATE
+        SELECT id, status
+        FROM orcamentos
+        WHERE id = ?
+        LIMIT 1
     ");
 
-    $stmt->execute([$id_orcamento]);
+    $stmt->execute([$orcamento_id]);
 
     $orcamento = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -51,75 +44,43 @@ try {
         throw new Exception('Orçamento não encontrado.');
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Só permite aceitar orçamento pendente
-    |--------------------------------------------------------------------------
-    */
-
     if ($orcamento['status'] !== 'pendente') {
-        throw new Exception('Este orçamento não está pendente.');
+        throw new Exception('Este orçamento já foi processado.');
     }
 
+
     /*
     |--------------------------------------------------------------------------
-    | Calcular total do orçamento
+    | 2. Buscar parcelas
     |--------------------------------------------------------------------------
     */
 
     $stmt = $pdo->prepare("
         SELECT
-            COALESCE(
-                SUM(quantidade * valor_unitario),
-                0
-            ) AS total
-        FROM orcamentos_itens
+            id,
+            numero_parcela,
+            valor,
+            vencimento,
+            status
+        FROM parcelas
         WHERE orcamento_id = ?
+        ORDER BY numero_parcela ASC
     ");
 
-    $stmt->execute([$id_orcamento]);
+    $stmt->execute([$orcamento_id]);
 
-    $total = (float)$stmt->fetchColumn();
+    $parcelas = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    if ($total <= 0) {
+    if (empty($parcelas)) {
         throw new Exception(
-            'Não é possível aceitar um orçamento sem valor.'
+            'Este orçamento não possui parcelas cadastradas.'
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Buscar quantidade de parcelas
-    |--------------------------------------------------------------------------
-    */
-
-    $stmt = $pdo->prepare("
-        SELECT
-            COUNT(*) AS quantidade,
-            COALESCE(SUM(valor), 0) AS total_parcelas
-        FROM parcelas
-        WHERE orcamento_id = ?
-    ");
-
-    $stmt->execute([$id_orcamento]);
-
-    $dados_parcelas = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    $quantidade_parcelas = (int)$dados_parcelas['quantidade'];
 
     /*
     |--------------------------------------------------------------------------
-    | Se não houver parcelas, considera à vista
-    |--------------------------------------------------------------------------
-    */
-
-    if ($quantidade_parcelas <= 0) {
-        $quantidade_parcelas = 1;
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Alterar status do orçamento
+    | 3. Alterar orçamento para ACEITO
     |--------------------------------------------------------------------------
     */
 
@@ -127,96 +88,165 @@ try {
         UPDATE orcamentos
         SET status = 'aceito'
         WHERE id = ?
+          AND status = 'pendente'
     ");
 
-    $stmt->execute([$id_orcamento]);
+    $stmt->execute([$orcamento_id]);
+
+    if ($stmt->rowCount() !== 1) {
+        throw new Exception(
+            'Não foi possível aceitar o orçamento.'
+        );
+    }
+
 
     /*
     |--------------------------------------------------------------------------
-    | Verificar se já existe lançamento financeiro
+    | 4. Criar lançamentos financeiros
     |--------------------------------------------------------------------------
     */
 
-    $stmt = $pdo->prepare("
-        SELECT id
-        FROM lancamentos_financeiros
-        WHERE orcamento_id = ?
-          AND tipo = 'receita'
-        LIMIT 1
+    $stmtLancamento = $pdo->prepare("
+        INSERT INTO lancamentos_financeiros (
+            tipo,
+            categoria,
+            descricao,
+            data,
+            forma_pagamento,
+            valor,
+            parcelas,
+            status,
+            observacoes,
+            orcamento_id,
+            parcela_id
+        )
+        VALUES (
+            'receita',
+            'Orçamento',
+            ?,
+            ?,
+            'A definir',
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?
+        )
     ");
 
-    $stmt->execute([$id_orcamento]);
 
-    $lancamento_existente = $stmt->fetchColumn();
+    $totalParcelas = count($parcelas);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Criar receita no financeiro
-    |--------------------------------------------------------------------------
-    */
+    foreach ($parcelas as $parcela) {
 
-    if (!$lancamento_existente) {
+        /*
+        |--------------------------------------------------------------------------
+        | Evita duplicação
+        |--------------------------------------------------------------------------
+        */
 
-        $descricao = 'Orçamento #' .
-            $id_orcamento .
-            ' - ' .
-            $orcamento['paciente'];
-
-        $stmt = $pdo->prepare("
-            INSERT INTO lancamentos_financeiros (
-                tipo,
-                categoria,
-                descricao,
-                data,
-                forma_pagamento,
-                valor,
-                parcelas,
-                status,
-                observacoes,
-                orcamento_id
-            )
-            VALUES (
-                'receita',
-                'Orçamento',
-                ?,
-                CURDATE(),
-                'A definir',
-                ?,
-                ?,
-                'pendente',
-                ?,
-                ?
-            )
+        $stmtExiste = $pdo->prepare("
+            SELECT id
+            FROM lancamentos_financeiros
+            WHERE parcela_id = ?
+            LIMIT 1
         ");
 
-        $observacoes =
-            'Receita gerada automaticamente a partir do orçamento #' .
-            $id_orcamento .
-            '.';
+        $stmtExiste->execute([
+            $parcela['id']
+        ]);
 
-        $stmt->execute([
+        if ($stmtExiste->fetch()) {
+            continue;
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Status financeiro
+        |--------------------------------------------------------------------------
+        */
+
+        $statusFinanceiro = $parcela['status'] === 'paga'
+            ? 'pago'
+            : 'pendente';
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Descrição
+        |--------------------------------------------------------------------------
+        */
+
+        $descricao = sprintf(
+            'Orçamento #%d - Parcela %d/%d',
+            $orcamento_id,
+            $parcela['numero_parcela'],
+            $totalParcelas
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Observação
+        |--------------------------------------------------------------------------
+        */
+
+        $observacao = sprintf(
+            'Receita gerada pelo orçamento #%d. Parcela %d/%d.',
+            $orcamento_id,
+            $parcela['numero_parcela'],
+            $totalParcelas
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Inserção
+        |--------------------------------------------------------------------------
+        */
+
+        $stmtLancamento->execute([
             $descricao,
-            $total,
-            $quantidade_parcelas,
-            $observacoes,
-            $id_orcamento
+            $parcela['vencimento'],
+            $parcela['valor'],
+            $totalParcelas,
+            $statusFinanceiro,
+            $observacao,
+            $orcamento_id,
+            $parcela['id']
         ]);
     }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | 5. Confirmar tudo
+    |--------------------------------------------------------------------------
+    */
 
     $pdo->commit();
 
     header(
         'Location: visualizar_orcamento.php?id=' .
-            $id_orcamento
+            $orcamento_id
     );
 
     exit;
-} catch (Exception $e) {
+} catch (Throwable $e) {
 
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
 
-    die('Erro ao aceitar orçamento: ' .
+    error_log(
+        'ERRO AO ACEITAR ORÇAMENTO #' .
+            $orcamento_id .
+            ': ' .
+            $e->getMessage()
+    );
+
+    die('Não foi possível aceitar o orçamento. ' .
         htmlspecialchars($e->getMessage()));
 }
