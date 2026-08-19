@@ -179,11 +179,19 @@ if ($tipo_filtro !== 'todos') {
     $params_manual[':tipo'] = $tipo_filtro;
 }
 
-$where_manual_sql = '';
+/*
+ * Orçamentos aceitos são exibidos a partir da tabela `parcelas`, que é a
+ * fonte oficial de verdade do financeiro do orçamento.
+ *
+ * Algumas versões anteriores do fluxo também criavam um registro em
+ * `lancamentos_financeiros` com `orcamento_id` preenchido. Se esse registro
+ * for carregado junto com `parcelas`, a mesma parcela aparece duas vezes.
+ * Portanto, lançamentos vinculados a orçamento não entram nesta consulta;
+ * eles serão montados abaixo exclusivamente a partir de `parcelas`.
+ */
+$where_manual[] = '(orcamento_id IS NULL OR orcamento_id = 0)';
 
-if (!empty($where_manual)) {
-    $where_manual_sql = 'WHERE ' . implode(' AND ', $where_manual);
-}
+$where_manual_sql = 'WHERE ' . implode(' AND ', $where_manual);
 
 /*
 |--------------------------------------------------------------------------
@@ -308,6 +316,11 @@ $stmt_orcamentos = $pdo->prepare("
         p.orcamento_id,
         p.numero_parcela,
         p.valor,
+        (
+            SELECT COUNT(*)
+            FROM parcelas p2
+            WHERE p2.orcamento_id = p.orcamento_id
+        ) AS total_parcelas,
         p.vencimento,
         LOWER(TRIM(p.status)) AS status_parcela,
         p.data_pagamento,
@@ -365,12 +378,14 @@ foreach ($parcelas_orcamentos as $parcela) {
     }
 
     $numero_parcela = (int)$parcela['numero_parcela'];
+    $total_parcelas = max(1, (int)$parcela['total_parcelas']);
 
     $descricao = sprintf(
-        'Orçamento #%d - %s - Parcela %dx',
+        'Orçamento #%d - %s - Parcela %d/%d',
         (int)$parcela['numero_orcamento'],
         $parcela['paciente'],
-        $numero_parcela
+        $numero_parcela,
+        $total_parcelas
     );
 
     $lancamentos_orcamentos[] = [
@@ -388,7 +403,7 @@ foreach ($parcelas_orcamentos as $parcela) {
 
         'valor' => (float)$parcela['valor'],
 
-        'parcelas' => $numero_parcela,
+        'parcelas' => $total_parcelas,
 
         'status' => $status_financeiro,
 
@@ -597,8 +612,7 @@ $dados_grafico = array_values($dados_grafico_array);
 |--------------------------------------------------------------------------
 */
 
-$sucesso = isset($_GET['sucesso']) &&
-    $_GET['sucesso'] === '1';
+$sucesso = $_GET['sucesso'] ?? null;
 
 /*
 |--------------------------------------------------------------------------
@@ -711,7 +725,11 @@ $tipos_nomes = [
 
                     <i class="fa-solid fa-circle-check"></i>
 
-                    Lançamento salvo com sucesso.
+                    <?php if ($sucesso === 'pagamento'): ?>
+                        Pagamento da parcela registrado com sucesso.
+                    <?php else: ?>
+                        Lançamento salvo com sucesso.
+                    <?php endif; ?>
 
                 </div>
 
