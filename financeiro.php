@@ -2014,7 +2014,7 @@ $tipos_nomes = [
                                                 <!-- VISUALIZAR LANÇAMENTO -->
 
                                                 <a
-                                                    href="visualizar_lancamento.php?id=<?= (int)$lancamento['id'] ?>"
+                                                    href="visualizar_orcamento.php?id=<?= (int)$lancamento['id'] ?>"
                                                     class="btn-acao"
                                                     title="Visualizar">
 
@@ -2026,7 +2026,7 @@ $tipos_nomes = [
                                                 <!-- EDITAR -->
 
                                                 <a
-                                                    href="editar_lancamento.php?id=<?= (int)$lancamento['id'] ?>"
+                                                    href="editar_orcamento.php?id=<?= (int)$lancamento['id'] ?>"
                                                     class="btn-acao"
                                                     title="Editar">
 
