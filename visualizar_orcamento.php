@@ -333,18 +333,17 @@ $status_classe = match ($status_orcamento) {
         Orçamento #<?= $id ?> - Dentech
     </title>
 
-    <link
-        rel="stylesheet"
-        href="css/navbar.css">
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/vis_orcamento.css">
 
     <link
         rel="stylesheet"
-        href="css/vis_orcamento.css">
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
-    <link
-        rel="icon"
-        type="image/png"
-        href="img/icon.PNG">
+    <link rel="icon" type="image/png" href="img/icon.PNG">
 
 </head>
 
