@@ -39,6 +39,20 @@ body {
   padding: 34px 0 50px;
 }
 
+.content {
+  width: calc(100% - 220px);
+  margin-left: 220px;
+  min-height: 100vh;
+  padding: 24px 30px 28px;
+}
+
+.content .container {
+  width: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 34px 0 50px;
+}
+
 .page-header {
   display: flex;
   align-items: flex-end;
@@ -734,6 +748,35 @@ body {
 
 .btn-pagar-financeiro:active {
   transform: translateY(0);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Status da parcela atrasada
+|--------------------------------------------------------------------------
+*/
+
+.status-atrasada {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Botão de pagar parcela
+|--------------------------------------------------------------------------
+*/
+
+.btn-pagar-financeiro {
+  border: 0;
+  cursor: pointer;
+  background: #16a34a;
+  color: #ffffff;
+}
+
+.btn-pagar-financeiro:hover {
+  background: #15803d;
 }
 
 @media (max-width: 1200px) {
