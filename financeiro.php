@@ -42,20 +42,36 @@ function dataBR($data): string
 function classeStatus($status): string
 {
     return match ($status) {
-        'pago' => 'status-pago',
-        'pendente' => 'status-pendente',
-        'atrasada' => 'status-atrasada',
-        default => 'status-outro'
+        'pago',
+        'paga'
+        => 'status-pago',
+
+        'pendente'
+        => 'status-pendente',
+
+        'atrasada'
+        => 'status-atrasada',
+
+        default
+        => 'status-outro'
     };
 }
 
 function textoStatus($status): string
 {
     return match ($status) {
-        'pago' => 'Pago',
-        'pendente' => 'Pendente',
-        'atrasada' => 'Atrasada',
-        default => ucfirst((string)$status)
+        'pago',
+        'paga'
+        => 'Pago',
+
+        'pendente'
+        => 'Pendente',
+
+        'atrasada'
+        => 'Atrasada',
+
+        default
+        => ucfirst((string)$status)
     };
 }
 
@@ -94,51 +110,45 @@ if (!in_array($tipo_filtro, $tipos_validos, true)) {
 
 /*
 |--------------------------------------------------------------------------
-| DEFINIR PERÍODO
+| PERÍODO
 |--------------------------------------------------------------------------
 */
 
-$data_inicio = null;
-$data_fim = null;
+$where = [];
+$params = [];
 
 switch ($periodo) {
 
     case 'hoje':
 
-        $data_inicio = date('Y-m-d');
-        $data_fim = date('Y-m-d');
+        $where[] = "DATE(data) = CURDATE()";
 
         break;
 
 
     case '7dias':
 
-        $data_inicio = date(
-            'Y-m-d',
-            strtotime('-6 days')
-        );
+        $where[] =
+            "data >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)";
 
-        $data_fim = date('Y-m-d');
+        $where[] =
+            "data <= CURDATE()";
 
         break;
 
 
     case '30dias':
 
-        $data_inicio = date(
-            'Y-m-d',
-            strtotime('-29 days')
-        );
+        $where[] =
+            "data >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)";
 
-        $data_fim = date('Y-m-d');
+        $where[] =
+            "data <= CURDATE()";
 
         break;
 
 
     case 'todos':
-
-        $data_inicio = null;
-        $data_fim = null;
 
         break;
 
@@ -146,8 +156,11 @@ switch ($periodo) {
     case 'mes':
     default:
 
-        $data_inicio = date('Y-m-01');
-        $data_fim = date('Y-m-t');
+        $where[] =
+            "YEAR(data) = YEAR(CURDATE())";
+
+        $where[] =
+            "MONTH(data) = MONTH(CURDATE())";
 
         break;
 }
@@ -155,11 +168,30 @@ switch ($periodo) {
 
 /*
 |--------------------------------------------------------------------------
+| FILTRO DE TIPO PARA LANÇAMENTOS MANUAIS
+|--------------------------------------------------------------------------
+*/
+
+if ($tipo_filtro !== 'todos') {
+
+    $where[] =
+        "tipo = :tipo";
+
+    $params[':tipo'] =
+        $tipo_filtro;
+}
+
+
+$where_sql =
+    $where
+    ? 'WHERE ' . implode(' AND ', $where)
+    : '';
+
+
+/*
+|--------------------------------------------------------------------------
 | ATUALIZAR PARCELAS ATRASADAS
 |--------------------------------------------------------------------------
-|
-| Somente parcelas de orçamentos aceitos entram no financeiro.
-|
 */
 
 $pdo->exec("
@@ -170,7 +202,7 @@ $pdo->exec("
 
     SET p.status = 'atrasada'
 
-    WHERE o.status = 'aceito'
+    WHERE o.status IN ('aceito', 'confirmado')
       AND p.status = 'pendente'
       AND p.vencimento < CURDATE()
 ");
@@ -178,67 +210,194 @@ $pdo->exec("
 
 /*
 |--------------------------------------------------------------------------
-| LANÇAMENTOS MANUAIS
+| RESUMO DOS LANÇAMENTOS MANUAIS
+|--------------------------------------------------------------------------
+|
+| Receitas:
+|   somente lançamentos pagos.
+|
+| Despesas:
+|   somente despesas pagas.
+|
+| A receber:
+|   lançamentos manuais pendentes.
+|
 |--------------------------------------------------------------------------
 */
 
-$where_manual = [];
-$params_manual = [];
-
-
-/*
-|--------------------------------------------------------------------------
-| FILTRO DE DATA DOS LANÇAMENTOS MANUAIS
-|--------------------------------------------------------------------------
-*/
-
-if ($data_inicio !== null) {
-
-    $where_manual[] =
-        "DATE(data) BETWEEN :data_inicio AND :data_fim";
-
-    $params_manual[':data_inicio'] =
-        $data_inicio;
-
-    $params_manual[':data_fim'] =
-        $data_fim;
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| FILTRO DE TIPO
-|--------------------------------------------------------------------------
-*/
-
-if ($tipo_filtro !== 'todos') {
-
-    $where_manual[] =
-        "tipo = :tipo";
-
-    $params_manual[':tipo'] =
-        $tipo_filtro;
-}
-
-
-$where_manual_sql = '';
-
-if (!empty($where_manual)) {
-
-    $where_manual_sql =
-        'WHERE ' .
-        implode(' AND ', $where_manual);
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| BUSCAR LANÇAMENTOS MANUAIS
-|--------------------------------------------------------------------------
-*/
-
-$stmt_manual = $pdo->prepare("
+$stmt_resumo_manual = $pdo->prepare("
     SELECT
+
+        COALESCE(
+            SUM(
+                CASE
+                    WHEN tipo = 'receita'
+                     AND status = 'pago'
+                    THEN valor
+                    ELSE 0
+                END
+            ),
+            0
+        ) AS receitas,
+
+        COALESCE(
+            SUM(
+                CASE
+                    WHEN tipo = 'despesa'
+                     AND status = 'pago'
+                    THEN valor
+                    ELSE 0
+                END
+            ),
+            0
+        ) AS despesas,
+
+        COALESCE(
+            SUM(
+                CASE
+                    WHEN tipo = 'receita'
+                     AND status = 'pendente'
+                    THEN valor
+                    ELSE 0
+                END
+            ),
+            0
+        ) AS a_receber
+
+    FROM lancamentos_financeiros
+
+    $where_sql
+");
+
+$stmt_resumo_manual->execute($params);
+
+$resumo_manual =
+    $stmt_resumo_manual->fetch(PDO::FETCH_ASSOC)
+    ?: [
+        'receitas' => 0,
+        'despesas' => 0,
+        'a_receber' => 0
+    ];
+
+
+/*
+|--------------------------------------------------------------------------
+| VALORES MANUAIS
+|--------------------------------------------------------------------------
+*/
+
+$receitas =
+    (float)$resumo_manual['receitas'];
+
+$despesas =
+    (float)$resumo_manual['despesas'];
+
+$a_receber =
+    (float)$resumo_manual['a_receber'];
+
+
+/*
+|--------------------------------------------------------------------------
+| A RECEBER DOS ORÇAMENTOS
+|--------------------------------------------------------------------------
+|
+| IMPORTANTE:
+|
+| Não aplicamos o filtro de período aqui.
+|
+| O card "A receber" representa o total que a clínica
+| ainda tem para receber de todos os orçamentos aceitos.
+|
+| Portanto, uma parcela que vence mês que vem continua
+| aparecendo no A receber.
+|
+|--------------------------------------------------------------------------
+*/
+
+$stmt_a_receber_orcamentos = $pdo->query("
+    SELECT
+        COALESCE(SUM(p.valor), 0)
+
+    FROM parcelas p
+
+    INNER JOIN orcamentos o
+        ON o.id = p.orcamento_id
+
+    WHERE o.status IN ('aceito', 'confirmado')
+
+      AND p.status IN (
+          'pendente',
+          'atrasada'
+      )
+");
+
+$a_receber_orcamentos =
+    (float)$stmt_a_receber_orcamentos->fetchColumn();
+
+
+/*
+|--------------------------------------------------------------------------
+| SOMAR ORÇAMENTOS AO A RECEBER
+|--------------------------------------------------------------------------
+*/
+
+$a_receber +=
+    $a_receber_orcamentos;
+
+
+/*
+|--------------------------------------------------------------------------
+| RECEITAS JÁ PAGAS DOS ORÇAMENTOS
+|--------------------------------------------------------------------------
+*/
+
+$stmt_receitas_orcamentos = $pdo->query("
+    SELECT
+        COALESCE(SUM(p.valor), 0)
+
+    FROM parcelas p
+
+    INNER JOIN orcamentos o
+        ON o.id = p.orcamento_id
+
+    WHERE o.status IN ('aceito', 'confirmado')
+
+      AND p.status = 'paga'
+");
+
+$receitas_orcamentos =
+    (float)$stmt_receitas_orcamentos->fetchColumn();
+
+
+/*
+|--------------------------------------------------------------------------
+| SOMAR RECEITAS DOS ORÇAMENTOS
+|--------------------------------------------------------------------------
+*/
+
+$receitas +=
+    $receitas_orcamentos;
+
+
+/*
+|--------------------------------------------------------------------------
+| LUCRO
+|--------------------------------------------------------------------------
+*/
+
+$lucro =
+    $receitas - $despesas;
+
+
+/*
+|--------------------------------------------------------------------------
+| LANÇAMENTOS MANUAIS RECENTES
+|--------------------------------------------------------------------------
+*/
+
+$stmt_lancamentos = $pdo->prepare("
+    SELECT
+
         id,
         tipo,
         categoria,
@@ -253,29 +412,36 @@ $stmt_manual = $pdo->prepare("
 
     FROM lancamentos_financeiros
 
-    $where_manual_sql
+    $where_sql
 
     ORDER BY
         data DESC,
         id DESC
+
+    LIMIT 20
 ");
 
-$stmt_manual->execute(
-    $params_manual
-);
+$stmt_lancamentos->execute($params);
 
 $lancamentos_manuais =
-    $stmt_manual->fetchAll(PDO::FETCH_ASSOC);
+    $stmt_lancamentos->fetchAll(PDO::FETCH_ASSOC);
 
 
 /*
 |--------------------------------------------------------------------------
-| BUSCAR PARCELAS DOS ORÇAMENTOS
+| PARCELAS DOS ORÇAMENTOS PARA A TABELA
+|--------------------------------------------------------------------------
+|
+| Aqui SIM usamos o período selecionado.
+|
+| Assim o filtro controla quais movimentações aparecem
+| na lista, mas não interfere no total de "A receber".
+|
 |--------------------------------------------------------------------------
 */
 
 $where_parcelas = [
-    "o.status = 'aceito'"
+    "o.status IN ('aceito', 'confirmado')"
 ];
 
 $params_parcelas = [];
@@ -283,49 +449,74 @@ $params_parcelas = [];
 
 /*
 |--------------------------------------------------------------------------
-| FILTRO DE DATA DAS PARCELAS
+| FILTRO DE PERÍODO DAS PARCELAS
 |--------------------------------------------------------------------------
-|
-| Se estiver paga:
-|   usa data_pagamento
-|
-| Se estiver pendente/atrasada:
-|   usa vencimento
-|
 */
 
-if ($data_inicio !== null) {
+if ($periodo === 'hoje') {
 
     $where_parcelas[] = "
-        (
+        DATE(
             CASE
                 WHEN p.status = 'paga'
                      AND p.data_pagamento IS NOT NULL
-                THEN DATE(p.data_pagamento)
-
-                ELSE DATE(p.vencimento)
+                THEN p.data_pagamento
+                ELSE p.vencimento
             END
-        ) BETWEEN :data_inicio_parcela
-          AND :data_fim_parcela
+        ) = CURDATE()
+    ";
+} elseif ($periodo === '7dias') {
+
+    $where_parcelas[] = "
+        DATE(
+            CASE
+                WHEN p.status = 'paga'
+                     AND p.data_pagamento IS NOT NULL
+                THEN p.data_pagamento
+                ELSE p.vencimento
+            END
+        )
+        BETWEEN DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+        AND CURDATE()
+    ";
+} elseif ($periodo === '30dias') {
+
+    $where_parcelas[] = "
+        DATE(
+            CASE
+                WHEN p.status = 'paga'
+                     AND p.data_pagamento IS NOT NULL
+                THEN p.data_pagamento
+                ELSE p.vencimento
+            END
+        )
+        BETWEEN DATE_SUB(CURDATE(), INTERVAL 29 DAY)
+        AND CURDATE()
+    ";
+} elseif ($periodo === 'mes') {
+
+    $where_parcelas[] = "
+        YEAR(
+            CASE
+                WHEN p.status = 'paga'
+                     AND p.data_pagamento IS NOT NULL
+                THEN p.data_pagamento
+                ELSE p.vencimento
+            END
+        ) = YEAR(CURDATE())
     ";
 
-    $params_parcelas[':data_inicio_parcela'] =
-        $data_inicio;
-
-    $params_parcelas[':data_fim_parcela'] =
-        $data_fim;
+    $where_parcelas[] = "
+        MONTH(
+            CASE
+                WHEN p.status = 'paga'
+                     AND p.data_pagamento IS NOT NULL
+                THEN p.data_pagamento
+                ELSE p.vencimento
+            END
+        ) = MONTH(CURDATE())
+    ";
 }
-
-
-/*
-|--------------------------------------------------------------------------
-| MONTAR WHERE
-|--------------------------------------------------------------------------
-*/
-
-$where_parcelas_sql =
-    'WHERE ' .
-    implode(' AND ', $where_parcelas);
 
 
 /*
@@ -334,7 +525,14 @@ $where_parcelas_sql =
 |--------------------------------------------------------------------------
 */
 
-$sql_parcelas = "
+$where_parcelas_sql =
+    'WHERE ' . implode(
+        ' AND ',
+        $where_parcelas
+    );
+
+
+$stmt_parcelas = $pdo->prepare("
 
     SELECT
 
@@ -351,8 +549,6 @@ $sql_parcelas = "
         p.status AS status_parcela,
 
         p.data_pagamento,
-
-        o.id AS numero_orcamento,
 
         o.status AS status_orcamento,
 
@@ -378,11 +574,10 @@ $sql_parcelas = "
         END,
 
         p.vencimento ASC
-";
 
+    LIMIT 20
 
-$stmt_parcelas =
-    $pdo->prepare($sql_parcelas);
+");
 
 $stmt_parcelas->execute(
     $params_parcelas
@@ -394,126 +589,16 @@ $parcelas_orcamentos =
 
 /*
 |--------------------------------------------------------------------------
-| CONVERTER PARCELAS PARA O FORMATO DO FINANCEIRO
-|--------------------------------------------------------------------------
-*/
-
-$lancamentos_orcamentos = [];
-
-foreach ($parcelas_orcamentos as $parcela) {
-
-    /*
-    |--------------------------------------------------------------------------
-    | STATUS
-    |--------------------------------------------------------------------------
-    */
-
-    if ($parcela['status_parcela'] === 'paga') {
-
-        $data_movimentacao =
-            $parcela['data_pagamento'];
-
-        $status_financeiro =
-            'pago';
-    } elseif (
-        $parcela['status_parcela'] === 'atrasada'
-    ) {
-
-        $data_movimentacao =
-            $parcela['vencimento'];
-
-        $status_financeiro =
-            'atrasada';
-    } else {
-
-        $data_movimentacao =
-            $parcela['vencimento'];
-
-        $status_financeiro =
-            'pendente';
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | DESCRIÇÃO
-    |--------------------------------------------------------------------------
-    */
-
-    $descricao = sprintf(
-        'Orçamento #%d - %s - Parcela %d',
-        (int)$parcela['numero_orcamento'],
-        $parcela['paciente'],
-        (int)$parcela['numero_parcela']
-    );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | CRIAR LANÇAMENTO VIRTUAL
-    |--------------------------------------------------------------------------
-    |
-    | Não gravamos isso em lancamentos_financeiros.
-    |
-    */
-
-    $lancamentos_orcamentos[] = [
-
-        'id' => null,
-
-        'tipo' => 'receita',
-
-        'categoria' =>
-        'Orçamento odontológico',
-
-        'descricao' =>
-        $descricao,
-
-        'data' =>
-        $data_movimentacao,
-
-        'forma_pagamento' =>
-        'Orçamento',
-
-        'valor' =>
-        (float)$parcela['valor'],
-
-        'parcelas' =>
-        (int)$parcela['numero_parcela'],
-
-        'status' =>
-        $status_financeiro,
-
-        'observacoes' =>
-        null,
-
-        'orcamento_id' =>
-        (int)$parcela['orcamento_id'],
-
-        'origem' =>
-        'orcamento',
-
-        'parcela_id' =>
-        (int)$parcela['parcela_id'],
-
-        'numero_orcamento' =>
-        (int)$parcela['numero_orcamento'],
-
-        'paciente' =>
-        $parcela['paciente']
-    ];
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| UNIFICAR LANÇAMENTOS MANUAIS
+| CONVERTER LANÇAMENTOS MANUAIS
 |--------------------------------------------------------------------------
 */
 
 $lancamentos = [];
 
-foreach ($lancamentos_manuais as $lancamento) {
+foreach (
+    $lancamentos_manuais
+    as $lancamento
+) {
 
     $lancamento['origem'] =
         'lancamento';
@@ -534,29 +619,132 @@ foreach ($lancamentos_manuais as $lancamento) {
 
 /*
 |--------------------------------------------------------------------------
-| ADICIONAR PARCELAS
+| ADICIONAR PARCELAS DOS ORÇAMENTOS
 |--------------------------------------------------------------------------
 */
 
 if (
-    $tipo_filtro === 'todos' ||
+    $tipo_filtro === 'todos'
+    ||
     $tipo_filtro === 'receita'
 ) {
 
     foreach (
-        $lancamentos_orcamentos
-        as $lancamento_orcamento
+        $parcelas_orcamentos
+        as $parcela
     ) {
 
-        $lancamentos[] =
-            $lancamento_orcamento;
+        /*
+        |--------------------------------------------------------------------------
+        | DATA DA MOVIMENTAÇÃO
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            $parcela['status_parcela'] === 'paga'
+            &&
+            !empty($parcela['data_pagamento'])
+        ) {
+
+            $data =
+                $parcela['data_pagamento'];
+
+            $status =
+                'paga';
+        } elseif (
+            $parcela['status_parcela'] === 'atrasada'
+        ) {
+
+            $data =
+                $parcela['vencimento'];
+
+            $status =
+                'atrasada';
+        } else {
+
+            $data =
+                $parcela['vencimento'];
+
+            $status =
+                'pendente';
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | DESCRIÇÃO
+        |--------------------------------------------------------------------------
+        */
+
+        $descricao =
+            'Orçamento #' .
+            (int)$parcela['orcamento_id'] .
+            ' - ' .
+            $parcela['paciente'] .
+            ' - Parcela ' .
+            (int)$parcela['numero_parcela'];
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | LANÇAMENTO VIRTUAL
+        |--------------------------------------------------------------------------
+        */
+
+        $lancamentos[] = [
+
+            'id' =>
+            null,
+
+            'tipo' =>
+            'receita',
+
+            'categoria' =>
+            'Orçamento',
+
+            'descricao' =>
+            $descricao,
+
+            'data' =>
+            $data,
+
+            'forma_pagamento' =>
+            'Orçamento',
+
+            'valor' =>
+            (float)$parcela['valor'],
+
+            'parcelas' =>
+            (int)$parcela['numero_parcela'],
+
+            'status' =>
+            $status,
+
+            'observacoes' =>
+            null,
+
+            'orcamento_id' =>
+            (int)$parcela['orcamento_id'],
+
+            'origem' =>
+            'orcamento',
+
+            'parcela_id' =>
+            (int)$parcela['parcela_id'],
+
+            'numero_orcamento' =>
+            (int)$parcela['orcamento_id'],
+
+            'paciente' =>
+            $parcela['paciente']
+        ];
     }
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| ORDENAR POR DATA
+| ORDENAR
 |--------------------------------------------------------------------------
 */
 
@@ -574,15 +762,6 @@ usort(
                 $b['data'] ?? '1970-01-01'
             );
 
-
-        if ($dataA === $dataB) {
-
-            return ((int)($b['id'] ?? 0))
-                <=>
-                ((int)($a['id'] ?? 0));
-        }
-
-
         return $dataB <=> $dataA;
     }
 );
@@ -590,122 +769,277 @@ usort(
 
 /*
 |--------------------------------------------------------------------------
-| LIMITAR LANÇAMENTOS EXIBIDOS
+| GRÁFICO
+|--------------------------------------------------------------------------
+|
+| O gráfico considera:
+|
+| - lançamentos manuais pagos;
+| - parcelas de orçamento pagas.
+|
 |--------------------------------------------------------------------------
 */
 
-$lancamentos =
-    array_slice(
-        $lancamentos,
-        0,
-        20
-    );
+$dados_grafico = [];
 
 
 /*
 |--------------------------------------------------------------------------
-| RESUMO FINANCEIRO
+| GRÁFICO DOS LANÇAMENTOS MANUAIS
 |--------------------------------------------------------------------------
 */
 
-$receitas = 0;
-$despesas = 0;
-$a_receber = 0;
+$where_grafico = [];
+$params_grafico = [];
 
 
-foreach ($lancamentos as $lancamento) {
+if ($periodo === 'mes') {
 
-    $valor =
-        (float)$lancamento['valor'];
+    $where_grafico[] =
+        "YEAR(data) = YEAR(CURDATE())";
+
+    $where_grafico[] =
+        "MONTH(data) = MONTH(CURDATE())";
+} elseif ($periodo === 'hoje') {
+
+    $where_grafico[] =
+        "DATE(data) = CURDATE()";
+} elseif ($periodo === '7dias') {
+
+    $where_grafico[] =
+        "data >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)";
+
+    $where_grafico[] =
+        "data <= CURDATE()";
+} elseif ($periodo === '30dias') {
+
+    $where_grafico[] =
+        "data >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)";
+
+    $where_grafico[] =
+        "data <= CURDATE()";
+} else {
+
+    $where_grafico[] =
+        "data >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)";
+
+    $where_grafico[] =
+        "data <= CURDATE()";
+}
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | RECEITAS
-    |--------------------------------------------------------------------------
-    */
+if ($tipo_filtro !== 'todos') {
 
-    if ($lancamento['tipo'] === 'receita') {
+    $where_grafico[] =
+        "tipo = :tipo_grafico";
 
-        if (
-            $lancamento['status'] === 'pago'
-        ) {
-
-            $receitas += $valor;
-        } else {
-
-            $a_receber += $valor;
-        }
-    }
+    $params_grafico[':tipo_grafico'] =
+        $tipo_filtro;
+}
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | DESPESAS
-    |--------------------------------------------------------------------------
-    */
+$where_grafico_sql =
+    'WHERE ' .
+    implode(
+        ' AND ',
+        $where_grafico
+    );
 
-    if ($lancamento['tipo'] === 'despesa') {
 
-        if (
-            $lancamento['status'] === 'pago'
-        ) {
+$stmt_grafico =
+    $pdo->prepare("
 
-            $despesas += $valor;
-        }
-    }
+        SELECT
+
+            DATE(data) AS dia,
+
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN tipo = 'receita'
+                             AND status = 'pago'
+                        THEN valor
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS receitas,
+
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN tipo = 'despesa'
+                             AND status = 'pago'
+                        THEN valor
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS despesas
+
+        FROM lancamentos_financeiros
+
+        $where_grafico_sql
+
+        GROUP BY DATE(data)
+
+        ORDER BY DATE(data) ASC
+
+    ");
+
+
+$stmt_grafico->execute(
+    $params_grafico
+);
+
+$dados_grafico_manual =
+    $stmt_grafico->fetchAll(PDO::FETCH_ASSOC);
+
+
+/*
+|--------------------------------------------------------------------------
+| INSERIR DADOS MANUAIS NO GRÁFICO
+|--------------------------------------------------------------------------
+*/
+
+foreach (
+    $dados_grafico_manual
+    as $dia
+) {
+
+    $data =
+        $dia['dia'];
+
+    $dados_grafico[$data] = [
+
+        'dia' =>
+        $data,
+
+        'receitas' =>
+        (float)$dia['receitas'],
+
+        'despesas' =>
+        (float)$dia['despesas']
+    ];
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| LUCRO
+| GRÁFICO DAS PARCELAS PAGAS
 |--------------------------------------------------------------------------
 */
 
-$lucro =
-    $receitas - $despesas;
+$where_grafico_parcelas = [
+    "o.status IN ('aceito', 'confirmado')",
+    "p.status = 'paga'"
+];
+
+$params_grafico_parcelas = [];
+
+
+if ($periodo === 'mes') {
+
+    $where_grafico_parcelas[] = "
+        YEAR(p.data_pagamento) = YEAR(CURDATE())
+    ";
+
+    $where_grafico_parcelas[] = "
+        MONTH(p.data_pagamento) = MONTH(CURDATE())
+    ";
+} elseif ($periodo === 'hoje') {
+
+    $where_grafico_parcelas[] = "
+        DATE(p.data_pagamento) = CURDATE()
+    ";
+} elseif ($periodo === '7dias') {
+
+    $where_grafico_parcelas[] = "
+        p.data_pagamento >=
+        DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+    ";
+
+    $where_grafico_parcelas[] = "
+        p.data_pagamento <= CURDATE()
+    ";
+} elseif ($periodo === '30dias') {
+
+    $where_grafico_parcelas[] = "
+        p.data_pagamento >=
+        DATE_SUB(CURDATE(), INTERVAL 29 DAY)
+    ";
+
+    $where_grafico_parcelas[] = "
+        p.data_pagamento <= CURDATE()
+    ";
+}
+
+
+$where_grafico_parcelas_sql =
+    'WHERE ' .
+    implode(
+        ' AND ',
+        $where_grafico_parcelas
+    );
+
+
+$stmt_grafico_parcelas =
+    $pdo->prepare("
+
+        SELECT
+
+            DATE(p.data_pagamento) AS dia,
+
+            COALESCE(
+                SUM(p.valor),
+                0
+            ) AS receitas
+
+        FROM parcelas p
+
+        INNER JOIN orcamentos o
+            ON o.id = p.orcamento_id
+
+        $where_grafico_parcelas_sql
+
+        GROUP BY
+            DATE(p.data_pagamento)
+
+        ORDER BY
+            DATE(p.data_pagamento) ASC
+
+    ");
+
+
+$stmt_grafico_parcelas->execute(
+    $params_grafico_parcelas
+);
+
+$dados_grafico_parcelas =
+    $stmt_grafico_parcelas->fetchAll(PDO::FETCH_ASSOC);
 
 
 /*
 |--------------------------------------------------------------------------
-| DADOS PARA O GRÁFICO
+| ADICIONAR PARCELAS AO GRÁFICO
 |--------------------------------------------------------------------------
-|
-| O gráfico usa os lançamentos já unificados.
-|
 */
 
-$dados_grafico = [];
+foreach (
+    $dados_grafico_parcelas
+    as $dia
+) {
 
-foreach ($lancamentos as $lancamento) {
-
-    /*
-    |--------------------------------------------------------------------------
-    | Somente movimentações efetivamente recebidas/pagas
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-        $lancamento['status'] !== 'pago'
-    ) {
-        continue;
-    }
+    $data =
+        $dia['dia'];
 
 
-    $dia =
-        date(
-            'Y-m-d',
-            strtotime($lancamento['data'])
-        );
+    if (!isset($dados_grafico[$data])) {
 
-
-    if (!isset($dados_grafico[$dia])) {
-
-        $dados_grafico[$dia] = [
+        $dados_grafico[$data] = [
 
             'dia' =>
-            $dia,
+            $data,
 
             'receitas' =>
             0,
@@ -716,19 +1050,8 @@ foreach ($lancamentos as $lancamento) {
     }
 
 
-    if (
-        $lancamento['tipo'] === 'receita'
-    ) {
-
-        $dados_grafico[$dia]['receitas']
-            += (float)$lancamento['valor'];
-    } elseif (
-        $lancamento['tipo'] === 'despesa'
-    ) {
-
-        $dados_grafico[$dia]['despesas']
-            += (float)$lancamento['valor'];
-    }
+    $dados_grafico[$data]['receitas']
+        += (float)$dia['receitas'];
 }
 
 
@@ -741,23 +1064,9 @@ foreach ($lancamentos as $lancamento) {
 ksort($dados_grafico);
 
 $dados_grafico =
-    array_values($dados_grafico);
-
-
-/*
-|--------------------------------------------------------------------------
-| PEGAR ÚLTIMOS 30 DIAS
-|--------------------------------------------------------------------------
-*/
-
-if (count($dados_grafico) > 30) {
-
-    $dados_grafico =
-        array_slice(
-            $dados_grafico,
-            -30
-        );
-}
+    array_values(
+        $dados_grafico
+    );
 
 
 /*
@@ -767,7 +1076,9 @@ if (count($dados_grafico) > 30) {
 */
 
 $sucesso =
-    $_GET['sucesso'] ?? null;
+    isset($_GET['sucesso'])
+    &&
+    $_GET['sucesso'] === '1';
 
 
 /*
@@ -837,544 +1148,427 @@ $tipos_nomes = [
 
     <?php include 'navbar.php'; ?>
 
-    <div class="content">
 
-        <main class="container">
+    <main class="container">
 
-            <!-- ==================================================
-             CABEÇALHO
-        =================================================== -->
 
-            <div class="page-header">
+        <!-- ======================================================
+         CABEÇALHO
+    ======================================================= -->
 
-                <div>
+        <div class="page-header">
 
-                    <div class="breadcrumb">
-                        <span>Financeiro</span>
-                    </div>
+            <div>
 
-                    <h1>Financeiro</h1>
-
-                    <p>
-                        Controle as receitas, despesas e movimentações
-                        financeiras da clínica.
-                    </p>
-
+                <div class="breadcrumb">
+                    <span>Financeiro</span>
                 </div>
 
+                <h1>
+                    Financeiro
+                </h1>
 
-                <a
-                    href="novo_lancamento.php"
-                    class="btn-novo">
-
-                    <i class="fa-solid fa-plus"></i>
-
-                    Novo lançamento
-
-                </a>
+                <p>
+                    Controle as receitas, despesas e movimentações financeiras da clínica.
+                </p>
 
             </div>
 
 
-            <!-- ==================================================
-             MENSAGEM DE SUCESSO
-        =================================================== -->
+            <a
+                href="novo_lancamento.php"
+                class="btn-novo">
 
-            <?php if ($sucesso): ?>
+                <i class="fa-solid fa-plus"></i>
 
-                <div class="alert-sucesso">
+                Novo lançamento
 
-                    <i class="fa-solid fa-circle-check"></i>
+            </a>
 
-                    <?php if ($sucesso === 'pagamento'): ?>
+        </div>
 
-                        Pagamento da parcela registrado com sucesso.
 
-                    <?php else: ?>
+        <!-- ======================================================
+         SUCESSO
+    ======================================================= -->
 
-                        Lançamento salvo com sucesso.
+        <?php if ($sucesso): ?>
 
-                    <?php endif; ?>
+            <div class="alert-sucesso">
+
+                <i class="fa-solid fa-circle-check"></i>
+
+                Operação realizada com sucesso.
+
+            </div>
+
+        <?php endif; ?>
+
+
+        <!-- ======================================================
+         FILTROS
+    ======================================================= -->
+
+        <section class="filtros-card">
+
+            <form
+                method="GET"
+                class="filtros-form">
+
+
+                <div class="filtro-grupo">
+
+                    <label for="periodo">
+                        Período
+                    </label>
+
+                    <div class="select-wrapper">
+
+                        <i class="fa-regular fa-calendar"></i>
+
+                        <select
+                            id="periodo"
+                            name="periodo">
+
+                            <?php foreach (
+                                $periodos_nomes
+                                as $valor => $nome
+                            ): ?>
+
+                                <option
+                                    value="<?= htmlspecialchars($valor) ?>"
+                                    <?= $periodo === $valor
+                                        ? 'selected'
+                                        : '' ?>>
+
+                                    <?= htmlspecialchars($nome) ?>
+
+                                </option>
+
+                            <?php endforeach; ?>
+
+                        </select>
+
+                    </div>
 
                 </div>
 
-            <?php endif; ?>
 
+                <div class="filtro-grupo">
 
-            <!-- ==================================================
-             FILTROS
-        =================================================== -->
+                    <label for="tipo">
+                        Tipo
+                    </label>
 
-            <section class="filtros-card">
-
-                <form
-                    method="GET"
-                    class="filtros-form">
-
-                    <div class="filtro-grupo">
-
-                        <label for="periodo">
-                            Período
-                        </label>
-
-                        <div class="select-wrapper">
-
-                            <i class="fa-regular fa-calendar"></i>
-
-                            <select
-                                id="periodo"
-                                name="periodo">
-
-                                <?php foreach (
-                                    $periodos_nomes
-                                    as $valor => $nome
-                                ): ?>
-
-                                    <option
-                                        value="<?= htmlspecialchars($valor) ?>"
-                                        <?= $periodo === $valor
-                                            ? 'selected'
-                                            : '' ?>>
-
-                                        <?= htmlspecialchars($nome) ?>
-
-                                    </option>
-
-                                <?php endforeach; ?>
-
-                            </select>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="filtro-grupo">
-
-                        <label for="tipo">
-                            Tipo
-                        </label>
-
-                        <div class="select-wrapper">
-
-                            <i class="fa-solid fa-filter"></i>
-
-                            <select
-                                id="tipo"
-                                name="tipo">
-
-                                <?php foreach (
-                                    $tipos_nomes
-                                    as $valor => $nome
-                                ): ?>
-
-                                    <option
-                                        value="<?= htmlspecialchars($valor) ?>"
-                                        <?= $tipo_filtro === $valor
-                                            ? 'selected'
-                                            : '' ?>>
-
-                                        <?= htmlspecialchars($nome) ?>
-
-                                    </option>
-
-                                <?php endforeach; ?>
-
-                            </select>
-
-                        </div>
-
-                    </div>
-
-
-                    <button
-                        type="submit"
-                        class="btn-filtrar">
+                    <div class="select-wrapper">
 
                         <i class="fa-solid fa-filter"></i>
 
-                        Filtrar
+                        <select
+                            id="tipo"
+                            name="tipo">
 
-                    </button>
+                            <?php foreach (
+                                $tipos_nomes
+                                as $valor => $nome
+                            ): ?>
+
+                                <option
+                                    value="<?= htmlspecialchars($valor) ?>"
+                                    <?= $tipo_filtro === $valor
+                                        ? 'selected'
+                                        : '' ?>>
+
+                                    <?= htmlspecialchars($nome) ?>
+
+                                </option>
+
+                            <?php endforeach; ?>
+
+                        </select>
+
+                    </div>
+
+                </div>
 
 
-                    <?php if (
-                        $periodo !== 'mes' ||
-                        $tipo_filtro !== 'todos'
-                    ): ?>
+                <button
+                    type="submit"
+                    class="btn-filtrar">
 
-                        <a
-                            href="financeiro.php"
-                            class="btn-limpar">
+                    <i class="fa-solid fa-filter"></i>
 
-                            Limpar
+                    Filtrar
 
-                        </a>
+                </button>
 
-                    <?php endif; ?>
 
-                </form>
+                <?php if (
+                    $periodo !== 'mes'
+                    ||
+                    $tipo_filtro !== 'todos'
+                ): ?>
 
-            </section>
+                    <a
+                        href="financeiro.php"
+                        class="btn-limpar">
+
+                        Limpar
+
+                    </a>
+
+                <?php endif; ?>
+
+            </form>
+
+        </section>
+
+
+        <!-- ======================================================
+         RESUMO
+    ======================================================= -->
+
+        <section class="resumo-grid">
+
+
+            <!-- RECEITAS -->
+
+            <article class="resumo-card receita">
+
+                <div class="resumo-icon">
+
+                    <i class="fa-solid fa-arrow-trend-up"></i>
+
+                </div>
+
+                <div>
+
+                    <span class="resumo-label">
+                        Receitas
+                    </span>
+
+                    <strong>
+                        <?= moedaBR($receitas) ?>
+                    </strong>
+
+                </div>
+
+            </article>
+
+
+            <!-- DESPESAS -->
+
+            <article class="resumo-card despesa">
+
+                <div class="resumo-icon">
+
+                    <i class="fa-solid fa-arrow-trend-down"></i>
+
+                </div>
+
+                <div>
+
+                    <span class="resumo-label">
+                        Despesas
+                    </span>
+
+                    <strong>
+                        <?= moedaBR($despesas) ?>
+                    </strong>
+
+                </div>
+
+            </article>
+
+
+            <!-- LUCRO -->
+
+            <article class="resumo-card lucro">
+
+                <div class="resumo-icon">
+
+                    <i class="fa-solid fa-dollar-sign"></i>
+
+                </div>
+
+                <div>
+
+                    <span class="resumo-label">
+                        Lucro
+                    </span>
+
+                    <strong>
+                        <?= moedaBR($lucro) ?>
+                    </strong>
+
+                </div>
+
+            </article>
+
+
+            <!-- A RECEBER -->
+
+            <article class="resumo-card receber">
+
+                <div class="resumo-icon">
+
+                    <i class="fa-regular fa-credit-card"></i>
+
+                </div>
+
+                <div>
+
+                    <span class="resumo-label">
+                        A receber
+                    </span>
+
+                    <strong>
+                        <?= moedaBR($a_receber) ?>
+                    </strong>
+
+                </div>
+
+            </article>
+
+        </section>
+
+
+        <!-- ======================================================
+         CONTEÚDO
+    ======================================================= -->
+
+        <section class="conteudo-grid">
 
 
             <!-- ==================================================
-             RESUMO
+             FLUXO DE CAIXA
         =================================================== -->
 
-            <section class="resumo-grid">
+            <div class="card fluxo-card">
 
-
-                <!-- RECEITAS -->
-
-                <article class="resumo-card receita">
-
-                    <div class="resumo-icon">
-
-                        <i class="fa-solid fa-arrow-trend-up"></i>
-
-                    </div>
+                <div class="card-header">
 
                     <div>
 
-                        <span class="resumo-label">
-                            Receitas
-                        </span>
+                        <h2>
+                            Fluxo de caixa
+                        </h2>
 
-                        <strong>
-                            <?= moedaBR($receitas) ?>
-                        </strong>
-
-                    </div>
-
-                </article>
-
-
-                <!-- DESPESAS -->
-
-                <article class="resumo-card despesa">
-
-                    <div class="resumo-icon">
-
-                        <i class="fa-solid fa-arrow-trend-down"></i>
+                        <p>
+                            Movimentações financeiras do período selecionado.
+                        </p>
 
                     </div>
 
-                    <div>
-
-                        <span class="resumo-label">
-                            Despesas
-                        </span>
-
-                        <strong>
-                            <?= moedaBR($despesas) ?>
-                        </strong>
-
-                    </div>
-
-                </article>
+                </div>
 
 
-                <!-- LUCRO -->
+                <div class="legenda">
 
-                <article class="resumo-card lucro">
+                    <span>
 
-                    <div class="resumo-icon">
+                        <i class="ponto receita"></i>
 
-                        <i class="fa-solid fa-dollar-sign"></i>
+                        Receitas
 
-                    </div>
-
-                    <div>
-
-                        <span class="resumo-label">
-                            Lucro
-                        </span>
-
-                        <strong>
-                            <?= moedaBR($lucro) ?>
-                        </strong>
-
-                    </div>
-
-                </article>
+                    </span>
 
 
-                <!-- A RECEBER -->
+                    <span>
 
-                <article class="resumo-card receber">
+                        <i class="ponto despesa"></i>
 
-                    <div class="resumo-icon">
+                        Despesas
 
-                        <i class="fa-regular fa-credit-card"></i>
+                    </span>
 
-                    </div>
-
-                    <div>
-
-                        <span class="resumo-label">
-                            A receber
-                        </span>
-
-                        <strong>
-                            <?= moedaBR($a_receber) ?>
-                        </strong>
-
-                    </div>
-
-                </article>
-
-            </section>
+                </div>
 
 
-            <!-- ==================================================
-             CONTEÚDO PRINCIPAL
-        =================================================== -->
+                <div class="grafico-wrapper">
 
-            <section class="conteudo-grid">
+                    <?php if (!empty($dados_grafico)): ?>
 
+                        <div class="grafico-barras">
 
-                <!-- ==================================================
-                 FLUXO DE CAIXA
-            =================================================== -->
+                            <?php
 
-                <div class="card fluxo-card">
+                            $maior_valor = 0;
 
-                    <div class="card-header">
+                            foreach (
+                                $dados_grafico
+                                as $dia
+                            ) {
 
-                        <div>
+                                $maior_valor =
+                                    max(
+                                        $maior_valor,
+                                        (float)$dia['receitas'],
+                                        (float)$dia['despesas']
+                                    );
+                            }
 
-                            <h2>
-                                Fluxo de caixa
-                            </h2>
+                            $maior_valor =
+                                $maior_valor > 0
+                                ? $maior_valor
+                                : 1;
 
-                            <p>
-                                Movimentações financeiras do período selecionado.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="legenda">
-
-                        <span>
-
-                            <i class="ponto receita"></i>
-
-                            Receitas
-
-                        </span>
+                            ?>
 
 
-                        <span>
-
-                            <i class="ponto despesa"></i>
-
-                            Despesas
-
-                        </span>
-
-                    </div>
-
-
-                    <div class="grafico-wrapper">
-
-                        <?php if (!empty($dados_grafico)): ?>
-
-                            <div class="grafico-barras">
+                            <?php foreach (
+                                $dados_grafico
+                                as $dia
+                            ): ?>
 
                                 <?php
 
-                                $maior_valor = 0;
+                                $altura_receita =
+                                    (
+                                        (float)$dia['receitas']
+                                        /
+                                        $maior_valor
+                                    ) * 100;
 
-                                foreach (
-                                    $dados_grafico
-                                    as $dia
-                                ) {
 
-                                    $maior_valor =
-                                        max(
-                                            $maior_valor,
-                                            (float)$dia['receitas'],
-                                            (float)$dia['despesas']
-                                        );
-                                }
-
-                                $maior_valor =
-                                    $maior_valor > 0
-                                    ? $maior_valor
-                                    : 1;
+                                $altura_despesa =
+                                    (
+                                        (float)$dia['despesas']
+                                        /
+                                        $maior_valor
+                                    ) * 100;
 
                                 ?>
 
 
-                                <?php foreach (
-                                    $dados_grafico
-                                    as $dia
-                                ): ?>
+                                <div
+                                    class="barra-coluna"
+                                    title="<?= dataBR($dia['dia']) ?>">
 
-                                    <?php
+                                    <div class="barras">
 
-                                    $altura_receita =
-                                        (
-                                            (float)$dia['receitas']
-                                            /
-                                            $maior_valor
-                                        ) * 100;
-
-
-                                    $altura_despesa =
-                                        (
-                                            (float)$dia['despesas']
-                                            /
-                                            $maior_valor
-                                        ) * 100;
-
-                                    ?>
-
-
-                                    <div
-                                        class="barra-coluna"
-                                        title="<?= dataBR($dia['dia']) ?>">
-
-                                        <div class="barras">
-
-                                            <div
-                                                class="barra barra-receita"
-                                                style="height: <?= max(2, $altura_receita) ?>%;">
-                                            </div>
-
-
-                                            <div
-                                                class="barra barra-despesa"
-                                                style="height: <?= max(2, $altura_despesa) ?>%;">
-                                            </div>
-
+                                        <div
+                                            class="barra barra-receita"
+                                            style="height: <?= max(2, $altura_receita) ?>%;">
                                         </div>
 
 
-                                        <span class="barra-label">
-
-                                            <?= date(
-                                                'd/m',
-                                                strtotime($dia['dia'])
-                                            ) ?>
-
-                                        </span>
+                                        <div
+                                            class="barra barra-despesa"
+                                            style="height: <?= max(2, $altura_despesa) ?>%;">
+                                        </div>
 
                                     </div>
 
-                                <?php endforeach; ?>
 
-                            </div>
-
-                        <?php else: ?>
-
-                            <div class="sem-dados">
-
-                                <i class="fa-solid fa-chart-line"></i>
-
-                                <span>
-                                    Não existem movimentações no período selecionado.
-                                </span>
-
-                            </div>
-
-                        <?php endif; ?>
-
-                    </div>
-
-                </div>
-
-
-                <!-- ==================================================
-                 LANÇAMENTOS RECENTES
-            =================================================== -->
-
-                <div class="card recentes-card">
-
-                    <div class="card-header">
-
-                        <div>
-
-                            <h2>
-                                Lançamentos recentes
-                            </h2>
-
-                            <p>
-                                Últimas movimentações financeiras.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-
-                    <?php if (!empty($lancamentos)): ?>
-
-                        <div class="lista-lancamentos">
-
-                            <?php foreach (
-                                $lancamentos
-                                as $lancamento
-                            ): ?>
-
-                                <div class="lancamento-item">
-
-                                    <div class="lancamento-data">
+                                    <span class="barra-label">
 
                                         <?= date(
                                             'd/m',
-                                            strtotime($lancamento['data'])
+                                            strtotime($dia['dia'])
                                         ) ?>
 
-                                    </div>
-
-
-                                    <div class="lancamento-info">
-
-                                        <strong>
-
-                                            <?= htmlspecialchars(
-                                                $lancamento['descricao']
-                                            ) ?>
-
-                                        </strong>
-
-
-                                        <span>
-
-                                            <?= htmlspecialchars(
-                                                $lancamento['categoria']
-                                            ) ?>
-
-                                            ·
-
-                                            <?= htmlspecialchars(
-                                                $lancamento['forma_pagamento']
-                                            ) ?>
-
-                                        </span>
-
-                                    </div>
-
-
-                                    <div
-                                        class="lancamento-valor <?= $lancamento['tipo'] === 'receita'
-                                                                    ? 'valor-receita'
-                                                                    : 'valor-despesa' ?>">
-
-                                        <?= $lancamento['tipo'] === 'receita'
-                                            ? '+'
-                                            : '-' ?>
-
-                                        <?= moedaBR(
-                                            $lancamento['valor']
-                                        ) ?>
-
-                                    </div>
+                                    </span>
 
                                 </div>
 
@@ -1384,389 +1578,137 @@ $tipos_nomes = [
 
                     <?php else: ?>
 
-                        <div class="sem-lancamentos">
+                        <div class="sem-dados">
 
-                            <i class="fa-regular fa-file-lines"></i>
-
-                            <strong>
-                                Nenhum lançamento encontrado
-                            </strong>
+                            <i class="fa-solid fa-chart-line"></i>
 
                             <span>
-                                Cadastre uma receita ou despesa para começar.
+                                Não existem movimentações no período selecionado.
                             </span>
-
-
-                            <a
-                                href="novo_lancamento.php"
-                                class="btn-novo-vazio">
-
-                                <i class="fa-solid fa-plus"></i>
-
-                                Novo lançamento
-
-                            </a>
 
                         </div>
 
                     <?php endif; ?>
 
-
-                    <a
-                        href="financeiro_lancamentos.php"
-                        class="ver-todos">
-
-                        Ver todos
-
-                        <i class="fa-solid fa-arrow-right"></i>
-
-                    </a>
-
                 </div>
 
-            </section>
+            </div>
 
 
             <!-- ==================================================
-             TABELA DE MOVIMENTAÇÕES
+             LANÇAMENTOS RECENTES
         =================================================== -->
 
-            <section class="card tabela-card">
+            <div class="card recentes-card">
 
-                <div class="card-header tabela-header">
+                <div class="card-header">
 
                     <div>
 
                         <h2>
-                            Movimentações
+                            Lançamentos recentes
                         </h2>
 
                         <p>
-                            Últimos lançamentos encontrados.
+                            Últimas movimentações financeiras.
                         </p>
 
                     </div>
-
-
-                    <span class="contador">
-
-                        <?= count($lancamentos) ?>
-
-                        lançamento<?= count($lancamentos) === 1
-                                        ? ''
-                                        : 's' ?>
-
-                    </span>
 
                 </div>
 
 
                 <?php if (!empty($lancamentos)): ?>
 
-                    <div class="tabela-scroll">
+                    <div class="lista-lancamentos">
 
-                        <table>
+                        <?php foreach (
+                            array_slice(
+                                $lancamentos,
+                                0,
+                                10
+                            )
+                            as $lancamento
+                        ): ?>
 
-                            <thead>
+                            <div class="lancamento-item">
 
-                                <tr>
+                                <div class="lancamento-data">
 
-                                    <th>
-                                        Data
-                                    </th>
+                                    <?= date(
+                                        'd/m',
+                                        strtotime($lancamento['data'])
+                                    ) ?>
 
-                                    <th>
-                                        Descrição
-                                    </th>
+                                </div>
 
-                                    <th>
-                                        Categoria
-                                    </th>
 
-                                    <th>
-                                        Pagamento
-                                    </th>
+                                <div class="lancamento-info">
 
-                                    <th>
-                                        Parcelas
-                                    </th>
+                                    <strong>
 
-                                    <th>
-                                        Status
-                                    </th>
+                                        <?= htmlspecialchars(
+                                            $lancamento['descricao']
+                                        ) ?>
 
-                                    <th class="coluna-valor">
-                                        Valor
-                                    </th>
+                                    </strong>
 
-                                    <th class="coluna-acoes">
-                                        Ações
-                                    </th>
 
-                                </tr>
+                                    <span>
 
-                            </thead>
+                                        <?= htmlspecialchars(
+                                            $lancamento['categoria']
+                                        ) ?>
 
+                                        ·
 
-                            <tbody>
+                                        <?= htmlspecialchars(
+                                            $lancamento['forma_pagamento']
+                                        ) ?>
 
-                                <?php foreach (
-                                    $lancamentos
-                                    as $lancamento
-                                ): ?>
+                                    </span>
 
-                                    <tr>
+                                </div>
 
 
-                                        <!-- DATA -->
+                                <div
+                                    class="lancamento-valor <?= $lancamento['tipo'] === 'receita'
+                                                                ? 'valor-receita'
+                                                                : 'valor-despesa' ?>">
 
-                                        <td>
+                                    <?= $lancamento['tipo'] === 'receita'
+                                        ? '+'
+                                        : '-' ?>
 
-                                            <?= dataBR(
-                                                $lancamento['data']
-                                            ) ?>
+                                    <?= moedaBR(
+                                        $lancamento['valor']
+                                    ) ?>
 
-                                        </td>
+                                </div>
 
+                            </div>
 
-                                        <!-- DESCRIÇÃO -->
-
-                                        <td>
-
-                                            <strong>
-
-                                                <?= htmlspecialchars(
-                                                    $lancamento['descricao']
-                                                ) ?>
-
-                                            </strong>
-
-                                        </td>
-
-
-                                        <!-- CATEGORIA -->
-
-                                        <td>
-
-                                            <?= htmlspecialchars(
-                                                $lancamento['categoria']
-                                            ) ?>
-
-                                        </td>
-
-
-                                        <!-- PAGAMENTO -->
-
-                                        <td>
-
-                                            <?= htmlspecialchars(
-                                                $lancamento['forma_pagamento']
-                                            ) ?>
-
-                                        </td>
-
-
-                                        <!-- PARCELAS -->
-
-                                        <td>
-
-                                            <?php if (
-                                                $lancamento['origem']
-                                                === 'orcamento'
-                                            ): ?>
-
-                                                Parcela
-                                                <?= (int)$lancamento['parcelas'] ?>
-
-                                            <?php else: ?>
-
-                                                <?= (int)$lancamento['parcelas'] === 1
-                                                    ? 'À vista'
-                                                    : (int)$lancamento['parcelas'] . 'x' ?>
-
-                                            <?php endif; ?>
-
-                                        </td>
-
-
-                                        <!-- STATUS -->
-
-                                        <td>
-
-                                            <span
-                                                class="status-badge <?= classeStatus(
-                                                                        $lancamento['status']
-                                                                    ) ?>">
-
-                                                <?= htmlspecialchars(
-                                                    textoStatus(
-                                                        $lancamento['status']
-                                                    )
-                                                ) ?>
-
-                                            </span>
-
-                                        </td>
-
-
-                                        <!-- VALOR -->
-
-                                        <td
-                                            class="coluna-valor <?= $lancamento['tipo'] === 'receita'
-                                                                    ? 'valor-receita'
-                                                                    : 'valor-despesa' ?>">
-
-                                            <?= $lancamento['tipo'] === 'receita'
-                                                ? '+'
-                                                : '-' ?>
-
-                                            <?= moedaBR(
-                                                $lancamento['valor']
-                                            ) ?>
-
-                                        </td>
-
-
-                                        <!-- AÇÕES -->
-
-                                        <td class="coluna-acoes">
-
-
-                                            <?php if (
-                                                $lancamento['origem']
-                                                === 'orcamento'
-                                            ): ?>
-
-
-                                                <!-- VISUALIZAR ORÇAMENTO -->
-
-                                                <a
-                                                    href="visualizar_orcamento.php?id=<?= (int)$lancamento['orcamento_id'] ?>"
-                                                    class="btn-acao"
-                                                    title="Visualizar orçamento">
-
-                                                    <i class="fa-regular fa-eye"></i>
-
-                                                </a>
-
-
-                                                <!-- PAGAR PARCELA -->
-
-                                                <?php if (
-                                                    $lancamento['status']
-                                                    === 'pendente'
-                                                    ||
-                                                    $lancamento['status']
-                                                    === 'atrasada'
-                                                ): ?>
-
-                                                    <form
-                                                        method="POST"
-                                                        action="pagar_parcela.php"
-                                                        class="form-pagar-parcela"
-                                                        onsubmit="return confirm('Confirmar o pagamento desta parcela?');">
-
-
-                                                        <?php if (
-                                                            function_exists('csrf_field')
-                                                        ): ?>
-
-                                                            <?= csrf_field() ?>
-
-                                                        <?php else: ?>
-
-                                                            <input
-                                                                type="hidden"
-                                                                name="csrf_token"
-                                                                value="<?= htmlspecialchars(
-                                                                            $_SESSION['csrf_token'] ?? ''
-                                                                        ) ?>">
-
-                                                        <?php endif; ?>
-
-
-                                                        <input
-                                                            type="hidden"
-                                                            name="parcela_id"
-                                                            value="<?= (int)$lancamento['parcela_id'] ?>">
-
-
-                                                        <button
-                                                            type="submit"
-                                                            class="btn-acao btn-pagar-financeiro"
-                                                            title="Pagar parcela">
-
-                                                            <i class="fa-solid fa-check"></i>
-
-                                                        </button>
-
-                                                    </form>
-
-                                                <?php endif; ?>
-
-
-                                            <?php else: ?>
-
-
-                                                <!-- VISUALIZAR LANÇAMENTO MANUAL -->
-
-                                                <a
-                                                    href="visualizar_lancamento.php?id=<?= (int)$lancamento['id'] ?>"
-                                                    class="btn-acao"
-                                                    title="Visualizar">
-
-                                                    <i class="fa-regular fa-eye"></i>
-
-                                                </a>
-
-
-                                                <!-- EDITAR LANÇAMENTO MANUAL -->
-
-                                                <a
-                                                    href="editar_lancamento.php?id=<?= (int)$lancamento['id'] ?>"
-                                                    class="btn-acao"
-                                                    title="Editar">
-
-                                                    <i class="fa-solid fa-pen"></i>
-
-                                                </a>
-
-
-                                            <?php endif; ?>
-
-
-                                        </td>
-
-                                    </tr>
-
-                                <?php endforeach; ?>
-
-                            </tbody>
-
-                        </table>
+                        <?php endforeach; ?>
 
                     </div>
 
-
                 <?php else: ?>
 
+                    <div class="sem-lancamentos">
 
-                    <div class="tabela-vazia">
+                        <i class="fa-regular fa-file-lines"></i>
 
-                        <i class="fa-solid fa-wallet"></i>
+                        <strong>
+                            Nenhum lançamento encontrado
+                        </strong>
 
-                        <h3>
-                            Nenhum lançamento cadastrado
-                        </h3>
-
-                        <p>
-                            Comece cadastrando sua primeira receita ou despesa.
-                        </p>
-
+                        <span>
+                            Cadastre uma receita ou despesa para começar.
+                        </span>
 
                         <a
                             href="novo_lancamento.php"
-                            class="btn-novo">
+                            class="btn-novo-vazio">
 
                             <i class="fa-solid fa-plus"></i>
 
@@ -1776,15 +1718,406 @@ $tipos_nomes = [
 
                     </div>
 
-
                 <?php endif; ?>
 
 
-            </section>
+                <a
+                    href="financeiro_lancamentos.php"
+                    class="ver-todos">
 
-        </main>
+                    Ver todos
 
-    </div>
+                    <i class="fa-solid fa-arrow-right"></i>
+
+                </a>
+
+            </div>
+
+        </section>
+
+
+        <!-- ======================================================
+         TABELA
+    ======================================================= -->
+
+        <section class="card tabela-card">
+
+            <div class="card-header tabela-header">
+
+                <div>
+
+                    <h2>
+                        Movimentações
+                    </h2>
+
+                    <p>
+                        Últimos lançamentos encontrados.
+                    </p>
+
+                </div>
+
+
+                <span class="contador">
+
+                    <?= count($lancamentos) ?>
+
+                    lançamento<?= count($lancamentos) === 1
+                                    ? ''
+                                    : 's' ?>
+
+                </span>
+
+            </div>
+
+
+            <?php if (!empty($lancamentos)): ?>
+
+                <div class="tabela-scroll">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    Data
+                                </th>
+
+                                <th>
+                                    Descrição
+                                </th>
+
+                                <th>
+                                    Categoria
+                                </th>
+
+                                <th>
+                                    Pagamento
+                                </th>
+
+                                <th>
+                                    Parcelas
+                                </th>
+
+                                <th>
+                                    Status
+                                </th>
+
+                                <th class="coluna-valor">
+                                    Valor
+                                </th>
+
+                                <th class="coluna-acoes">
+                                    Ações
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                            <?php foreach (
+                                $lancamentos
+                                as $lancamento
+                            ): ?>
+
+                                <tr>
+
+
+                                    <!-- DATA -->
+
+                                    <td>
+
+                                        <?= dataBR(
+                                            $lancamento['data']
+                                        ) ?>
+
+                                    </td>
+
+
+                                    <!-- DESCRIÇÃO -->
+
+                                    <td>
+
+                                        <strong>
+
+                                            <?= htmlspecialchars(
+                                                $lancamento['descricao']
+                                            ) ?>
+
+                                        </strong>
+
+                                    </td>
+
+
+                                    <!-- CATEGORIA -->
+
+                                    <td>
+
+                                        <?= htmlspecialchars(
+                                            $lancamento['categoria']
+                                        ) ?>
+
+                                    </td>
+
+
+                                    <!-- PAGAMENTO -->
+
+                                    <td>
+
+                                        <?= htmlspecialchars(
+                                            $lancamento['forma_pagamento']
+                                        ) ?>
+
+                                    </td>
+
+
+                                    <!-- PARCELAS -->
+
+                                    <td>
+
+                                        <?php if (
+                                            $lancamento['origem']
+                                            === 'orcamento'
+                                        ): ?>
+
+                                            Parcela
+                                            <?= (int)$lancamento['parcelas'] ?>
+
+                                        <?php else: ?>
+
+                                            <?= (int)$lancamento['parcelas'] === 1
+                                                ? 'À vista'
+                                                : (int)$lancamento['parcelas'] . 'x' ?>
+
+                                        <?php endif; ?>
+
+                                    </td>
+
+
+                                    <!-- STATUS -->
+
+                                    <td>
+
+                                        <span
+                                            class="status-badge <?= classeStatus(
+                                                                    $lancamento['status']
+                                                                ) ?>">
+
+                                            <?= htmlspecialchars(
+                                                textoStatus(
+                                                    $lancamento['status']
+                                                )
+                                            ) ?>
+
+                                        </span>
+
+                                    </td>
+
+
+                                    <!-- VALOR -->
+
+                                    <td
+                                        class="coluna-valor <?= $lancamento['tipo'] === 'receita'
+                                                                ? 'valor-receita'
+                                                                : 'valor-despesa' ?>">
+
+                                        <?= $lancamento['tipo'] === 'receita'
+                                            ? '+'
+                                            : '-' ?>
+
+                                        <?= moedaBR(
+                                            $lancamento['valor']
+                                        ) ?>
+
+                                    </td>
+
+
+                                    <!-- AÇÕES -->
+
+                                    <td class="coluna-acoes">
+
+
+                                        <?php if (
+                                            $lancamento['origem']
+                                            === 'orcamento'
+                                        ): ?>
+
+
+                                            <!-- VISUALIZAR ORÇAMENTO -->
+
+                                            <a
+                                                href="visualizar_orcamento.php?id=<?= (int)$lancamento['orcamento_id'] ?>"
+                                                class="btn-acao"
+                                                title="Visualizar orçamento">
+
+                                                <i class="fa-regular fa-eye"></i>
+
+                                            </a>
+
+
+                                            <!-- PAGAR PARCELA -->
+
+                                            <?php if (
+                                                $lancamento['status']
+                                                === 'pendente'
+                                                ||
+                                                $lancamento['status']
+                                                === 'atrasada'
+                                            ): ?>
+
+                                                <form
+                                                    method="POST"
+                                                    action="visualizar_orcamento.php?id=<?= (int)$lancamento['orcamento_id'] ?>"
+                                                    style="display:inline;"
+                                                    onsubmit="return confirm('Confirmar pagamento desta parcela?');">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="csrf_token"
+                                                        value="<?= htmlspecialchars(
+                                                                    $_SESSION['csrf_token'] ?? ''
+                                                                ) ?>">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="parcela_id"
+                                                        value="<?= (int)$lancamento['parcela_id'] ?>">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="marcar_paga"
+                                                        value="1">
+
+                                                    <button
+                                                        type="submit"
+                                                        class="btn-acao btn-pagar-financeiro"
+                                                        title="Marcar parcela como paga">
+
+                                                        <i class="fa-solid fa-check"></i>
+
+                                                    </button>
+
+                                                </form>
+
+                                            <?php endif; ?>
+
+
+                                        <?php else: ?>
+
+
+                                            <!-- VISUALIZAR LANÇAMENTO -->
+
+                                            <a
+                                                href="visualizar_lancamento.php?id=<?= (int)$lancamento['id'] ?>"
+                                                class="btn-acao"
+                                                title="Visualizar">
+
+                                                <i class="fa-regular fa-eye"></i>
+
+                                            </a>
+
+
+                                            <!-- EDITAR -->
+
+                                            <a
+                                                href="editar_lancamento.php?id=<?= (int)$lancamento['id'] ?>"
+                                                class="btn-acao"
+                                                title="Editar">
+
+                                                <i class="fa-solid fa-pen"></i>
+
+                                            </a>
+
+
+                                        <?php endif; ?>
+
+
+                                    </td>
+
+                                </tr>
+
+                            <?php endforeach; ?>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
+            <?php else: ?>
+
+
+                <div class="tabela-vazia">
+
+                    <i class="fa-solid fa-wallet"></i>
+
+                    <h3>
+                        Nenhum lançamento cadastrado
+                    </h3>
+
+                    <p>
+                        Comece cadastrando sua primeira receita ou despesa.
+                    </p>
+
+
+                    <a
+                        href="novo_lancamento.php"
+                        class="btn-novo">
+
+                        <i class="fa-solid fa-plus"></i>
+
+                        Novo lançamento
+
+                    </a>
+
+                </div>
+
+
+            <?php endif; ?>
+
+
+        </section>
+
+    </main>
+
+
+    <style>
+        /*
+|--------------------------------------------------------------------------
+| Status da parcela atrasada
+|--------------------------------------------------------------------------
+*/
+
+        .status-atrasada {
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
+
+
+        /*
+|--------------------------------------------------------------------------
+| Botão de pagar parcela
+|--------------------------------------------------------------------------
+*/
+
+        .btn-pagar-financeiro {
+            border: 0;
+            cursor: pointer;
+            background: #16a34a;
+            color: #ffffff;
+        }
+
+        .btn-pagar-financeiro:hover {
+            background: #15803d;
+        }
+    </style>
+
 
 </body>
 
