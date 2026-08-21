@@ -1073,3 +1073,9 @@ body {
     font-size: 12px;
   }
 }
+
+/* Paciente com agendamento confirmado */
+.event-content strong.paciente-confirmado,
+.next-patient strong.paciente-confirmado {
+  color: #22a06b;
+}

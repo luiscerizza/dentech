@@ -65,7 +65,8 @@ $stmt_agendamentos = $pdo->prepare("
         COALESCE(p.paciente, a.paciente_nome) AS nome_paciente,
         a.procedimento,
         a.data,
-        a.horario
+        a.horario,
+        COALESCE(a.status, 'agendado') AS status
     FROM agendamentos a
     LEFT JOIN prontuarios p
         ON a.paciente_id = p.id
@@ -90,7 +91,8 @@ $stmt_proximos = $pdo->prepare("
         COALESCE(p.paciente, a.paciente_nome) AS nome_paciente,
         a.procedimento,
         a.data,
-        a.horario
+        a.horario,
+        COALESCE(a.status, 'agendado') AS status
     FROM agendamentos a
     LEFT JOIN prontuarios p
         ON a.paciente_id = p.id
@@ -496,82 +498,60 @@ usort(
 
 
                                         <div
-                                            class="appointment-event <?= htmlspecialchars($classeEvento) ?>">
+                                            class="appointment-event <?= htmlspecialchars($classeEvento) ?> <?= $ag['status'] === 'confirmado' ? 'appointment-confirmed' : '' ?>">
 
                                             <div class="event-content">
-
-                                                <strong>
-
-                                                    <?= htmlspecialchars(
-                                                        $ag['nome_paciente']
-                                                    ) ?>
-
+                                                <strong class="<?= $ag['status'] === 'confirmado' ? 'paciente-confirmado' : '' ?>">
+                                                    <?= htmlspecialchars($ag['nome_paciente']) ?>
                                                 </strong>
 
-
                                                 <span>
-
-                                                    <?= htmlspecialchars(
-                                                        $ag['procedimento']
-                                                    ) ?>
-
+                                                    <?= htmlspecialchars($ag['procedimento']) ?>
                                                 </span>
 
-
                                                 <small>
-
-                                                    <?= htmlspecialchars(
-                                                        substr(
-                                                            $ag['horario'],
-                                                            0,
-                                                            5
-                                                        )
-                                                    ) ?>
-
+                                                    <?= htmlspecialchars(substr($ag['horario'], 0, 5)) ?>
                                                 </small>
-
                                             </div>
-
 
                                             <div class="event-actions">
 
-
                                                 <?php if (!empty($ag['paciente_id'])): ?>
-
                                                     <a
                                                         href="visualizar_prontuario.php?id=<?= (int)$ag['paciente_id'] ?>"
                                                         title="Visualizar prontuário">
-
                                                         <i class="fa-regular fa-folder-open"></i>
-
                                                     </a>
-
                                                 <?php endif; ?>
 
+                                                <?php if ($ag['status'] === 'confirmado'): ?>
+                                                    <?php if (!empty($ag['paciente_id'])): ?>
+                                                        <a
+                                                            href="adicionar_procedimento.php?prontuario_id=<?= (int)$ag['paciente_id'] ?>"
+                                                            title="Adicionar procedimento">
+                                                            <i class="fa-solid fa-tooth"></i>
+                                                        </a>
+                                                    <?php endif; ?>
+                                                <?php else: ?>
+                                                    <form
+                                                        method="POST"
+                                                        action="confirmar_agendamento.php"
+                                                        onsubmit="return confirm('Confirmar este agendamento?')">
 
-                                                <form
-                                                    method="POST"
-                                                    action="registrar_atendimento.php"
-                                                    onsubmit="return confirm('Confirmar atendimento e registrar procedimento?')">
+                                                        <?= csrf_field() ?>
 
-                                                    <?= csrf_field() ?>
+                                                        <input
+                                                            type="hidden"
+                                                            name="id"
+                                                            value="<?= (int)$ag['id'] ?>">
 
-                                                    <input
-                                                        type="hidden"
-                                                        name="id"
-                                                        value="<?= (int)$ag['id'] ?>">
-
-
-                                                    <button
-                                                        type="submit"
-                                                        title="Confirmar atendimento">
-
-                                                        <i class="fa-solid fa-check"></i>
-
-                                                    </button>
-
-                                                </form>
-
+                                                        <button
+                                                            type="submit"
+                                                            title="Confirmar agendamento">
+                                                            <i class="fa-solid fa-check"></i>
+                                                        </button>
+                                                    </form>
+                                                <?php endif; ?>
 
                                                 <form
                                                     method="POST"
@@ -585,20 +565,14 @@ usort(
                                                         name="id"
                                                         value="<?= (int)$ag['id'] ?>">
 
-
                                                     <button
                                                         type="submit"
                                                         title="Excluir agendamento">
-
                                                         <i class="fa-solid fa-trash"></i>
-
                                                     </button>
-
                                                 </form>
 
-
                                             </div>
-
                                         </div>
 
                                     <?php endforeach; ?>
