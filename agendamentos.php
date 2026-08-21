@@ -526,8 +526,7 @@ usort(
 
                                                 <?php if ($ag['status'] === 'confirmado'): ?>
                                                     <?php if (!empty($ag['paciente_id'])): ?>
-                                                        <a
-                                                            href="adicionar_procedimento.php?prontuario_id=<?= (int)$ag['paciente_id'] ?>"
+                                                        <a href="adicionar_procedimento.php?prontuario_id=<?= (int)$ag['paciente_id'] ?>&agendamento_id=<?= (int)$ag['id'] ?>">
                                                             title="Adicionar procedimento">
                                                             <i class="fa-solid fa-tooth"></i>
                                                         </a>
