@@ -904,39 +904,144 @@ body {
   cursor: pointer;
 }
 
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.patient-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 24px;
+  border-bottom: 1px solid #dfe5ec;
+}
+
+.patient-tab {
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  padding: 12px 18px;
+  color: #64748b;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.patient-tab:hover {
+  color: #1d4ed8;
+  background: #f8fafc;
+}
+
+.patient-tab.active {
+  color: #1d4ed8;
+  border-bottom-color: #2563eb;
+}
+
+.consent-accepted-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #15803d;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 /* ============================================================
    IMPRESSÃO
    ============================================================ */
 
-@media print {
-  body {
-    background: #ffffff;
-  }
+@page {
+  size: A4;
+  margin: 14mm;
+}
 
-  .prontuario-page {
-    margin-left: 0;
+html,
+body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  background: #fff !important;
+  color: #111827 !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+}
 
-    width: 100%;
+.prontuario-page {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
 
-    padding: 0;
-  }
+.page-header {
+  margin: 0 0 18px !important;
+  padding: 0 0 12px !important;
+  border-bottom: 2px solid #111827 !important;
+}
 
-  .patient-actions,
-  .tabs,
-  .add-procedure,
-  .view-procedure,
-  .consent-button,
-  .modal {
-    display: none !important;
-  }
+.page-header .breadcrumb,
+.page-header p,
+.patient-actions,
+.patient-tabs,
+.consent-button,
+.consent-accepted-label,
+.card-link,
+.table-action,
+.more-wrapper,
+.modal {
+  display: none !important;
+}
 
-  .patient-header,
-  .card,
-  .content-area {
-    box-shadow: none;
+.page-header h1 {
+  margin: 0 !important;
+  font-size: 20px !important;
+  color: #111827 !important;
+}
 
-    border-color: #d8d8d8;
-  }
+.patient-header,
+.info-card {
+  margin: 0 0 14px !important;
+  padding: 14px !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: #fff !important;
+  break-inside: avoid;
+}
+
+.content-grid {
+  display: block !important;
+}
+
+.content-grid > .info-card {
+  width: 100% !important;
+}
+
+.tab-content {
+  display: block !important;
+}
+
+#tab-historico,
+#tab-documentos,
+#tab-anexos,
+#tab-financeiro {
+  display: none !important;
+}
+
+.procedures-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+}
+
+.procedures-table th,
+.procedures-table td {
+  border: 1px solid #d1d5db !important;
+  padding: 7px !important;
+  color: #111827 !important;
+  font-size: 11px !important;
 }
 
 /* ============================================================
