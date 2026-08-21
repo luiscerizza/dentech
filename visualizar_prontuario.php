@@ -179,58 +179,23 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
 
     <link
         rel="stylesheet"
-        href="css/navbar.css">
+        href="css/global.css">
+
+    <link
+        rel="stylesheet"
+        href="css/variables.css">
+
+    <link
+        rel="stylesheet"
+        href="css/layout.css">
 
     <link
         rel="stylesheet"
         href="css/vis_prontuario.css">
 
-    <style>
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .patient-tabs {
-            display: flex;
-            gap: 4px;
-            margin: 0 0 24px;
-            border-bottom: 1px solid #dfe5ec;
-        }
-
-        .patient-tab {
-            border: 0;
-            border-bottom: 3px solid transparent;
-            background: transparent;
-            padding: 12px 18px;
-            color: #64748b;
-            font: inherit;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .patient-tab:hover {
-            color: #1d4ed8;
-            background: #f8fafc;
-        }
-
-        .patient-tab.active {
-            color: #1d4ed8;
-            border-bottom-color: #2563eb;
-        }
-
-        .consent-accepted-label {
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            color: #15803d;
-            font-size: 13px;
-            font-weight: 600;
-        }
-    </style>
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
     <link
         rel="icon"
