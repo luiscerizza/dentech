@@ -23,6 +23,43 @@ $erro = null;
 
 /*
 |--------------------------------------------------------------------------
+| AGENDAMENTO DE ORIGEM
+|--------------------------------------------------------------------------
+*/
+$agendamento_id = null;
+$agendamento = null;
+
+if (isset($_GET['agendamento_id']) && is_numeric($_GET['agendamento_id'])) {
+    $agendamento_id = (int)$_GET['agendamento_id'];
+
+    $stmtAgendamento = $pdo->prepare("
+        SELECT
+            a.id,
+            a.paciente_id,
+            a.paciente_nome,
+            a.procedimento,
+            a.data,
+            a.horario,
+            a.status,
+            p.paciente
+        FROM agendamentos a
+        LEFT JOIN prontuarios p ON p.id = a.paciente_id
+        WHERE a.id = ?
+        LIMIT 1
+    ");
+    $stmtAgendamento->execute([$agendamento_id]);
+    $agendamento = $stmtAgendamento->fetch(PDO::FETCH_ASSOC);
+
+    if (!$agendamento) {
+        $erro = 'Agendamento não encontrado.';
+        $agendamento_id = null;
+    } elseif ($agendamento['status'] !== 'confirmado') {
+        $erro = 'Somente agendamentos confirmados podem gerar orçamento.';
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
 | SALVAR ORÇAMENTO
 |--------------------------------------------------------------------------
 */
@@ -42,6 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         */
 
         $paciente_id = (int)($_POST['paciente_id'] ?? 0);
+        $agendamento_post = (int)($_POST['agendamento_id'] ?? 0);
 
         $validade = $_POST['validade'] ?? '';
 
@@ -79,18 +117,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         |
         */
 
+        if ($agendamento_post > 0) {
+            $stmtAgendamento = $pdo->prepare("
+                SELECT paciente_id, status
+                FROM agendamentos
+                WHERE id = ?
+                LIMIT 1
+                FOR UPDATE
+            ");
+            $stmtAgendamento->execute([$agendamento_post]);
+            $agendamentoDb = $stmtAgendamento->fetch(PDO::FETCH_ASSOC);
+
+            if (!$agendamentoDb) {
+                throw new Exception('Agendamento não encontrado.');
+            }
+
+            if ($agendamentoDb['status'] !== 'confirmado') {
+                throw new Exception('O agendamento precisa estar confirmado para gerar um orçamento.');
+            }
+
+            if ((int)$agendamentoDb['paciente_id'] !== $paciente_id) {
+                throw new Exception('O agendamento não pertence ao paciente selecionado.');
+            }
+        } else {
+            $agendamento_post = null;
+        }
+
         $stmt = $pdo->prepare("
             INSERT INTO orcamentos (
                 paciente_id,
+                agendamento_id,
                 data_criacao,
                 validade,
                 observacoes
             )
-            VALUES (?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?)
         ");
 
         $stmt->execute([
             $paciente_id,
+            $agendamento_post,
             date('Y-m-d'),
             $validade,
             $observacoes
@@ -459,7 +525,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         content="width=device-width, initial-scale=1.0">
 
     <title>
-        Novo Orçamento - Dentech
+        <?= $agendamento ? 'Novo Orçamento do Agendamento - Dentech' : 'Novo Orçamento - Dentech' ?>
     </title>
 
     <link rel="stylesheet" href="css/global.css">
@@ -473,6 +539,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
     <link rel="icon" type="image/png" href="img/icon.PNG">
+
+    <style>
+        .agendamento-paciente {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 12px 14px;
+            border: 1px solid #b7e4c7;
+            border-radius: 8px;
+            background: #f0fdf4;
+        }
+
+        .agendamento-paciente strong {
+            color: #166534;
+            font-size: 14px;
+        }
+
+        .agendamento-paciente span {
+            color: #15803d;
+            font-size: 12px;
+        }
+
+        .agendamento-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            margin: -4px 0 20px;
+            padding: 14px 16px;
+            border: 1px solid #dbe4ee;
+            border-radius: 8px;
+            background: #f8fafc;
+        }
+
+        .agendamento-info div {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .agendamento-info strong {
+            color: #334155;
+            font-size: 12px;
+        }
+
+        .agendamento-info span {
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        @media (max-width:700px) {
+            .agendamento-info {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
 
 </head>
 
@@ -515,6 +638,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <?= csrf_field() ?>
 
+            <input
+                type="hidden"
+                name="agendamento_id"
+                value="<?= $agendamento_id ?? '' ?>">
 
             <!-- =====================================================
              PACIENTE
@@ -526,30 +653,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     Paciente
                 </label>
 
-                <select
-                    name="paciente_id"
-                    required>
+                <?php if ($agendamento && $agendamento['status'] === 'confirmado'): ?>
 
-                    <option value="">
-                        Selecione
-                    </option>
+                    <div class="agendamento-paciente">
+                        <strong>
+                            <?= htmlspecialchars($agendamento['paciente'] ?: $agendamento['paciente_nome'] ?: 'Paciente') ?>
+                        </strong>
+                        <span>
+                            Agendamento confirmado
+                        </span>
+                    </div>
 
-                    <?php foreach ($pacientes as $p): ?>
+                    <input
+                        type="hidden"
+                        name="paciente_id"
+                        value="<?= (int)$agendamento['paciente_id'] ?>">
 
-                        <option
-                            value="<?= $p['id'] ?>">
+                <?php else: ?>
 
-                            <?= htmlspecialchars(
-                                $p['paciente']
-                            ) ?>
+                    <select
+                        name="paciente_id"
+                        required>
 
+                        <option value="">
+                            Selecione
                         </option>
 
-                    <?php endforeach; ?>
+                        <?php foreach ($pacientes as $p): ?>
 
-                </select>
+                            <option
+                                value="<?= (int)$p['id'] ?>">
+
+                                <?= htmlspecialchars($p['paciente']) ?>
+
+                            </option>
+
+                        <?php endforeach; ?>
+
+                    </select>
+
+                <?php endif; ?>
 
             </div>
+
+            <?php if ($agendamento): ?>
+
+                <div class="agendamento-info">
+                    <div>
+                        <strong>Agendamento confirmado</strong>
+                        <span><?= htmlspecialchars($agendamento['procedimento']) ?></span>
+                    </div>
+                    <div>
+                        <strong>Data e horário</strong>
+                        <span>
+                            <?= date('d/m/Y', strtotime($agendamento['data'])) ?>
+                            às
+                            <?= date('H:i', strtotime($agendamento['horario'])) ?>
+                        </span>
+                    </div>
+                </div>
+
+            <?php endif; ?>
 
 
             <!-- =====================================================
