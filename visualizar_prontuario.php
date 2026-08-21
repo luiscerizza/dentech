@@ -5,6 +5,56 @@ exigirLogin();
 
 require_once 'conexao/conexao.php';
 
+/*
+|--------------------------------------------------------------------------
+| EXCLUIR PROCEDIMENTO
+|--------------------------------------------------------------------------
+| Ao excluir, os materiais utilizados são devolvidos ao estoque.
+|--------------------------------------------------------------------------
+*/
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'excluir_procedimento') {
+    try {
+        if (
+            empty($_POST['csrf_token']) ||
+            empty($_SESSION['csrf_token']) ||
+            !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
+        ) {
+            throw new Exception('Token de segurança inválido.');
+        }
+
+        $procedimentoExcluir = (int)($_POST['procedimento_id'] ?? 0);
+        $prontuarioExcluir = (int)($_POST['prontuario_id'] ?? 0);
+        if ($procedimentoExcluir <= 0 || $prontuarioExcluir <= 0) {
+            throw new Exception('Procedimento inválido.');
+        }
+
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare('SELECT id FROM procedimentos WHERE id = ? AND paciente_id = ? LIMIT 1 FOR UPDATE');
+        $stmt->execute([$procedimentoExcluir, $prontuarioExcluir]);
+        if (!$stmt->fetchColumn()) {
+            throw new Exception('Procedimento não encontrado.');
+        }
+
+        $stmt = $pdo->prepare('SELECT estoque_id, quantidade FROM procedimento_materiais WHERE procedimento_id = ?');
+        $stmt->execute([$procedimentoExcluir]);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $material) {
+            $pdo->prepare('UPDATE estoque SET quantidade = quantidade + ? WHERE id = ?')
+                ->execute([(float)$material['quantidade'], (int)$material['estoque_id']]);
+        }
+
+        $pdo->prepare('DELETE FROM procedimentos WHERE id = ?')->execute([$procedimentoExcluir]);
+        $pdo->commit();
+
+        header('Location: visualizar_prontuario.php?id=' . $prontuarioExcluir);
+        exit;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        http_response_code(400);
+        die('Não foi possível excluir o procedimento: ' . htmlspecialchars($e->getMessage()));
+    }
+}
+
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     die("Prontuário não encontrado.");
 }
@@ -127,13 +177,65 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
         | Dentech
     </title>
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link rel="stylesheet" href="css/global.css">
-    <link rel="stylesheet" href="css/variables.css">
-    <link rel="stylesheet" href="css/layout.css">
-    <link rel="stylesheet" href="css/vis_prontuario.css">
-    <link rel="stylesheet" href="css/navbar.css">
-    <link rel="icon" type="image/png" href="img/icon.PNG">
+    <link
+        rel="stylesheet"
+        href="css/navbar.css">
+
+    <link
+        rel="stylesheet"
+        href="css/vis_prontuario.css">
+
+    <style>
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .patient-tabs {
+            display: flex;
+            gap: 4px;
+            margin: 0 0 24px;
+            border-bottom: 1px solid #dfe5ec;
+        }
+
+        .patient-tab {
+            border: 0;
+            border-bottom: 3px solid transparent;
+            background: transparent;
+            padding: 12px 18px;
+            color: #64748b;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .patient-tab:hover {
+            color: #1d4ed8;
+            background: #f8fafc;
+        }
+
+        .patient-tab.active {
+            color: #1d4ed8;
+            border-bottom-color: #2563eb;
+        }
+
+        .consent-accepted-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            color: #15803d;
+            font-size: 13px;
+            font-weight: 600;
+        }
+    </style>
+
+    <link
+        rel="icon"
+        type="image/png"
+        href="img/icon.PNG">
 
 </head>
 
@@ -772,7 +874,13 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
 
                                         <?php if (!$isPrint): ?>
 
-                                            <td>
+                                            <td class="procedure-actions">
+
+                                                <a
+                                                    class="table-action btn-editar-procedimento"
+                                                    href="adicionar_procedimento.php?prontuario_id=<?= $id ?>&procedimento_id=<?= (int)$proc['id'] ?>">
+                                                    Editar
+                                                </a>
 
                                                 <button
                                                     type="button"
@@ -794,11 +902,22 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
                                                                     strtotime(
                                                                         $proc['data_procedimento']
                                                                     )
-                                                                ) ?>">
+                                                                ) ?>"
+                                                    data-valor-materiais="<?= htmlspecialchars($proc['valor_materiais'] ?? '0', ENT_QUOTES) ?>"
+                                                    data-valor-mao-obra="<?= htmlspecialchars($proc['valor_mao_obra'] ?? '0', ENT_QUOTES) ?>"
+                                                    data-valor-final="<?= htmlspecialchars($proc['valor_final'] ?? '0', ENT_QUOTES) ?>">
 
                                                     Visualizar
 
                                                 </button>
+
+                                                <form method="POST" class="form-excluir-procedimento" onsubmit="return confirm('Excluir este procedimento? Os materiais utilizados serão devolvidos ao estoque.');">
+                                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
+                                                    <input type="hidden" name="acao" value="excluir_procedimento">
+                                                    <input type="hidden" name="prontuario_id" value="<?= (int)$id ?>">
+                                                    <input type="hidden" name="procedimento_id" value="<?= (int)$proc['id'] ?>">
+                                                    <button type="submit" class="table-action btn-excluir-procedimento">Excluir</button>
+                                                </form>
 
                                             </td>
 
@@ -1068,6 +1187,13 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
                     document.getElementById('modalCloseFooter');
 
 
+                function formatarMoedaModal(valor) {
+                    return Number(valor || 0).toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                    });
+                }
+
                 function fecharModal() {
 
                     if (modal) {
@@ -1094,6 +1220,10 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
 
                             const data =
                                 this.dataset.data || '';
+
+                            const valorMateriais = Number(this.dataset.valorMateriais || 0);
+                            const valorMaoObra = Number(this.dataset.valorMaoObra || 0);
+                            const valorFinal = Number(this.dataset.valorFinal || 0);
 
 
                             modalTitle.textContent = titulo;
@@ -1136,6 +1266,13 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
 
                             }
 
+
+                            html += `
+                    <div class="modal-info">
+                        <strong>Valores</strong>
+                        <span>Materiais: ${formatarMoedaModal(valorMateriais)} | Mão de obra: ${formatarMoedaModal(valorMaoObra)} | Final: <strong>${formatarMoedaModal(valorFinal)}</strong></span>
+                    </div>
+                `;
 
                             if (
                                 descricao.trim() === '' &&

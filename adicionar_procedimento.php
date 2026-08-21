@@ -7,7 +7,181 @@ require_once 'conexao/conexao.php';
 
 /*
 |--------------------------------------------------------------------------
+| SALVAR PROCEDIMENTO (novo / edição)
+|--------------------------------------------------------------------------
+*/
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json; charset=utf-8');
+
+    try {
+        if (
+            empty($_POST['csrf_token']) ||
+            empty($_SESSION['csrf_token']) ||
+            !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
+        ) {
+            throw new Exception('Token de segurança inválido.');
+        }
+
+        $dados = json_decode($_POST['dados'] ?? '', true);
+        if (!is_array($dados)) {
+            throw new Exception('Dados do procedimento inválidos.');
+        }
+
+        $prontuario_id = (int)($dados['prontuario_id'] ?? 0);
+        $procedimento_id = !empty($dados['procedimento_id']) ? (int)$dados['procedimento_id'] : null;
+        $titulo = trim($dados['titulo'] ?? '');
+        $data_procedimento = $dados['data_procedimento'] ?? '';
+        $descricao = trim($dados['descricao'] ?? '');
+        $medicamentos = trim($dados['medicamentos'] ?? '');
+        $valor_mao_obra = max(0, (float)($dados['valor_mao_obra'] ?? 0));
+        $valor_final = max(0, (float)($dados['valor_final'] ?? 0));
+        $agendamento_id_post = !empty($dados['agendamento_id']) ? (int)$dados['agendamento_id'] : null;
+        $materiais_post = $dados['materiais'] ?? [];
+
+        if ($prontuario_id <= 0 || $titulo === '' || $data_procedimento === '') {
+            throw new Exception('Preencha os dados obrigatórios do procedimento.');
+        }
+
+        $stmt = $pdo->prepare('SELECT id FROM prontuarios WHERE id = ? LIMIT 1');
+        $stmt->execute([$prontuario_id]);
+        if (!$stmt->fetchColumn()) {
+            throw new Exception('Prontuário não encontrado.');
+        }
+
+        if ($agendamento_id_post) {
+            $stmt = $pdo->prepare('SELECT paciente_id, status FROM agendamentos WHERE id = ? LIMIT 1');
+            $stmt->execute([$agendamento_id_post]);
+            $ag = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$ag || (int)$ag['paciente_id'] !== $prontuario_id || $ag['status'] !== 'confirmado') {
+                throw new Exception('O agendamento precisa estar confirmado e pertencer ao paciente.');
+            }
+        }
+
+        $pdo->beginTransaction();
+
+        $materiais_normalizados = [];
+        foreach ($materiais_post as $material) {
+            $estoque_id = (int)($material['estoque_id'] ?? 0);
+            $quantidade = (float)($material['quantidade'] ?? 0);
+            if ($estoque_id <= 0 || $quantidade <= 0) {
+                throw new Exception('Material ou quantidade inválidos.');
+            }
+            if (isset($materiais_normalizados[$estoque_id])) {
+                throw new Exception('O mesmo material foi adicionado mais de uma vez.');
+            }
+            $materiais_normalizados[$estoque_id] = $quantidade;
+        }
+
+        // Na edição, devolvemos ao estoque os materiais do procedimento antigo.
+        if ($procedimento_id) {
+            $stmt = $pdo->prepare('SELECT id, paciente_id FROM procedimentos WHERE id = ? LIMIT 1 FOR UPDATE');
+            $stmt->execute([$procedimento_id]);
+            $procedimento_antigo = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$procedimento_antigo || (int)$procedimento_antigo['paciente_id'] !== $prontuario_id) {
+                throw new Exception('Procedimento não encontrado para edição.');
+            }
+
+            $stmt = $pdo->prepare('SELECT estoque_id, quantidade FROM procedimento_materiais WHERE procedimento_id = ?');
+            $stmt->execute([$procedimento_id]);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $antigo) {
+                $pdo->prepare('UPDATE estoque SET quantidade = quantidade + ? WHERE id = ?')
+                    ->execute([(float)$antigo['quantidade'], (int)$antigo['estoque_id']]);
+            }
+
+            $pdo->prepare('DELETE FROM procedimento_materiais WHERE procedimento_id = ?')->execute([$procedimento_id]);
+        }
+
+        $valor_materiais = 0.0;
+        foreach ($materiais_normalizados as $estoque_id => $quantidade) {
+            $stmt = $pdo->prepare('SELECT nome, quantidade, unidade, valor_item FROM estoque WHERE id = ? LIMIT 1 FOR UPDATE');
+            $stmt->execute([$estoque_id]);
+            $estoque = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$estoque) {
+                throw new Exception('Material não encontrado no estoque.');
+            }
+            if ((float)$estoque['quantidade'] < $quantidade) {
+                throw new Exception(
+                    'Estoque insuficiente para "' . $estoque['nome'] . '". Disponível: ' .
+                        $estoque['quantidade'] . ' ' . $estoque['unidade'] . '.'
+                );
+            }
+
+            $valor_unitario = (float)$estoque['valor_item'];
+            $valor_total = $valor_unitario * $quantidade;
+            $valor_materiais += $valor_total;
+
+            $pdo->prepare('UPDATE estoque SET quantidade = quantidade - ? WHERE id = ?')
+                ->execute([$quantidade, $estoque_id]);
+
+            $materiais_normalizados[$estoque_id] = [
+                'quantidade' => $quantidade,
+                'valor_unitario' => $valor_unitario,
+                'valor_total' => $valor_total
+            ];
+        }
+
+        if ($procedimento_id) {
+            $stmt = $pdo->prepare('UPDATE procedimentos SET titulo = ?, descricao = ?, medicamentos = ?, valor_materiais = ?, valor_mao_obra = ?, valor_final = ?, data_procedimento = ? WHERE id = ?');
+            $stmt->execute([
+                $titulo,
+                $descricao ?: null,
+                $medicamentos ?: null,
+                $valor_materiais,
+                $valor_mao_obra,
+                $valor_final,
+                $data_procedimento,
+                $procedimento_id
+            ]);
+        } else {
+            $stmt = $pdo->prepare('INSERT INTO procedimentos (paciente_id, titulo, descricao, medicamentos, valor_materiais, valor_mao_obra, valor_final, data_procedimento) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+            $stmt->execute([
+                $prontuario_id,
+                $titulo,
+                $descricao ?: null,
+                $medicamentos ?: null,
+                $valor_materiais,
+                $valor_mao_obra,
+                $valor_final,
+                $data_procedimento
+            ]);
+            $procedimento_id = (int)$pdo->lastInsertId();
+        }
+
+        $stmtMaterial = $pdo->prepare('INSERT INTO procedimento_materiais (procedimento_id, estoque_id, quantidade, valor_unitario, valor_total) VALUES (?, ?, ?, ?, ?)');
+        foreach ($materiais_normalizados as $estoque_id => $material) {
+            $stmtMaterial->execute([
+                $procedimento_id,
+                $estoque_id,
+                $material['quantidade'],
+                $material['valor_unitario'],
+                $material['valor_total']
+            ]);
+        }
+
+        $pdo->commit();
+
+        echo json_encode([
+            'success' => true,
+            'procedimento_id' => $procedimento_id,
+            'valor_materiais' => $valor_materiais,
+            'valor_final' => $valor_final
+        ]);
+        exit;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        exit;
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
 | Verificação do prontuário
+
 |--------------------------------------------------------------------------
 */
 
@@ -16,6 +190,7 @@ if (!isset($_GET['prontuario_id']) || !is_numeric($_GET['prontuario_id'])) {
 }
 
 $prontuario_id = (int) $_GET['prontuario_id'];
+$procedimento_id = isset($_GET['procedimento_id']) && is_numeric($_GET['procedimento_id']) ? (int)$_GET['procedimento_id'] : null;
 
 /*
 |--------------------------------------------------------------------------
@@ -103,20 +278,34 @@ if ($agendamento_id !== null) {
 */
 
 $stmt = $pdo->query("
-    SELECT
-        id,
-        nome,
-        quantidade,
-        unidade,
-        estoque_minimo,
-        valor_item,
-        valor_sugerido
+    SELECT id, nome, quantidade, unidade, estoque_minimo, valor_item, valor_sugerido
     FROM estoque
-    WHERE quantidade > 0
     ORDER BY nome ASC
 ");
-
 $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$procedimento = null;
+$materiaisExistentes = [];
+
+if ($procedimento_id) {
+    $stmt = $pdo->prepare("SELECT * FROM procedimentos WHERE id = ? AND paciente_id = ? LIMIT 1");
+    $stmt->execute([$procedimento_id, $prontuario_id]);
+    $procedimento = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$procedimento) {
+        die("Procedimento não encontrado.");
+    }
+
+    $stmt = $pdo->prepare("SELECT estoque_id, quantidade FROM procedimento_materiais WHERE procedimento_id = ?");
+    $stmt->execute([$procedimento_id]);
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $m) {
+        $materiaisExistentes[(int)$m['estoque_id']] = (float)$m['quantidade'];
+    }
+}
+
+foreach ($materiais as &$material) {
+    $material['quantidade_disponivel'] = (float)$material['quantidade'] + ($materiaisExistentes[(int)$material['id']] ?? 0);
+}
+unset($material);
 
 ?>
 
@@ -130,7 +319,7 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>
-        Novo Procedimento -
+        <?= $procedimento_id ? 'Editar Procedimento -' : 'Novo Procedimento -' ?>
         <?= htmlspecialchars($paciente) ?>
         | Dentech
     </title>
@@ -153,7 +342,7 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         <main>
 
-            <h1>Novo Procedimento</h1>
+            <h1><?= $procedimento_id ? 'Editar Procedimento' : 'Novo Procedimento' ?></h1>
 
             <p class="subtitle">
                 Paciente:
@@ -193,6 +382,11 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     id="agendamentoId"
                     value="<?= $agendamento_id ?? '' ?>">
 
+                <input
+                    type="hidden"
+                    id="procedimentoId"
+                    value="<?= $procedimento_id ?? '' ?>">
+
                 <!-- =====================================================
                  DADOS DO PROCEDIMENTO
             ====================================================== -->
@@ -210,6 +404,7 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <input
                             type="text"
                             id="titulo"
+                            value="<?= htmlspecialchars($procedimento['titulo'] ?? '') ?>"
                             placeholder="Ex: Clareamento dental, Restauração..."
                             required>
 
@@ -225,7 +420,7 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <input
                             type="date"
                             id="data_procedimento"
-                            value="<?= date('Y-m-d') ?>"
+                            value="<?= htmlspecialchars($procedimento['data_procedimento'] ?? date('Y-m-d')) ?>"
                             required>
 
                     </div>
@@ -239,7 +434,7 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                         <textarea
                             id="descricao"
-                            placeholder="Detalhes clínicos, observações, etc..."></textarea>
+                            placeholder="Detalhes clínicos, observações, etc..."><?= htmlspecialchars($procedimento['descricao'] ?? '') ?></textarea>
 
                     </div>
 
@@ -252,7 +447,7 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                         <textarea
                             id="medicamentos"
-                            placeholder="Ex: Amoxicilina 500mg – 1 comprimido de 8/8h por 7 dias"></textarea>
+                            placeholder="Ex: Amoxicilina 500mg – 1 comprimido de 8/8h por 7 dias"><?= htmlspecialchars($procedimento['medicamentos'] ?? '') ?></textarea>
 
                     </div>
 
@@ -307,7 +502,8 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                                         <option
                                             value="<?= (int)$material['id'] ?>"
-                                            data-estoque="<?= htmlspecialchars($material['quantidade']) ?>"
+                                            <?= isset($materiaisExistentes[(int)$material['id']]) ? 'selected' : '' ?>
+                                            data-estoque="<?= htmlspecialchars($material['quantidade_disponivel']) ?>"
                                             data-unidade="<?= htmlspecialchars($material['unidade']) ?>"
                                             data-valor="<?= htmlspecialchars($material['valor_item']) ?>"
                                             data-sugerido="<?= htmlspecialchars($material['valor_sugerido']) ?>">
@@ -316,7 +512,7 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                                             —
                                             Estoque:
-                                            <?= htmlspecialchars($material['quantidade']) ?>
+                                            <?= htmlspecialchars($material['quantidade_disponivel']) ?>
                                             <?= htmlspecialchars($material['unidade']) ?>
 
                                         </option>
@@ -337,7 +533,7 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     class="quantidade-material"
                                     min="0.01"
                                     step="0.01"
-                                    value="1"
+                                    value="<?= $materiaisExistentes ? htmlspecialchars((string)reset($materiaisExistentes)) : '1' ?>"
                                     required>
 
                                 <small class="estoque-disponivel">
@@ -486,7 +682,7 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 id="maoObra"
                                 min="0"
                                 step="0.01"
-                                value="0.00">
+                                value="<?= htmlspecialchars($procedimento['valor_mao_obra'] ?? '0.00') ?>">
 
                         </div>
 
@@ -494,15 +690,14 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 
                     <div class="valor-final-box">
-
-                        <span>
-                            Valor final do procedimento
-                        </span>
-
-                        <strong id="valorFinal">
-                            R$ 0,00
-                        </strong>
-
+                        <div>
+                            <span>Valor sugerido do procedimento</span>
+                            <strong id="valorFinalSugerido">R$ 0,00</strong>
+                        </div>
+                        <div class="valor-final-editavel">
+                            <label for="valorFinalInput">Valor final cobrado</label>
+                            <input type="number" id="valorFinalInput" min="0" step="0.01" value="<?= htmlspecialchars($procedimento['valor_final'] ?? '0.00') ?>">
+                        </div>
                     </div>
 
                 </section>
@@ -525,7 +720,7 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         type="submit"
                         class="btn btn-save"
                         id="btnSalvar">
-                        Adicionar Procedimento
+                        <?= $procedimento_id ? 'Salvar Alterações' : 'Adicionar Procedimento' ?>
                     </button>
 
                 </div>
@@ -547,6 +742,8 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                 JSON_HEX_AMP |
                                                 JSON_HEX_QUOT
                                         ) ?>;
+
+        const materiaisExistentes = <?= json_encode($materiaisExistentes, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 
 
         /*
@@ -586,7 +783,7 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 html += `
             <option
                 value="${material.id}"
-                data-estoque="${material.quantidade}"
+                data-estoque="${material.quantidade_disponivel}"
                 data-unidade="${material.unidade}"
                 data-valor="${material.valor_item}"
                 data-sugerido="${material.valor_sugerido}"
@@ -830,12 +1027,18 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 });
 
 
-            const valorFinal =
-                totalMateriais + maoObra;
+            const totalSugerido = document.querySelector('#totalSugerido') ? null : null;
+            let materiaisSugeridos = 0;
+            document.querySelectorAll('.material-row').forEach(linha => {
+                const select = linha.querySelector('.material');
+                const quantidadeInput = linha.querySelector('.quantidade-material');
+                if (!select.value) return;
+                const option = select.options[select.selectedIndex];
+                materiaisSugeridos += (Number(option.dataset.sugerido) || 0) * (Number(quantidadeInput.value) || 0);
+            });
 
-
-            document.getElementById('valorFinal').textContent =
-                formatarMoeda(valorFinal);
+            const valorSugeridoFinal = materiaisSugeridos + maoObra;
+            document.getElementById('valorFinalSugerido').textContent = formatarMoeda(valorSugeridoFinal);
 
         }
 
@@ -1021,9 +1224,26 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
         |--------------------------------------------------------------------------
         */
 
-        document
-            .querySelectorAll('.material-row')
-            .forEach(configurarLinha);
+        const linhasIniciais = document.querySelectorAll('.material-row');
+        linhasIniciais.forEach(configurarLinha);
+
+        const existentes = Object.entries(materiaisExistentes);
+        if (existentes.length > 0) {
+            const primeiraLinha = document.querySelector('.material-row');
+            primeiraLinha.querySelector('.material').value = existentes[0][0];
+            primeiraLinha.querySelector('.quantidade-material').value = existentes[0][1];
+
+            for (let i = 1; i < existentes.length; i++) {
+                adicionarLinhaMaterial();
+                const linhas = document.querySelectorAll('.material-row');
+                const linha = linhas[linhas.length - 1];
+                linha.querySelector('.material').value = existentes[i][0];
+                linha.querySelector('.quantidade-material').value = existentes[i][1];
+            }
+        }
+
+        document.querySelectorAll('.material-row').forEach(atualizarLinha);
+        atualizarValorFinal();
 
 
         /*
@@ -1215,8 +1435,7 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     agendamento_id: document.getElementById('agendamentoId').value ?
                         Number(
                             document.getElementById('agendamentoId').value
-                        ) :
-                        null,
+                        ) : null,
 
                     titulo: document.getElementById('titulo').value.trim(),
 
@@ -1274,11 +1493,12 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         'dados',
                         JSON.stringify(dados)
                     );
+                    formData.append('acao', 'salvar');
 
 
                     const response =
                         await fetch(
-                            'salvar_procedimento.php', {
+                            'adicionar_procedimento.php', {
                                 method: 'POST',
                                 body: formData
                             }
@@ -1292,7 +1512,7 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     if (result.success) {
 
                         alert(
-                            'Procedimento adicionado com sucesso!'
+                            dados.procedimento_id ? 'Procedimento atualizado com sucesso!' : 'Procedimento adicionado com sucesso!'
                         );
 
 
@@ -1328,7 +1548,7 @@ $materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     btnSalvar.disabled = false;
 
                     btnSalvar.textContent =
-                        'Adicionar Procedimento';
+                        dados.procedimento_id ? 'Salvar Alterações' : 'Adicionar Procedimento';
 
                 }
 
