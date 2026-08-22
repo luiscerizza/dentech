@@ -1429,3 +1429,31 @@
   margin: 0;
   padding: 0;
 }
+
+/* Valores próximos: evita justificar o conteúdo até a borda */
+.prontuario-page .procedure-values {
+  min-width: 180px;
+  width: 180px;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.prontuario-page .procedure-value-line {
+  display: grid;
+  grid-template-columns: 72px auto;
+  align-items: center;
+  justify-content: start;
+  column-gap: 8px;
+  margin-bottom: 3px;
+}
+
+.prontuario-page .procedure-value-line span {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.prontuario-page .procedure-value-line strong {
+  color: #334155;
+  font-size: 12px;
+  text-align: left;
+}
