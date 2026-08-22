@@ -779,6 +779,7 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
                                     <th>Procedimento</th>
 
                                     <th>Descrição</th>
+                                    <th>Valores</th>
 
                                     <?php if (!$isPrint): ?>
 
