@@ -66,7 +66,22 @@ $stmt_agendamentos = $pdo->prepare("
         a.procedimento,
         a.data,
         a.horario,
-        COALESCE(a.status, 'agendado') AS status
+        COALESCE(a.status, 'agendado') AS status,
+        COALESCE((
+            SELECT o.status
+            FROM orcamentos o
+            WHERE o.agendamento_id = a.id
+            ORDER BY o.id DESC
+            LIMIT 1
+        ), 'sem_orcamento') AS status_orcamento,
+        COALESCE((
+            SELECT o.id
+            FROM orcamentos o
+            WHERE o.agendamento_id = a.id
+              AND o.status = 'aceito'
+            ORDER BY o.id DESC
+            LIMIT 1
+        ), 0) AS orcamento_aceito_id
     FROM agendamentos a
     LEFT JOIN prontuarios p
         ON a.paciente_id = p.id
@@ -92,7 +107,22 @@ $stmt_proximos = $pdo->prepare("
         a.procedimento,
         a.data,
         a.horario,
-        COALESCE(a.status, 'agendado') AS status
+        COALESCE(a.status, 'agendado') AS status,
+        COALESCE((
+            SELECT o.status
+            FROM orcamentos o
+            WHERE o.agendamento_id = a.id
+            ORDER BY o.id DESC
+            LIMIT 1
+        ), 'sem_orcamento') AS status_orcamento,
+        COALESCE((
+            SELECT o.id
+            FROM orcamentos o
+            WHERE o.agendamento_id = a.id
+              AND o.status = 'aceito'
+            ORDER BY o.id DESC
+            LIMIT 1
+        ), 0) AS orcamento_aceito_id
     FROM agendamentos a
     LEFT JOIN prontuarios p
         ON a.paciente_id = p.id
@@ -526,21 +556,28 @@ usort(
 
                                                 <?php if ($ag['status'] === 'confirmado'): ?>
                                                     <?php if (!empty($ag['paciente_id'])): ?>
-                                                        <?php
-                                                        /*
-                                                        |--------------------------------------------------------------------------
-                                                        | FLUXO:
-                                                        | Agendamento confirmado -> Orçamento
-                                                        |
-                                                        | O procedimento só será liberado depois que o
-                                                        | orçamento estiver aceito.
-                                                        |--------------------------------------------------------------------------
-                                                        */
-                                                        ?>
-                                                        <a href="novo_orcamento.php?agendamento_id=<?= (int)$ag['id'] ?>"
-                                                            title="Criar orçamento">
-                                                            <i class="fa-solid fa-file-invoice-dollar"></i>
-                                                        </a>
+
+                                                        <?php if ($ag['status_orcamento'] === 'aceito'): ?>
+
+                                                            <a href="visualizar_orcamento.php?id=<?= (int)$ag['orcamento_aceito_id'] ?>"
+                                                                title="Visualizar orçamento">
+                                                                <i class="fa-solid fa-file-invoice-dollar"></i>
+                                                            </a>
+
+                                                            <a href="adicionar_procedimento.php?prontuario_id=<?= (int)$ag['paciente_id'] ?>&agendamento_id=<?= (int)$ag['id'] ?>"
+                                                                title="Adicionar procedimento">
+                                                                <i class="fa-solid fa-tooth"></i>
+                                                            </a>
+
+                                                        <?php else: ?>
+
+                                                            <a href="novo_orcamento.php?agendamento_id=<?= (int)$ag['id'] ?>"
+                                                                title="<?= $ag['status_orcamento'] === 'pendente' ? 'Visualizar orçamento pendente' : 'Criar orçamento' ?>">
+                                                                <i class="fa-solid fa-file-invoice-dollar"></i>
+                                                            </a>
+
+                                                        <?php endif; ?>
+
                                                     <?php endif; ?>
                                                 <?php else: ?>
                                                     <form
