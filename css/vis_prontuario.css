@@ -1457,3 +1457,36 @@
   font-size: 12px;
   text-align: left;
 }
+
+/* Ajuste financeiro do procedimento */
+.prontuario-page .form-ajuste-financeiro {
+  display: inline-flex;
+  margin: 0;
+  padding: 0;
+}
+
+.prontuario-page .btn-ajuste-financeiro {
+  color: #c2410c;
+  border: 1px solid #fdba74;
+  background: #fff;
+}
+
+.prontuario-page .btn-ajuste-financeiro:hover {
+  color: #9a3412;
+  background: #fff7ed;
+  border-color: #fb923c;
+}
+
+.prontuario-page .ajuste-gerado {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 9px;
+  border-radius: 7px;
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #86efac;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}

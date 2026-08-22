@@ -135,7 +135,8 @@ $iniciais = mb_strtoupper($iniciais);
 $stmtProc = $pdo->prepare("
     SELECT
         p.*,
-        oi.valor_orcado
+        oi.valor_orcado,
+        aj.id AS ajuste_financeiro_id
     FROM procedimentos p
     LEFT JOIN (
         SELECT
@@ -143,7 +144,19 @@ $stmtProc = $pdo->prepare("
             ROUND(SUM(quantidade * valor_unitario), 2) AS valor_orcado
         FROM orcamentos_itens
         GROUP BY orcamento_id
-    ) oi ON oi.orcamento_id = p.orcamento_id
+    ) oi
+        ON oi.orcamento_id = p.orcamento_id
+    LEFT JOIN (
+        SELECT
+            procedimento_id,
+            MIN(id) AS id
+        FROM lancamentos_financeiros
+        WHERE procedimento_id IS NOT NULL
+          AND categoria = 'Ajuste de procedimento'
+          AND tipo = 'receita'
+        GROUP BY procedimento_id
+    ) aj
+        ON aj.procedimento_id = p.id
     WHERE p.paciente_id = ?
     ORDER BY p.data_procedimento DESC
 ");
@@ -893,6 +906,49 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
 
                                         <?php if (!$isPrint): ?>
                                             <td class="procedure-actions">
+
+                                                <?php if (
+                                                    $valorOrcado !== null &&
+                                                    $diferenca !== null &&
+                                                    $diferenca > 0
+                                                ): ?>
+
+                                                    <?php if (empty($proc['ajuste_financeiro_id'])): ?>
+
+                                                        <form
+                                                            method="POST"
+                                                            action="gerar_ajuste_financeiro.php"
+                                                            class="form-ajuste-financeiro"
+                                                            onsubmit="return confirm('Gerar uma cobrança adicional de R$ <?= number_format($diferenca, 2, ',', '.') ?> para este procedimento?');">
+
+                                                            <input
+                                                                type="hidden"
+                                                                name="csrf_token"
+                                                                value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
+
+                                                            <input
+                                                                type="hidden"
+                                                                name="procedimento_id"
+                                                                value="<?= (int)$proc['id'] ?>">
+
+                                                            <button
+                                                                type="submit"
+                                                                class="table-action btn-ajuste-financeiro">
+                                                                Gerar ajuste
+                                                            </button>
+
+                                                        </form>
+
+                                                    <?php else: ?>
+
+                                                        <span class="ajuste-gerado">
+                                                            Ajuste gerado
+                                                        </span>
+
+                                                    <?php endif; ?>
+
+                                                <?php endif; ?>
+
 
                                                 <a
                                                     class="table-action btn-editar-procedimento"

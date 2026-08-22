@@ -131,8 +131,12 @@ $stmt_manuais = $pdo->prepare("
         LOWER(TRIM(COALESCE(lf.status, ''))) AS status,
         lf.observacoes,
         lf.orcamento_id,
-        lf.parcela_id
+        lf.parcela_id,
+        lf.procedimento_id,
+        p_proc.paciente_id
     FROM lancamentos_financeiros lf
+    LEFT JOIN procedimentos p_proc
+        ON p_proc.id = lf.procedimento_id
     WHERE " . implode(' AND ', $where_manuais) . "
     ORDER BY lf.data DESC, lf.id DESC
     LIMIT 100
@@ -147,6 +151,10 @@ foreach ($lancamentos_manuais as &$manual) {
     $manual['paciente'] = null;
     $manual['parcela_id'] = !empty($manual['parcela_id'])
         ? (int)$manual['parcela_id']
+        : null;
+
+    $manual['procedimento_id'] = !empty($manual['procedimento_id'])
+        ? (int)$manual['procedimento_id']
         : null;
 }
 unset($manual);
@@ -927,6 +935,12 @@ $tipos_nomes = [
                                             <?= htmlspecialchars($lancamento['forma_pagamento']) ?>
                                         </span>
 
+                                        <?php if (($lancamento['categoria'] ?? '') === 'Ajuste de procedimento'): ?>
+                                            <small class="lancamento-ajuste-badge">
+                                                Ajuste de procedimento
+                                            </small>
+                                        <?php endif; ?>
+
                                     </div>
 
                                     <div class="lancamento-valor <?= $lancamento['tipo'] === 'receita' ? 'valor-receita' : 'valor-despesa' ?>">
@@ -1000,7 +1014,7 @@ $tipos_nomes = [
 
                                 <?php foreach ($lancamentos as $lancamento): ?>
 
-                                    <tr>
+                                    <tr class="<?= (($lancamento['categoria'] ?? '') === 'Ajuste de procedimento') ? 'linha-ajuste-procedimento' : '' ?>">
 
                                         <td>
                                             <?= dataBR($lancamento['data']) ?>
@@ -1083,19 +1097,32 @@ $tipos_nomes = [
 
                                             <?php else: ?>
 
-                                                <a
-                                                    href="visualizar_lancamento.php?id=<?= (int) $lancamento['id'] ?>"
-                                                    class="btn-acao"
-                                                    title="Visualizar">
-                                                    <i class="fa-regular fa-eye"></i>
-                                                </a>
+                                                <?php if (($lancamento['categoria'] ?? '') === 'Ajuste de procedimento' && !empty($lancamento['procedimento_id'])): ?>
 
-                                                <a
-                                                    href="editar_lancamento.php?id=<?= (int) $lancamento['id'] ?>"
-                                                    class="btn-acao"
-                                                    title="Editar">
-                                                    <i class="fa-solid fa-pen"></i>
-                                                </a>
+                                                    <a
+                                                        href="visualizar_prontuario.php?id=<?= (int)($lancamento['paciente_id'] ?? 0) ?>"
+                                                        class="btn-acao"
+                                                        title="Ver prontuário">
+                                                        <i class="fa-regular fa-eye"></i>
+                                                    </a>
+
+                                                <?php else: ?>
+
+                                                    <a
+                                                        href="visualizar_lancamento.php?id=<?= (int) $lancamento['id'] ?>"
+                                                        class="btn-acao"
+                                                        title="Visualizar">
+                                                        <i class="fa-regular fa-eye"></i>
+                                                    </a>
+
+                                                    <a
+                                                        href="editar_lancamento.php?id=<?= (int) $lancamento['id'] ?>"
+                                                        class="btn-acao"
+                                                        title="Editar">
+                                                        <i class="fa-solid fa-pen"></i>
+                                                    </a>
+
+                                                <?php endif; ?>
 
                                             <?php endif; ?>
 
@@ -1130,6 +1157,31 @@ $tipos_nomes = [
 
         </main>
     </div>
+
+
+    <style>
+        .lancamento-ajuste-badge {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            margin-top: 4px;
+            padding: 3px 7px;
+            border: 1px solid #fed7aa;
+            border-radius: 999px;
+            background: #fff7ed;
+            color: #c2410c;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .linha-ajuste-procedimento td {
+            background: #fffaf5;
+        }
+
+        .linha-ajuste-procedimento td strong {
+            color: #9a3412;
+        }
+    </style>
 
 </body>
 
