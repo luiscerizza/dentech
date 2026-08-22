@@ -161,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ((float)$estoque['quantidade'] < $quantidade) {
                 throw new Exception(
                     'Estoque insuficiente para "' . $estoque['nome'] . '". Disponível: ' .
-                        $estoque['quantidade'] . ' ' . $estoque['unidade'] . '.'
+                    $estoque['quantidade'] . ' ' . $estoque['unidade'] . '.'
                 );
             }
 
@@ -190,15 +190,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($procedimento_id) {
             $stmt = $pdo->prepare('UPDATE procedimentos SET titulo = ?, descricao = ?, medicamentos = ?, valor_materiais = ?, valor_mao_obra = ?, valor_final = ?, data_procedimento = ?, orcamento_id = ? WHERE id = ?');
             $stmt->execute([
-                $titulo,
-                $descricao ?: null,
-                $medicamentos ?: null,
-                $valor_materiais,
-                $valor_mao_obra,
-                $valor_final,
-                $data_procedimento,
-                $orcamento_id,
-                $procedimento_id
+                $titulo, $descricao ?: null, $medicamentos ?: null,
+                $valor_materiais, $valor_mao_obra, $valor_final,
+                $data_procedimento, $orcamento_id, $procedimento_id
             ]);
         } else {
             if (!$orcamento_id) {
@@ -207,15 +201,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $stmt = $pdo->prepare('INSERT INTO procedimentos (paciente_id, orcamento_id, titulo, descricao, medicamentos, valor_materiais, valor_mao_obra, valor_final, data_procedimento) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
             $stmt->execute([
-                $prontuario_id,
-                $orcamento_id,
-                $titulo,
-                $descricao ?: null,
-                $medicamentos ?: null,
-                $valor_materiais,
-                $valor_mao_obra,
-                $valor_final,
-                $data_procedimento
+                $prontuario_id, $orcamento_id, $titulo, $descricao ?: null, $medicamentos ?: null,
+                $valor_materiais, $valor_mao_obra, $valor_final, $data_procedimento
             ]);
             $procedimento_id = (int)$pdo->lastInsertId();
         }
@@ -240,6 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'valor_final' => $valor_final
         ]);
         exit;
+
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
@@ -674,11 +662,15 @@ unset($material);
 
                                 <label>Subtotal</label>
 
-                                <input
-                                    type="number"
-                                    class="subtotal-material"
-                                    value=""
-                                    readonly> min="0" step="0.01" value="0.00">
+                                
+                                
+        <input
+            type="number"
+            class="subtotal-material"
+            min="0"
+            step="0.01"
+            value="0.00"
+        > min="0" step="0.01" value="0.00">
 
                             </div>
 
@@ -1352,13 +1344,13 @@ unset($material);
                 const estoqueId = item[0];
                 const dadosMaterial = item[1];
 
-                const quantidade = typeof dadosMaterial === 'object' ?
-                    Number(dadosMaterial.quantidade) || 1 :
-                    Number(dadosMaterial) || 1;
+                const quantidade = typeof dadosMaterial === 'object'
+                    ? Number(dadosMaterial.quantidade) || 1
+                    : Number(dadosMaterial) || 1;
 
-                const subtotal = typeof dadosMaterial === 'object' ?
-                    Number(dadosMaterial.subtotal) || 0 :
-                    0;
+                const subtotal = typeof dadosMaterial === 'object'
+                    ? Number(dadosMaterial.subtotal) || 0
+                    : 0;
 
                 linha.querySelector('.material').value = estoqueId;
                 linha.querySelector('.quantidade-material').value = quantidade;
@@ -1577,7 +1569,8 @@ unset($material);
                     agendamento_id: document.getElementById('agendamentoId').value ?
                         Number(
                             document.getElementById('agendamentoId').value
-                        ) : null,
+                        ) :
+                        null,
 
                     titulo: document.getElementById('titulo').value.trim(),
 
