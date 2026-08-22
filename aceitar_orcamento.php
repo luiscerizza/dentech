@@ -34,6 +34,7 @@ try {
         FROM orcamentos
         WHERE id = ?
         LIMIT 1
+        FOR UPDATE
     ");
 
     $stmt->execute([$orcamento_id]);
@@ -44,8 +45,12 @@ try {
         throw new Exception('Orçamento não encontrado.');
     }
 
-    if ($orcamento['status'] !== 'pendente') {
-        throw new Exception('Este orçamento já foi processado.');
+    if ($orcamento['status'] === 'recusado') {
+        throw new Exception('Um orçamento recusado não pode ser aceito.');
+    }
+
+    if (!in_array($orcamento['status'], ['pendente', 'aceito'], true)) {
+        throw new Exception('Status do orçamento inválido.');
     }
 
 
@@ -65,6 +70,7 @@ try {
         FROM parcelas
         WHERE orcamento_id = ?
         ORDER BY numero_parcela ASC
+        FOR UPDATE
     ");
 
     $stmt->execute([$orcamento_id]);
@@ -84,19 +90,21 @@ try {
     |--------------------------------------------------------------------------
     */
 
-    $stmt = $pdo->prepare("
-        UPDATE orcamentos
-        SET status = 'aceito'
-        WHERE id = ?
-          AND status = 'pendente'
-    ");
+    if ($orcamento['status'] === 'pendente') {
+        $stmt = $pdo->prepare("
+            UPDATE orcamentos
+            SET status = 'aceito'
+            WHERE id = ?
+              AND status = 'pendente'
+        ");
 
-    $stmt->execute([$orcamento_id]);
+        $stmt->execute([$orcamento_id]);
 
-    if ($stmt->rowCount() !== 1) {
-        throw new Exception(
-            'Não foi possível aceitar o orçamento.'
-        );
+        if ($stmt->rowCount() !== 1) {
+            throw new Exception(
+                'Não foi possível aceitar o orçamento.'
+            );
+        }
     }
 
 

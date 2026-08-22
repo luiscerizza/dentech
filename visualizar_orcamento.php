@@ -32,29 +32,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
 
         // ====================================================
-        // CONFIRMAR ORÇAMENTO
-        // ====================================================
-
-        if ($acao === 'confirmar_orcamento') {
-
-            $stmt = $pdo->prepare("
-                UPDATE orcamentos
-                SET status = 'aceito'
-                WHERE id = ?
-                  AND status = 'pendente'
-            ");
-
-            $stmt->execute([$id]);
-
-            header(
-                "Location: visualizar_orcamento.php?id=" . $id
-            );
-
-            exit;
-        }
-
-
-        // ====================================================
         // RECUSAR ORÇAMENTO
         // ====================================================
 
@@ -521,21 +498,22 @@ $status_classe = match ($status_orcamento) {
 
                         <form
                             method="POST"
+                            action="aceitar_orcamento.php"
                             class="form-acao"
-                            onsubmit="return confirm('Confirmar este orçamento?');">
+                            onsubmit="return confirm('Aceitar este orçamento? O financeiro das parcelas será gerado.');">
 
                             <?= csrf_field() ?>
 
                             <input
                                 type="hidden"
-                                name="acao"
-                                value="confirmar_orcamento">
+                                name="id"
+                                value="<?= (int)$id ?>">
 
                             <button
                                 type="submit"
                                 class="btn btn-confirmar">
 
-                                ✓ Confirmar
+                                ✓ Aceitar
 
                             </button>
 
