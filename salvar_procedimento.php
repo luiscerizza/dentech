@@ -83,14 +83,25 @@ try {
         $agendamento_id = (int)$dados['agendamento_id'];
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | ID do procedimento
+    |--------------------------------------------------------------------------
+    | Aceitamos tanto dentro do JSON quanto como POST separado.
+    | Isso deixa a edição compatível mesmo se o frontend estiver em uma
+    | versão anterior.
+    |--------------------------------------------------------------------------
+    */
     $procedimento_id = null;
 
+    $procedimento_id_recebido = $dados['procedimento_id']
+        ?? ($_POST['procedimento_id'] ?? null);
+
     if (
-        isset($dados['procedimento_id']) &&
-        $dados['procedimento_id'] !== null &&
-        $dados['procedimento_id'] !== ''
+        $procedimento_id_recebido !== null &&
+        $procedimento_id_recebido !== ''
     ) {
-        $procedimento_id = (int)$dados['procedimento_id'];
+        $procedimento_id = (int)$procedimento_id_recebido;
     }
 
     $titulo = trim($dados['titulo'] ?? '');
@@ -294,6 +305,12 @@ try {
     $orcamento_id = null;
     $procedimento_antigo = null;
 
+    if ($procedimento_id === null) {
+        $modo = 'criacao';
+    } else {
+        $modo = 'edicao';
+    }
+
     if ($procedimento_id !== null) {
         if ($procedimento_id <= 0) {
             throw new Exception('Procedimento inválido.');
@@ -334,7 +351,8 @@ try {
 
         if (!$orcamento_id) {
             throw new Exception(
-                'O procedimento não possui um orçamento vinculado.'
+                'O procedimento #' . $procedimento_id .
+                    ' realmente não possui orçamento vinculado.'
             );
         }
 
@@ -758,7 +776,7 @@ try {
     echo json_encode([
         'success' => true,
         'procedimento_id' => $procedimento_id,
-        'modo' => $procedimento_antigo ? 'edicao' : 'criacao',
+        'modo' => $modo,
         'orcamento_id' => $orcamento_id,
         'valor_materiais' => $valor_materiais,
         'valor_sugerido' => $valor_sugerido,
