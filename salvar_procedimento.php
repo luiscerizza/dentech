@@ -83,6 +83,16 @@ try {
         $agendamento_id = (int)$dados['agendamento_id'];
     }
 
+    $procedimento_id = null;
+
+    if (
+        isset($dados['procedimento_id']) &&
+        $dados['procedimento_id'] !== null &&
+        $dados['procedimento_id'] !== ''
+    ) {
+        $procedimento_id = (int)$dados['procedimento_id'];
+    }
+
     $titulo = trim($dados['titulo'] ?? '');
 
     $data_procedimento = trim(
@@ -99,6 +109,10 @@ try {
 
     $valor_mao_obra = (float)(
         $dados['valor_mao_obra'] ?? 0
+    );
+
+    $valor_final_informado = (float)(
+        $dados['valor_final'] ?? 0
     );
 
     $materiaisRecebidos = $dados['materiais'] ?? [];
@@ -159,6 +173,12 @@ try {
         );
     }
 
+    if ($valor_final_informado < 0) {
+        throw new Exception(
+            'O valor final do procedimento não pode ser negativo.'
+        );
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Validar materiais recebidos
@@ -197,6 +217,10 @@ try {
             $material['quantidade'] ?? 0
         );
 
+        $subtotal_informado = array_key_exists('subtotal', $material)
+            ? (float)$material['subtotal']
+            : null;
+
         if ($estoque_id <= 0) {
             throw new Exception(
                 'Material inválido.'
@@ -209,12 +233,25 @@ try {
             );
         }
 
+        if ($subtotal_informado !== null && $subtotal_informado < 0) {
+            throw new Exception(
+                'O subtotal do material não pode ser negativo.'
+            );
+        }
+
         if (isset($materiais[$estoque_id])) {
             $materiais[$estoque_id]['quantidade'] += $quantidade;
+
+            if ($subtotal_informado !== null) {
+                $materiais[$estoque_id]['subtotal_informado'] =
+                    ($materiais[$estoque_id]['subtotal_informado'] ?? 0)
+                    + $subtotal_informado;
+            }
         } else {
             $materiais[$estoque_id] = [
                 'estoque_id' => $estoque_id,
-                'quantidade' => $quantidade
+                'quantidade' => $quantidade,
+                'subtotal_informado' => $subtotal_informado
             ];
         }
     }
@@ -252,6 +289,75 @@ try {
         throw new Exception(
             'Prontuário não encontrado.'
         );
+    }
+
+    $orcamento_id = null;
+    $procedimento_antigo = null;
+
+    if ($procedimento_id !== null) {
+        if ($procedimento_id <= 0) {
+            throw new Exception('Procedimento inválido.');
+        }
+
+        $stmt = $pdo->prepare("
+            SELECT
+                id,
+                paciente_id,
+                orcamento_id,
+                titulo,
+                descricao,
+                medicamentos,
+                valor_mao_obra,
+                valor_final,
+                data_procedimento
+            FROM procedimentos
+            WHERE id = ?
+              AND paciente_id = ?
+            LIMIT 1
+            FOR UPDATE
+        ");
+
+        $stmt->execute([
+            $procedimento_id,
+            $prontuario_id
+        ]);
+
+        $procedimento_antigo = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$procedimento_antigo) {
+            throw new Exception('Procedimento não encontrado.');
+        }
+
+        $orcamento_id = !empty($procedimento_antigo['orcamento_id'])
+            ? (int)$procedimento_antigo['orcamento_id']
+            : null;
+
+        if (!$orcamento_id) {
+            throw new Exception(
+                'O procedimento não possui um orçamento vinculado.'
+            );
+        }
+
+        $stmtOrcamento = $pdo->prepare("
+            SELECT id
+            FROM orcamentos
+            WHERE id = ?
+              AND paciente_id = ?
+              AND status = 'aceito'
+            LIMIT 1
+            FOR UPDATE
+        ");
+
+        $stmtOrcamento->execute([
+            $orcamento_id,
+            $prontuario_id
+        ]);
+
+        if (!$stmtOrcamento->fetchColumn()) {
+            throw new Exception(
+                'O orçamento vinculado ao procedimento não está aceito.'
+            );
+        }
     }
 
     /*
@@ -308,6 +414,38 @@ try {
                 'O agendamento precisa estar confirmado antes de registrar o procedimento.'
             );
         }
+
+        if ($procedimento_id === null) {
+            $stmtOrcamento = $pdo->prepare("
+                SELECT id
+                FROM orcamentos
+                WHERE agendamento_id = ?
+                  AND paciente_id = ?
+                  AND status = 'aceito'
+                ORDER BY id DESC
+                LIMIT 1
+                FOR UPDATE
+            ");
+
+            $stmtOrcamento->execute([
+                $agendamento_id,
+                $prontuario_id
+            ]);
+
+            $orcamento_id = $stmtOrcamento->fetchColumn();
+
+            if (!$orcamento_id) {
+                throw new Exception(
+                    'Este agendamento não possui um orçamento aceito.'
+                );
+            }
+        }
+    }
+
+    if ($procedimento_id !== null && $orcamento_id === null) {
+        throw new Exception(
+            'O procedimento não possui um orçamento vinculado.'
+        );
     }
 
     /*
@@ -321,6 +459,33 @@ try {
     $valor_materiais = 0;
 
     $valor_sugerido = 0;
+
+    if ($procedimento_id !== null) {
+        $stmt = $pdo->prepare("
+            SELECT estoque_id, quantidade
+            FROM procedimento_materiais
+            WHERE procedimento_id = ?
+            FOR UPDATE
+        ");
+
+        $stmt->execute([$procedimento_id]);
+
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $materialAntigo) {
+            $pdo->prepare("
+                UPDATE estoque
+                SET quantidade = quantidade + ?
+                WHERE id = ?
+            ")->execute([
+                (float)$materialAntigo['quantidade'],
+                (int)$materialAntigo['estoque_id']
+            ]);
+        }
+
+        $pdo->prepare("
+            DELETE FROM procedimento_materiais
+            WHERE procedimento_id = ?
+        ")->execute([$procedimento_id]);
+    }
 
     foreach ($materiais as $material) {
 
@@ -401,9 +566,11 @@ try {
         $valorSugeridoUnitario =
             (float)$estoque['valor_sugerido'];
 
-        $valorTotal =
-            $valorUnitario *
-            $quantidadeUsada;
+        $subtotalInformado = $material['subtotal_informado'] ?? null;
+
+        $valorTotal = $subtotalInformado === null
+            ? ($valorUnitario * $quantidadeUsada)
+            : max(0, (float)$subtotalInformado);
 
         $valorSugeridoTotal =
             $valorSugeridoUnitario *
@@ -440,45 +607,74 @@ try {
         round($valor_mao_obra, 2);
 
     $valor_final =
-        round(
-            $valor_materiais +
-                $valor_mao_obra,
-            2
-        );
+        round($valor_final_informado, 2);
 
     /*
     |--------------------------------------------------------------------------
-    | 5. Criar procedimento
+    | 5. Criar ou atualizar procedimento
     |--------------------------------------------------------------------------
     */
 
-    $stmt = $pdo->prepare("
-        INSERT INTO procedimentos (
-            paciente_id,
-            titulo,
-            descricao,
-            medicamentos,
-            valor_materiais,
-            valor_mao_obra,
-            valor_final,
-            data_procedimento
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ");
+    if ($procedimento_id !== null) {
 
-    $stmt->execute([
-        $prontuario_id,
-        $titulo,
-        $descricao !== '' ? $descricao : null,
-        $medicamentos !== '' ? $medicamentos : null,
-        $valor_materiais,
-        $valor_mao_obra,
-        $valor_final,
-        $data_procedimento
-    ]);
+        $stmt = $pdo->prepare("
+            UPDATE procedimentos
+            SET titulo = ?,
+                descricao = ?,
+                medicamentos = ?,
+                valor_materiais = ?,
+                valor_mao_obra = ?,
+                valor_final = ?,
+                data_procedimento = ?,
+                orcamento_id = ?
+            WHERE id = ?
+              AND paciente_id = ?
+        ");
 
-    $procedimento_id =
-        (int)$pdo->lastInsertId();
+        $stmt->execute([
+            $titulo,
+            $descricao !== '' ? $descricao : null,
+            $medicamentos !== '' ? $medicamentos : null,
+            $valor_materiais,
+            $valor_mao_obra,
+            $valor_final,
+            $data_procedimento,
+            $orcamento_id,
+            $procedimento_id,
+            $prontuario_id
+        ]);
+    } else {
+
+        $stmt = $pdo->prepare("
+            INSERT INTO procedimentos (
+                paciente_id,
+                orcamento_id,
+                titulo,
+                descricao,
+                medicamentos,
+                valor_materiais,
+                valor_mao_obra,
+                valor_final,
+                data_procedimento
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+
+        $stmt->execute([
+            $prontuario_id,
+            $orcamento_id,
+            $titulo,
+            $descricao !== '' ? $descricao : null,
+            $medicamentos !== '' ? $medicamentos : null,
+            $valor_materiais,
+            $valor_mao_obra,
+            $valor_final,
+            $data_procedimento
+        ]);
+
+        $procedimento_id =
+            (int)$pdo->lastInsertId();
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -562,6 +758,8 @@ try {
     echo json_encode([
         'success' => true,
         'procedimento_id' => $procedimento_id,
+        'modo' => $procedimento_antigo ? 'edicao' : 'criacao',
+        'orcamento_id' => $orcamento_id,
         'valor_materiais' => $valor_materiais,
         'valor_sugerido' => $valor_sugerido,
         'valor_mao_obra' => $valor_mao_obra,
