@@ -670,7 +670,7 @@ unset($material);
             min="0"
             step="0.01"
             value="0.00"
-        > min="0" step="0.01" value="0.00">
+        >
 
                             </div>
 
