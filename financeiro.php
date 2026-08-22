@@ -105,7 +105,11 @@ $data_parcela_sql = "
 |--------------------------------------------------------------------------
 */
 $where_manuais = [
-    "(lf.orcamento_id IS NULL OR lf.orcamento_id = 0)"
+    "(
+        lf.orcamento_id IS NULL
+        OR lf.orcamento_id = 0
+        OR lf.categoria = 'Ajuste de procedimento'
+    )"
 ];
 $params_manuais = [];
 
@@ -318,7 +322,11 @@ $despesas = 0.0;
 |--------------------------------------------------------------------------
 */
 $where_resumo_manuais = [
-    "(lf.orcamento_id IS NULL OR lf.orcamento_id = 0)",
+    "(
+        lf.orcamento_id IS NULL
+        OR lf.orcamento_id = 0
+        OR lf.categoria = 'Ajuste de procedimento'
+    )",
     "LOWER(TRIM(COALESCE(lf.status, ''))) IN ('pago', 'paga')"
 ];
 $params_resumo_manuais = [];
@@ -432,7 +440,11 @@ $a_receber = 0.0;
 $stmt_receber_manuais = $pdo->prepare("
     SELECT COALESCE(SUM(lf.valor), 0)
     FROM lancamentos_financeiros lf
-    WHERE (lf.orcamento_id IS NULL OR lf.orcamento_id = 0)
+    WHERE (
+        lf.orcamento_id IS NULL
+        OR lf.orcamento_id = 0
+        OR lf.categoria = 'Ajuste de procedimento'
+    )
       AND LOWER(TRIM(COALESCE(lf.tipo, ''))) = 'receita'
       AND LOWER(TRIM(COALESCE(lf.status, ''))) IN (
           'pendente',
@@ -482,7 +494,11 @@ $lucro = $receitas - $despesas;
 |--------------------------------------------------------------------------
 */
 $where_grafico_manuais = [
-    "(lf.orcamento_id IS NULL OR lf.orcamento_id = 0)",
+    "(
+        lf.orcamento_id IS NULL
+        OR lf.orcamento_id = 0
+        OR lf.categoria = 'Ajuste de procedimento'
+    )",
     "LOWER(TRIM(COALESCE(lf.status, ''))) IN ('pago', 'paga')"
 ];
 $params_grafico_manuais = [];
