@@ -133,10 +133,19 @@ $iniciais = mb_strtoupper($iniciais);
 */
 
 $stmtProc = $pdo->prepare("
-    SELECT *
-    FROM procedimentos
-    WHERE paciente_id = ?
-    ORDER BY data_procedimento DESC
+    SELECT
+        p.*,
+        oi.valor_orcado
+    FROM procedimentos p
+    LEFT JOIN (
+        SELECT
+            orcamento_id,
+            ROUND(SUM(quantidade * valor_unitario), 2) AS valor_orcado
+        FROM orcamentos_itens
+        GROUP BY orcamento_id
+    ) oi ON oi.orcamento_id = p.orcamento_id
+    WHERE p.paciente_id = ?
+    ORDER BY p.data_procedimento DESC
 ");
 
 $stmtProc->execute([$id]);
@@ -837,8 +846,51 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
                                         </td>
 
 
-                                        <?php if (!$isPrint): ?>
+                                        <td class="procedure-values">
+                                            <?php
+                                            $valorOrcado = isset($proc['valor_orcado'])
+                                                ? (float)$proc['valor_orcado']
+                                                : null;
 
+                                            $valorRealizado = (float)($proc['valor_final'] ?? 0);
+
+                                            $diferenca = $valorOrcado !== null
+                                                ? round($valorRealizado - $valorOrcado, 2)
+                                                : null;
+                                            ?>
+
+                                            <?php if ($valorOrcado === null): ?>
+                                                <span class="procedure-value-muted">
+                                                    Sem orçamento vinculado
+                                                </span>
+                                            <?php else: ?>
+                                                <div class="procedure-value-line">
+                                                    <span>Orçado</span>
+                                                    <strong>R$ <?= number_format($valorOrcado, 2, ',', '.') ?></strong>
+                                                </div>
+
+                                                <div class="procedure-value-line">
+                                                    <span>Realizado</span>
+                                                    <strong>R$ <?= number_format($valorRealizado, 2, ',', '.') ?></strong>
+                                                </div>
+
+                                                <?php if ($diferenca > 0): ?>
+                                                    <span class="procedure-difference difference-positive">
+                                                        +R$ <?= number_format($diferenca, 2, ',', '.') ?> acima
+                                                    </span>
+                                                <?php elseif ($diferenca < 0): ?>
+                                                    <span class="procedure-difference difference-negative">
+                                                        R$ <?= number_format(abs($diferenca), 2, ',', '.') ?> abaixo
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="procedure-difference difference-equal">
+                                                        Sem diferença
+                                                    </span>
+                                                <?php endif; ?>
+                                            <?php endif; ?>
+                                        </td>
+
+                                        <?php if (!$isPrint): ?>
                                             <td class="procedure-actions">
 
                                                 <a
@@ -1189,6 +1241,14 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
                             const valorMateriais = Number(this.dataset.valorMateriais || 0);
                             const valorMaoObra = Number(this.dataset.valorMaoObra || 0);
                             const valorFinal = Number(this.dataset.valorFinal || 0);
+                            const valorOrcadoRaw = this.dataset.valorOrcado || '';
+                            const valorOrcado = valorOrcadoRaw === '' ?
+                                null :
+                                Number(valorOrcadoRaw);
+
+                            const diferenca = valorOrcado !== null ?
+                                valorFinal - valorOrcado :
+                                null;
 
 
                             modalTitle.textContent = titulo;
@@ -1235,9 +1295,32 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
                             html += `
                     <div class="modal-info">
                         <strong>Valores</strong>
-                        <span>Materiais: ${formatarMoedaModal(valorMateriais)} | Mão de obra: ${formatarMoedaModal(valorMaoObra)} | Final: <strong>${formatarMoedaModal(valorFinal)}</strong></span>
+                        <span>
+                            Materiais: ${formatarMoedaModal(valorMateriais)}
+                            | Mão de obra: ${formatarMoedaModal(valorMaoObra)}
+                            | Final realizado: <strong>${formatarMoedaModal(valorFinal)}</strong>
+                        </span>
                     </div>
                 `;
+
+                            if (valorOrcado !== null) {
+                                const textoDiferenca =
+                                    diferenca > 0 ?
+                                    `+${formatarMoedaModal(diferenca)} acima do orçamento` :
+                                    diferenca < 0 ?
+                                    `${formatarMoedaModal(Math.abs(diferenca))} abaixo do orçamento` :
+                                    'Sem diferença em relação ao orçamento';
+
+                                html += `
+                    <div class="modal-info">
+                        <strong>Orçamento</strong>
+                        <span>
+                            Orçado: ${formatarMoedaModal(valorOrcado)}
+                            | ${textoDiferenca}
+                        </span>
+                    </div>
+                `;
+                            }
 
                             if (
                                 descricao.trim() === '' &&
