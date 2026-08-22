@@ -83,13 +83,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach ($materiais_post as $material) {
             $estoque_id = (int)($material['estoque_id'] ?? 0);
             $quantidade = (float)($material['quantidade'] ?? 0);
+            $subtotal_informado = array_key_exists('subtotal', $material)
+                ? (float)$material['subtotal']
+                : null;
+
             if ($estoque_id <= 0 || $quantidade <= 0) {
                 throw new Exception('Material ou quantidade inválidos.');
             }
+
+            if ($subtotal_informado !== null && $subtotal_informado < 0) {
+                throw new Exception('O subtotal do material não pode ser negativo.');
+            }
+
             if (isset($materiais_normalizados[$estoque_id])) {
                 throw new Exception('O mesmo material foi adicionado mais de uma vez.');
             }
-            $materiais_normalizados[$estoque_id] = $quantidade;
+
+            $materiais_normalizados[$estoque_id] = [
+                'quantidade' => $quantidade,
+                'subtotal_informado' => $subtotal_informado
+            ];
         }
 
         // Na edição, devolvemos ao estoque os materiais do procedimento antigo.
@@ -105,6 +118,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $orcamento_id = (int)$procedimento_antigo['orcamento_id'];
             }
 
+            if (!$orcamento_id) {
+                throw new Exception('O procedimento não possui um orçamento vinculado.');
+            }
+
+            $stmtOrcamento = $pdo->prepare("
+                SELECT id
+                FROM orcamentos
+                WHERE id = ?
+                  AND paciente_id = ?
+                  AND status = 'aceito'
+                LIMIT 1
+            ");
+            $stmtOrcamento->execute([$orcamento_id, $prontuario_id]);
+
+            if (!$stmtOrcamento->fetchColumn()) {
+                throw new Exception('O procedimento precisa estar vinculado a um orçamento aceito.');
+            }
+
             $stmt = $pdo->prepare('SELECT estoque_id, quantidade FROM procedimento_materiais WHERE procedimento_id = ?');
             $stmt->execute([$procedimento_id]);
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $antigo) {
@@ -116,7 +147,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $valor_materiais = 0.0;
-        foreach ($materiais_normalizados as $estoque_id => $quantidade) {
+        foreach ($materiais_normalizados as $estoque_id => $material_data) {
+            $quantidade = (float)$material_data['quantidade'];
+
             $stmt = $pdo->prepare('SELECT nome, quantidade, unidade, valor_item FROM estoque WHERE id = ? LIMIT 1 FOR UPDATE');
             $stmt->execute([$estoque_id]);
             $estoque = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -124,6 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$estoque) {
                 throw new Exception('Material não encontrado no estoque.');
             }
+
             if ((float)$estoque['quantidade'] < $quantidade) {
                 throw new Exception(
                     'Estoque insuficiente para "' . $estoque['nome'] . '". Disponível: ' .
@@ -131,8 +165,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
             }
 
-            $valor_unitario = (float)$estoque['valor_item'];
-            $valor_total = $valor_unitario * $quantidade;
+            $subtotal_informado = $material_data['subtotal_informado'];
+
+            if ($subtotal_informado === null) {
+                $valor_unitario = (float)$estoque['valor_item'];
+                $valor_total = $valor_unitario * $quantidade;
+            } else {
+                $valor_total = max(0, $subtotal_informado);
+                $valor_unitario = $quantidade > 0 ? $valor_total / $quantidade : 0;
+            }
+
             $valor_materiais += $valor_total;
 
             $pdo->prepare('UPDATE estoque SET quantidade = quantidade - ? WHERE id = ?')
@@ -341,15 +383,28 @@ if ($procedimento_id) {
         die("Procedimento não encontrado.");
     }
 
-    $stmt = $pdo->prepare("SELECT estoque_id, quantidade FROM procedimento_materiais WHERE procedimento_id = ?");
+    $stmt = $pdo->prepare("
+        SELECT estoque_id, quantidade, valor_total
+        FROM procedimento_materiais
+        WHERE procedimento_id = ?
+    ");
     $stmt->execute([$procedimento_id]);
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $m) {
-        $materiaisExistentes[(int)$m['estoque_id']] = (float)$m['quantidade'];
+        $materiaisExistentes[(int)$m['estoque_id']] = [
+            'quantidade' => (float)$m['quantidade'],
+            'subtotal' => (float)$m['valor_total']
+        ];
     }
 }
 
 foreach ($materiais as &$material) {
-    $material['quantidade_disponivel'] = (float)$material['quantidade'] + ($materiaisExistentes[(int)$material['id']] ?? 0);
+    $existente = $materiaisExistentes[(int)$material['id']] ?? null;
+    $quantidadeExistente = is_array($existente)
+        ? (float)$existente['quantidade']
+        : (float)$existente;
+
+    $material['quantidade_disponivel'] =
+        (float)$material['quantidade'] + $quantidadeExistente;
 }
 unset($material);
 
@@ -620,10 +675,10 @@ unset($material);
                                 <label>Subtotal</label>
 
                                 <input
-                                    type="text"
+                                    type="number"
                                     class="subtotal-material"
-                                    value="R$ 0,00"
-                                    readonly>
+                                    value=""
+                                    readonly> min="0" step="0.01" value="0.00">
 
                             </div>
 
@@ -929,11 +984,10 @@ unset($material);
                 formatarMoeda(sugerido);
 
 
-            const subtotal =
-                valor * quantidade;
-
-            subtotalInput.value =
-                formatarMoeda(subtotal);
+            if (!subtotalInput.dataset.manual || Number(subtotalInput.value) <= 0) {
+                subtotalInput.value = (valor * quantidade).toFixed(2);
+                subtotalInput.dataset.manual = 'false';
+            }
 
 
             estoqueTexto.textContent =
@@ -993,15 +1047,16 @@ unset($material);
                     const quantidade =
                         Number(quantidadeInput.value) || 0;
 
-                    const valor =
-                        Number(option.dataset.valor) || 0;
+                    const subtotalInput =
+                        linha.querySelector('.subtotal-material');
+
+                    const subtotal =
+                        Number(subtotalInput.value) || 0;
 
                     const sugerido =
                         Number(option.dataset.sugerido) || 0;
 
-
-                    totalMateriais +=
-                        valor * quantidade;
+                    totalMateriais += subtotal;
 
                     totalSugerido +=
                         sugerido * quantidade;
@@ -1229,9 +1284,24 @@ unset($material);
 
             quantidade.addEventListener(
                 'input',
-                () => atualizarLinha(linha)
+                () => {
+                    const subtotalInput = linha.querySelector('.subtotal-material');
+                    subtotalInput.dataset.manual = 'false';
+                    atualizarLinha(linha);
+                }
             );
 
+            const subtotalInput = linha.querySelector('.subtotal-material');
+            subtotalInput.dataset.manual = 'true';
+
+            subtotalInput.addEventListener(
+                'input',
+                () => {
+                    subtotalInput.dataset.manual = 'true';
+                    atualizarTotais();
+                    atualizarValorFinal();
+                }
+            );
 
             remover.addEventListener(
                 'click',
@@ -1274,21 +1344,43 @@ unset($material);
         linhasIniciais.forEach(configurarLinha);
 
         const existentes = Object.entries(materiaisExistentes);
+
         if (existentes.length > 0) {
             const primeiraLinha = document.querySelector('.material-row');
-            primeiraLinha.querySelector('.material').value = existentes[0][0];
-            primeiraLinha.querySelector('.quantidade-material').value = existentes[0][1];
+
+            const preencherLinhaExistente = (linha, item) => {
+                const estoqueId = item[0];
+                const dadosMaterial = item[1];
+
+                const quantidade = typeof dadosMaterial === 'object' ?
+                    Number(dadosMaterial.quantidade) || 1 :
+                    Number(dadosMaterial) || 1;
+
+                const subtotal = typeof dadosMaterial === 'object' ?
+                    Number(dadosMaterial.subtotal) || 0 :
+                    0;
+
+                linha.querySelector('.material').value = estoqueId;
+                linha.querySelector('.quantidade-material').value = quantidade;
+                linha.querySelector('.subtotal-material').value = subtotal.toFixed(2);
+                linha.querySelector('.subtotal-material').dataset.manual = 'true';
+            };
+
+            preencherLinhaExistente(primeiraLinha, existentes[0]);
 
             for (let i = 1; i < existentes.length; i++) {
                 adicionarLinhaMaterial();
+
                 const linhas = document.querySelectorAll('.material-row');
-                const linha = linhas[linhas.length - 1];
-                linha.querySelector('.material').value = existentes[i][0];
-                linha.querySelector('.quantidade-material').value = existentes[i][1];
+                preencherLinhaExistente(
+                    linhas[linhas.length - 1],
+                    existentes[i]
+                );
             }
         }
 
         document.querySelectorAll('.material-row').forEach(atualizarLinha);
+        atualizarTotais();
         atualizarValorFinal();
 
 
@@ -1477,6 +1569,10 @@ unset($material);
                     prontuario_id: Number(
                         document.getElementById('prontuarioId').value
                     ),
+
+                    procedimento_id: Number(
+                        document.getElementById('procedimentoId').value
+                    ) || null,
 
                     agendamento_id: document.getElementById('agendamentoId').value ?
                         Number(
