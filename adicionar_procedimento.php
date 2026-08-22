@@ -281,12 +281,28 @@ if (!isset($_GET['prontuario_id']) || !is_numeric($_GET['prontuario_id'])) {
 
 $prontuario_id = (int) $_GET['prontuario_id'];
 $procedimento_id = isset($_GET['procedimento_id']) && is_numeric($_GET['procedimento_id']) ? (int)$_GET['procedimento_id'] : null;
+$agendamento_id = isset($_GET['agendamento_id']) && is_numeric($_GET['agendamento_id']) ? (int)$_GET['agendamento_id'] : null;
 
 /*
 |--------------------------------------------------------------------------
 | Agendamento
 |--------------------------------------------------------------------------
 */
+$stmt = $pdo->prepare("
+    SELECT id, paciente
+    FROM prontuarios
+    WHERE id = ?
+    LIMIT 1
+");
+$stmt->execute([$prontuario_id]);
+$prontuario = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$prontuario) {
+    die("Prontuário não encontrado.");
+}
+
+$paciente = $prontuario['paciente'];
+
 $agendamento = $agendamento ?? null;
 
 if ($procedimento_id === null && $agendamento_id !== null) {
@@ -603,7 +619,7 @@ unset($material);
                                     class="quantidade-material"
                                     min="0.01"
                                     step="0.01"
-                                    value="<?= $materiaisExistentes ? htmlspecialchars((string)reset($materiaisExistentes)) : '1' ?>"
+                                    value="1"
                                     required>
 
                                 <small class="estoque-disponivel">
@@ -643,14 +659,12 @@ unset($material);
 
                                 <label>Subtotal</label>
 
-
-
                                 <input
                                     type="number"
                                     class="subtotal-material"
                                     min="0"
                                     step="0.01"
-                                    value="0.00"> min="0" step="0.01" value="0.00">
+                                    value="0.00">
 
                             </div>
 
@@ -806,15 +820,15 @@ unset($material);
 
 
     <script>
-        const procedimentoExistente = <?= json_encode($procedimento_existente ?: null,
+        const procedimentoExistente = <?= json_encode(
+                                            $procedimento ?: null,
                                             JSON_UNESCAPED_UNICODE |
                                                 JSON_UNESCAPED_SLASHES |
                                                 JSON_HEX_TAG |
                                                 JSON_HEX_APOS |
                                                 JSON_HEX_AMP |
                                                 JSON_HEX_QUOT
-                                        )
-                                        ?>;
+                                        ) ?>;
 
         const materiaisDisponiveis = <?= json_encode(
                                             $materiais,
@@ -936,7 +950,7 @@ unset($material);
 
                 sugeridoInput.value = 'R$ 0,00';
 
-                subtotalInput.value = 'R$ 0,00';
+                subtotalInput.value = '0.00';
 
                 estoqueTexto.textContent =
                     'Selecione um material';
@@ -1213,10 +1227,11 @@ unset($material);
             <label>Subtotal</label>
 
             <input
-                type="text"
+                type="number"
                 class="subtotal-material"
-                value="R$ 0,00"
-                readonly
+                min="0"
+                step="0.01"
+                value="0.00"
             >
 
         </div>
