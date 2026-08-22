@@ -1495,6 +1495,16 @@ unset($material);
                         document.getElementById('maoObra').value
                     ) || 0,
 
+                    /*
+                    |----------------------------------------------------------
+                    | O valor final é definido pelo usuário.
+                    | O sistema apenas calcula e exibe uma sugestão.
+                    |----------------------------------------------------------
+                    */
+                    valor_final: Number(
+                        document.getElementById('valorFinalInput').value
+                    ) || 0,
+
                     materiais: materiais
 
                 };
@@ -1504,6 +1514,16 @@ unset($material);
 
                     alert(
                         'Informe o nome do procedimento.'
+                    );
+
+                    return;
+
+                }
+
+                if (dados.valor_final < 0) {
+
+                    alert(
+                        'O valor final não pode ser negativo.'
                     );
 
                     return;
