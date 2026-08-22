@@ -114,9 +114,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('Procedimento não encontrado para edição.');
             }
 
-            if (!$orcamento_id && !empty($procedimento_antigo['orcamento_id'])) {
-                $orcamento_id = (int)$procedimento_antigo['orcamento_id'];
-            }
+            // Na edição, o orçamento vem obrigatoriamente do próprio procedimento.
+            $orcamento_id = !empty($procedimento_antigo['orcamento_id'])
+                ? (int)$procedimento_antigo['orcamento_id']
+                : null;
 
             if (!$orcamento_id) {
                 throw new Exception('O procedimento não possui um orçamento vinculado.');
@@ -134,24 +135,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (!$stmtOrcamento->fetchColumn()) {
                 throw new Exception('O orçamento vinculado ao procedimento não está aceito.');
-            }
-
-            if (!$orcamento_id) {
-                throw new Exception('O procedimento não possui um orçamento vinculado.');
-            }
-
-            $stmtOrcamento = $pdo->prepare("
-                SELECT id
-                FROM orcamentos
-                WHERE id = ?
-                  AND paciente_id = ?
-                  AND status = 'aceito'
-                LIMIT 1
-            ");
-            $stmtOrcamento->execute([$orcamento_id, $prontuario_id]);
-
-            if (!$stmtOrcamento->fetchColumn()) {
-                throw new Exception('O procedimento precisa estar vinculado a um orçamento aceito.');
             }
 
             $stmt = $pdo->prepare('SELECT estoque_id, quantidade FROM procedimento_materiais WHERE procedimento_id = ?');
