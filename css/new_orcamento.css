@@ -3,94 +3,87 @@
 ========================================================= */
 
 * {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 body {
-    margin: 0;
-    background: var(--background, #f5f6fa);
-    color: #303641;
-    font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background: var(--background, #f5f6fa);
+  color: #303641;
+  font-family: Arial, Helvetica, sans-serif;
 }
-
 
 /* =========================================================
    CONTAINER
 ========================================================= */
 
 .container {
-    width: 100%;
-    max-width: 1100px;
+  width: 100%;
+  max-width: 1100px;
 
-    margin: 0 auto;
+  margin: 0 auto;
 
-    padding: 35px 40px 50px;
+  padding: 35px 40px 50px;
 }
-
 
 /* =========================================================
    TÍTULO
 ========================================================= */
 
 .container h1 {
-    margin: 0 0 28px;
+  margin: 0 0 28px;
 
-    color: #252a34;
+  color: #252a34;
 
-    font-size: 30px;
-    font-weight: 700;
+  font-size: 30px;
+  font-weight: 700;
 }
-
 
 /* =========================================================
    FORMULÁRIO
 ========================================================= */
 
 #formOrcamento {
-    width: 100%;
+  width: 100%;
 
-    background: #ffffff;
+  background: #ffffff;
 
-    border: 1px solid #e6e8ed;
-    border-radius: 14px;
+  border: 1px solid #e6e8ed;
+  border-radius: 14px;
 
-    padding: 30px;
+  padding: 30px;
 
-    box-shadow:
-        0 4px 18px rgba(15, 23, 42, 0.045);
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.045);
 }
-
 
 /* =========================================================
    GRUPOS
 ========================================================= */
 
 .form-group {
-    width: 100%;
+  width: 100%;
 
-    margin-bottom: 24px;
+  margin-bottom: 24px;
 }
 
 .form-group:last-of-type {
-    margin-bottom: 25px;
+  margin-bottom: 25px;
 }
-
 
 /* =========================================================
    LABEL
 ========================================================= */
 
 .form-group > label {
-    display: block;
+  display: block;
 
-    margin-bottom: 8px;
+  margin-bottom: 8px;
 
-    color: #555d69;
+  color: #555d69;
 
-    font-size: 13px;
-    font-weight: 700;
+  font-size: 13px;
+  font-weight: 700;
 }
-
 
 /* =========================================================
    INPUTS / SELECT / TEXTAREA
@@ -99,77 +92,73 @@ body {
 .form-group input,
 .form-group select,
 .form-group textarea {
-    width: 100%;
+  width: 100%;
 
-    min-height: 43px;
+  min-height: 43px;
 
-    padding: 10px 13px;
+  padding: 10px 13px;
 
-    background: #ffffff;
+  background: #ffffff;
 
-    border: 1px solid #dfe3e9;
-    border-radius: 8px;
+  border: 1px solid #dfe3e9;
+  border-radius: 8px;
 
-    color: #343a45;
+  color: #343a45;
 
-    font-family: inherit;
-    font-size: 14px;
+  font-family: inherit;
+  font-size: 14px;
 
-    outline: none;
+  outline: none;
 
-    transition:
-        border-color 0.2s ease,
-        box-shadow 0.2s ease,
-        background-color 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .form-group textarea {
-    min-height: 100px;
+  min-height: 100px;
 
-    resize: vertical;
+  resize: vertical;
 
-    line-height: 1.5;
+  line-height: 1.5;
 }
 
 .form-group input::placeholder,
 .form-group textarea::placeholder {
-    color: #a2a8b2;
+  color: #a2a8b2;
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
-    border-color: var(--primary, #5d3a8c);
+  border-color: var(--primary, #5d3a8c);
 
-    box-shadow:
-        0 0 0 3px rgba(93, 58, 140, 0.09);
+  box-shadow: 0 0 0 3px rgba(93, 58, 140, 0.09);
 }
-
 
 /* =========================================================
    PACIENTE
 ========================================================= */
 
 .form-group select {
-    cursor: pointer;
+  cursor: pointer;
 
-    appearance: auto;
+  appearance: auto;
 }
-
 
 /* =========================================================
    ITENS
 ========================================================= */
 
 #itens-container {
-    width: 100%;
+  width: 100%;
 
-    display: flex;
-    flex-direction: column;
+  display: flex;
+  flex-direction: column;
 
-    gap: 10px;
+  gap: 10px;
 }
-
 
 /*
    Cada linha possui:
@@ -180,294 +169,282 @@ body {
 */
 
 .item-row {
-    width: 100%;
+  width: 100%;
 
-    display: grid;
+  display: grid;
 
-    grid-template-columns:
-        minmax(0, 1fr)
-        100px
-        180px;
+  grid-template-columns:
+    minmax(0, 1fr)
+    100px
+    180px;
 
-    gap: 12px;
+  gap: 12px;
 
-    align-items: center;
+  align-items: center;
 }
-
 
 /* =========================================================
    BOTÃO ADICIONAR ITEM
 ========================================================= */
 
 .btn-add-item {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 
-    min-height: 39px;
+  min-height: 39px;
 
-    margin-top: 12px;
+  margin-top: 12px;
 
-    padding: 0 15px;
+  padding: 0 15px;
 
-    background: #f6f2fa;
+  background: #f6f2fa;
 
-    border: 1px solid #ded2e9;
-    border-radius: 8px;
+  border: 1px solid #ded2e9;
+  border-radius: 8px;
 
-    color: var(--primary, #5d3a8c);
+  color: var(--primary, #5d3a8c);
 
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 700;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
 
-    cursor: pointer;
+  cursor: pointer;
 
-    transition:
-        background-color 0.2s ease,
-        border-color 0.2s ease,
-        transform 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .btn-add-item:hover {
-    background: #eee7f5;
+  background: #eee7f5;
 
-    border-color: #cdbbde;
+  border-color: #cdbbde;
 
-    transform: translateY(-1px);
+  transform: translateY(-1px);
 }
-
 
 /* =========================================================
    PARCELAMENTO
 ========================================================= */
 
 #preview_parcelas {
-    min-height: 18px;
+  min-height: 18px;
 
-    color: var(--primary, #5d3a8c);
+  color: var(--primary, #5d3a8c);
 
-    font-size: 13px;
-    font-weight: 600;
+  font-size: 13px;
+  font-weight: 600;
 }
-
 
 /* =========================================================
    BOTÃO PRINCIPAL
 ========================================================= */
 
 .btn {
-    min-height: 44px;
+  min-height: 44px;
 
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 
-    padding: 0 22px;
+  padding: 0 22px;
 
-    background: var(--primary, #5d3a8c);
+  background: var(--primary, #5d3a8c);
 
-    border: 1px solid var(--primary, #5d3a8c);
-    border-radius: 9px;
+  border: 1px solid var(--primary, #5d3a8c);
+  border-radius: 9px;
 
-    color: #ffffff;
+  color: #ffffff;
 
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 700;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
 
-    cursor: pointer;
+  cursor: pointer;
 
-    transition:
-        background-color 0.2s ease,
-        border-color 0.2s ease,
-        box-shadow 0.2s ease,
-        transform 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
 .btn:hover {
-    background: #4f3179;
+  background: #4f3179;
 
-    border-color: #4f3179;
+  border-color: #4f3179;
 
-    box-shadow:
-        0 5px 14px rgba(93, 58, 140, 0.18);
+  box-shadow: 0 5px 14px rgba(93, 58, 140, 0.18);
 
-    transform: translateY(-1px);
+  transform: translateY(-1px);
 }
 
 .btn:active {
-    transform: translateY(0);
+  transform: translateY(0);
 }
-
 
 /* =========================================================
    LINK CANCELAR
 ========================================================= */
 
 #formOrcamento > a {
-    display: inline-flex !important;
-    align-items: center;
+  display: inline-flex !important;
+  align-items: center;
 
-    min-height: 44px;
+  min-height: 44px;
 
-    margin-left: 10px !important;
+  margin-left: 10px !important;
 
-    padding: 0 12px;
+  padding: 0 12px;
 
-    color: #69717d !important;
+  color: #69717d !important;
 
-    font-size: 14px;
-    font-weight: 600;
+  font-size: 14px;
+  font-weight: 600;
 
-    text-decoration: none;
+  text-decoration: none;
 
-    border-radius: 8px;
+  border-radius: 8px;
 
-    transition:
-        color 0.2s ease,
-        background-color 0.2s ease;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
 }
 
 #formOrcamento > a:hover {
-    color: #4f5662 !important;
+  color: #4f5662 !important;
 
-    background: #f2f3f5;
+  background: #f2f3f5;
 }
-
 
 /* =========================================================
    ERRO
 ========================================================= */
 
 .erro {
-    width: 100%;
+  width: 100%;
 
-    margin-bottom: 20px;
+  margin-bottom: 20px;
 
-    padding: 13px 15px;
+  padding: 13px 15px;
 
-    background: #fff0f0 !important;
+  background: #fff0f0 !important;
 
-    border: 1px solid #f3cccc;
+  border: 1px solid #f3cccc;
 
-    border-radius: 8px;
+  border-radius: 8px;
 
-    color: #b72f2f !important;
+  color: #b72f2f !important;
 
-    font-size: 13px;
+  font-size: 13px;
 
-    line-height: 1.5;
+  line-height: 1.5;
 }
-
 
 /* =========================================================
    RESPONSIVIDADE
 ========================================================= */
 
 @media (max-width: 900px) {
+  .container {
+    padding: 30px;
+  }
 
-    .container {
-        padding: 30px;
-    }
+  #formOrcamento {
+    padding: 25px;
+  }
 
-    #formOrcamento {
-        padding: 25px;
-    }
-
-    .item-row {
-        grid-template-columns:
-            minmax(0, 1fr)
-            90px
-            150px;
-    }
+  .item-row {
+    grid-template-columns:
+      minmax(0, 1fr)
+      90px
+      150px;
+  }
 }
-
 
 @media (max-width: 700px) {
+  .container {
+    padding: 25px 18px 40px;
+  }
 
-    .container {
-        padding: 25px 18px 40px;
-    }
+  .container h1 {
+    font-size: 25px;
 
-    .container h1 {
-        font-size: 25px;
+    margin-bottom: 22px;
+  }
 
-        margin-bottom: 22px;
-    }
+  #formOrcamento {
+    padding: 20px;
 
-    #formOrcamento {
-        padding: 20px;
+    border-radius: 11px;
+  }
 
-        border-radius: 11px;
-    }
+  .item-row {
+    grid-template-columns: 1fr;
 
-    .item-row {
-        grid-template-columns: 1fr;
+    gap: 9px;
 
-        gap: 9px;
+    padding: 15px;
 
-        padding: 15px;
+    background: #fafafd;
 
-        background: #fafafd;
+    border: 1px solid #e8e9ee;
+    border-radius: 9px;
+  }
 
-        border: 1px solid #e8e9ee;
-        border-radius: 9px;
-    }
+  .item-row input {
+    width: 100% !important;
+  }
 
-    .item-row input {
-        width: 100% !important;
-    }
+  .btn-add-item {
+    width: 100%;
+  }
 
-    .btn-add-item {
-        width: 100%;
-    }
+  #formOrcamento > .btn {
+    width: 100%;
+  }
 
-    #formOrcamento > .btn {
-        width: 100%;
-    }
+  #formOrcamento > a {
+    width: 100%;
 
-    #formOrcamento > a {
-        width: 100%;
+    justify-content: center;
 
-        justify-content: center;
+    margin-left: 0 !important;
 
-        margin-left: 0 !important;
+    margin-top: 8px;
 
-        margin-top: 8px;
-
-        padding: 0;
-    }
+    padding: 0;
+  }
 }
 
-
 @media (max-width: 480px) {
+  .container {
+    padding: 18px 10px 30px;
+  }
 
-    .container {
-        padding: 18px 10px 30px;
-    }
+  .container h1 {
+    font-size: 22px;
+  }
 
-    .container h1 {
-        font-size: 22px;
-    }
+  #formOrcamento {
+    padding: 16px;
+  }
 
-    #formOrcamento {
-        padding: 16px;
-    }
+  .form-group {
+    margin-bottom: 20px;
+  }
 
-    .form-group {
-        margin-bottom: 20px;
-    }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 14px;
+  }
 
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-        font-size: 14px;
-    }
-
-    .btn {
-        min-height: 45px;
-    }
+  .btn {
+    min-height: 45px;
+  }
 }
 
 /* =========================================================
@@ -475,94 +452,97 @@ body {
    ========================================================= */
 
 #itens-container {
-    gap: 10px;
+  gap: 10px;
 }
 
 .item-row {
-    position: relative;
-    width: 100%;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 92px 170px 42px;
-    gap: 12px;
-    align-items: center;
-    padding: 10px;
-    background: #fbfcfe;
-    border: 1px solid #e4e8ef;
-    border-radius: 10px;
-    transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+  position: relative;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px 170px 42px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  background: #fbfcfe;
+  border: 1px solid #e4e8ef;
+  border-radius: 10px;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
 }
 
 .item-row:hover {
-    background: #ffffff;
-    border-color: #d7dee8;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  background: #ffffff;
+  border-color: #d7dee8;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 
 .item-row > div {
-    min-width: 0;
+  min-width: 0;
 }
 
 .item-row input {
-    width: 100%;
-    min-height: 42px;
-    margin: 0;
+  width: 100%;
+  min-height: 42px;
+  margin: 0;
 }
 
 .item-row input[name="quantidade[]"] {
-    text-align: center;
+  text-align: center;
 }
 
 .btn-remove-item {
-    width: 38px;
-    height: 38px;
-    min-width: 38px;
-    min-height: 38px;
-    margin: 0;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #f0c9c9;
-    border-radius: 8px;
-    background: #fffafa;
-    color: #d64545;
-    cursor: pointer;
-    transition: all 0.18s ease;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  margin: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #f0c9c9;
+  border-radius: 8px;
+  background: #fffafa;
+  color: #d64545;
+  cursor: pointer;
+  transition: all 0.18s ease;
 }
 
 .btn-remove-item:hover {
-    background: #fff0f0;
-    border-color: #e7a5a5;
-    color: #b92f2f;
-    box-shadow: 0 2px 7px rgba(185, 47, 47, 0.10);
+  background: #fff0f0;
+  border-color: #e7a5a5;
+  color: #b92f2f;
+  box-shadow: 0 2px 7px rgba(185, 47, 47, 0.1);
 }
 
 .btn-remove-item:active {
-    transform: scale(0.97);
+  transform: scale(0.97);
 }
 
 .btn-remove-item i {
-    font-size: 12px;
+  font-size: 12px;
 }
 
 /* Mantém o botão de adicionar item mais integrado à tabela */
 .btn-add-item {
-    margin-top: 10px;
-    min-height: 38px;
-    padding: 0 14px;
+  margin-top: 10px;
+  min-height: 38px;
+  padding: 0 14px;
 }
 
 /* Melhor acabamento para a área de parcelamento */
 #preview_parcelas {
-    margin-top: 8px;
-    min-height: 18px;
-    padding: 0;
-    font-size: 13px;
+  margin-top: 8px;
+  min-height: 18px;
+  padding: 0;
+  font-size: 13px;
 }
 
 /* Espaçamento mais equilibrado entre os blocos */
 #formOrcamento .form-group {
-    margin-bottom: 22px;
+  margin-bottom: 22px;
 }
 
 /* =========================================================
@@ -570,24 +550,174 @@ body {
    ========================================================= */
 
 @media (max-width: 900px) {
-    .item-row {
-        grid-template-columns: minmax(0, 1fr) 86px 150px 40px;
-    }
+  .item-row {
+    grid-template-columns: minmax(0, 1fr) 86px 150px 40px;
+  }
 }
 
 @media (max-width: 700px) {
-    .item-row {
-        grid-template-columns: 1fr;
-        gap: 9px;
-        padding: 12px;
-    }
+  .item-row {
+    grid-template-columns: 1fr;
+    gap: 9px;
+    padding: 12px;
+  }
 
-    .item-row input {
-        width: 100% !important;
-    }
+  .item-row input {
+    width: 100% !important;
+  }
 
-    .btn-remove-item {
-        width: 100%;
-        height: 38px;
-    }
+  .btn-remove-item {
+    width: 100%;
+    height: 38px;
+  }
+}
+
+/* =========================================================
+   CORREÇÃO FINAL — LINHA DE ITEM
+   ========================================================= */
+
+/* A linha deve respeitar exatamente a largura do formulário */
+#itens-container .item-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 88px 168px 36px !important;
+  align-items: center !important;
+  gap: 10px !important;
+
+  width: 100% !important;
+  min-height: 64px;
+
+  margin: 0 !important;
+  padding: 10px 12px !important;
+
+  background: #ffffff !important;
+  border: 1px solid #dfe5ed !important;
+  border-radius: 9px !important;
+
+  box-sizing: border-box !important;
+}
+
+/* Cada célula ocupa somente o espaço reservado */
+#itens-container .item-row > div {
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Inputs com mesma altura e mesma base visual */
+#itens-container .item-row input {
+  display: block !important;
+
+  width: 100% !important;
+  height: 42px !important;
+  min-height: 42px !important;
+
+  margin: 0 !important;
+  padding: 0 12px !important;
+
+  border: 1px solid #dfe3e9 !important;
+  border-radius: 8px !important;
+
+  background: #ffffff !important;
+  color: #343a45 !important;
+
+  font-family: inherit;
+  font-size: 14px;
+
+  line-height: 42px;
+}
+
+/* Quantidade */
+#itens-container .item-row input[name="quantidade[]"] {
+  text-align: center;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+
+/* Valor */
+#itens-container .item-row input[name="valor[]"] {
+  text-align: left;
+}
+
+/* Botão de excluir: menor, limpo e alinhado ao centro */
+#itens-container .item-row .btn-remove-item {
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  justify-self: center !important;
+  align-self: center !important;
+
+  border: 1px solid #e7caca !important;
+  border-radius: 7px !important;
+
+  background: #fff !important;
+  color: #c73b3b !important;
+
+  font-size: 0 !important;
+  line-height: 1 !important;
+
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* Ícone */
+#itens-container .item-row .btn-remove-item i {
+  display: block !important;
+  margin: 0 !important;
+  font-size: 12px !important;
+  line-height: 1 !important;
+}
+
+/* Hover */
+#itens-container .item-row .btn-remove-item:hover {
+  background: #fff5f5 !important;
+  border-color: #dca6a6 !important;
+  color: #b52f2f !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* Focus */
+#itens-container .item-row .btn-remove-item:focus-visible {
+  outline: 2px solid rgba(199, 59, 59, 0.18);
+  outline-offset: 2px;
+}
+
+/* Botão adicionar */
+#itens-container + .btn-add-item {
+  margin-top: 10px !important;
+}
+
+/* Responsivo */
+@media (max-width: 900px) {
+  #itens-container .item-row {
+    grid-template-columns: minmax(0, 1fr) 82px 145px 36px !important;
+  }
+}
+
+@media (max-width: 700px) {
+  #itens-container .item-row {
+    grid-template-columns: 1fr !important;
+    gap: 9px !important;
+    min-height: 0;
+    padding: 12px !important;
+  }
+
+  #itens-container .item-row .btn-remove-item {
+    width: 100% !important;
+    max-width: none !important;
+    height: 38px !important;
+  }
 }
