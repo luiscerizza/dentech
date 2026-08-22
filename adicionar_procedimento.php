@@ -133,6 +133,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtOrcamento->execute([$orcamento_id, $prontuario_id]);
 
             if (!$stmtOrcamento->fetchColumn()) {
+                throw new Exception('O orçamento vinculado ao procedimento não está aceito.');
+            }
+
+            if (!$orcamento_id) {
+                throw new Exception('O procedimento não possui um orçamento vinculado.');
+            }
+
+            $stmtOrcamento = $pdo->prepare("
+                SELECT id
+                FROM orcamentos
+                WHERE id = ?
+                  AND paciente_id = ?
+                  AND status = 'aceito'
+                LIMIT 1
+            ");
+            $stmtOrcamento->execute([$orcamento_id, $prontuario_id]);
+
+            if (!$stmtOrcamento->fetchColumn()) {
                 throw new Exception('O procedimento precisa estar vinculado a um orçamento aceito.');
             }
 
@@ -161,7 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ((float)$estoque['quantidade'] < $quantidade) {
                 throw new Exception(
                     'Estoque insuficiente para "' . $estoque['nome'] . '". Disponível: ' .
-                    $estoque['quantidade'] . ' ' . $estoque['unidade'] . '.'
+                        $estoque['quantidade'] . ' ' . $estoque['unidade'] . '.'
                 );
             }
 
@@ -190,9 +208,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($procedimento_id) {
             $stmt = $pdo->prepare('UPDATE procedimentos SET titulo = ?, descricao = ?, medicamentos = ?, valor_materiais = ?, valor_mao_obra = ?, valor_final = ?, data_procedimento = ?, orcamento_id = ? WHERE id = ?');
             $stmt->execute([
-                $titulo, $descricao ?: null, $medicamentos ?: null,
-                $valor_materiais, $valor_mao_obra, $valor_final,
-                $data_procedimento, $orcamento_id, $procedimento_id
+                $titulo,
+                $descricao ?: null,
+                $medicamentos ?: null,
+                $valor_materiais,
+                $valor_mao_obra,
+                $valor_final,
+                $data_procedimento,
+                $orcamento_id,
+                $procedimento_id
             ]);
         } else {
             if (!$orcamento_id) {
@@ -201,8 +225,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $stmt = $pdo->prepare('INSERT INTO procedimentos (paciente_id, orcamento_id, titulo, descricao, medicamentos, valor_materiais, valor_mao_obra, valor_final, data_procedimento) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
             $stmt->execute([
-                $prontuario_id, $orcamento_id, $titulo, $descricao ?: null, $medicamentos ?: null,
-                $valor_materiais, $valor_mao_obra, $valor_final, $data_procedimento
+                $prontuario_id,
+                $orcamento_id,
+                $titulo,
+                $descricao ?: null,
+                $medicamentos ?: null,
+                $valor_materiais,
+                $valor_mao_obra,
+                $valor_final,
+                $data_procedimento
             ]);
             $procedimento_id = (int)$pdo->lastInsertId();
         }
@@ -227,7 +258,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'valor_final' => $valor_final
         ]);
         exit;
-
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
@@ -256,66 +286,17 @@ $procedimento_id = isset($_GET['procedimento_id']) && is_numeric($_GET['procedim
 |--------------------------------------------------------------------------
 | Agendamento
 |--------------------------------------------------------------------------
-| O procedimento deve ser iniciado a partir de um agendamento confirmado.
-| Porém, mantemos o prontuario_id como obrigatório para compatibilidade.
-|--------------------------------------------------------------------------
 */
+$agendamento = $agendamento ?? null;
 
-$agendamento_id = null;
-
-if (isset($_GET['agendamento_id']) && is_numeric($_GET['agendamento_id'])) {
-    $agendamento_id = (int) $_GET['agendamento_id'];
-}
-
-/*
-|--------------------------------------------------------------------------
-| Buscar paciente
-|--------------------------------------------------------------------------
-*/
-
-$stmt = $pdo->prepare("
-    SELECT id, paciente
-    FROM prontuarios
-    WHERE id = ?
-    LIMIT 1
-");
-
-$stmt->execute([$prontuario_id]);
-
-$prontuario = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$prontuario) {
-    die("Prontuário não encontrado.");
-}
-
-$paciente = $prontuario['paciente'];
-
-/*
-|--------------------------------------------------------------------------
-| Se veio de um agendamento, verificar se está confirmado
-|--------------------------------------------------------------------------
-*/
-
-$agendamento = null;
-
-if ($agendamento_id !== null) {
-
+if ($procedimento_id === null && $agendamento_id !== null) {
     $stmt = $pdo->prepare("
-        SELECT
-            id,
-            paciente_id,
-            paciente_nome,
-            procedimento,
-            data,
-            horario,
-            status
+        SELECT id, paciente_id, paciente_nome, procedimento, data, horario, status
         FROM agendamentos
         WHERE id = ?
         LIMIT 1
     ");
-
     $stmt->execute([$agendamento_id]);
-
     $agendamento = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$agendamento) {
@@ -330,7 +311,7 @@ if ($agendamento_id !== null) {
         die("Este agendamento ainda não está confirmado.");
     }
 
-    $stmtOrcamento = $pdo->prepare("
+    $stmt = $pdo->prepare("
         SELECT id
         FROM orcamentos
         WHERE agendamento_id = ?
@@ -339,11 +320,11 @@ if ($agendamento_id !== null) {
         ORDER BY id DESC
         LIMIT 1
     ");
-    $stmtOrcamento->execute([$agendamento_id, $prontuario_id]);
-    $orcamentoAceitoId = $stmtOrcamento->fetchColumn();
+    $stmt->execute([$agendamento_id, $prontuario_id]);
+    $orcamento_id = $stmt->fetchColumn();
 
-    if (!$orcamentoAceitoId) {
-        die("Este agendamento ainda não possui um orçamento aceito. O procedimento só pode ser iniciado após a aprovação do orçamento.");
+    if (!$orcamento_id) {
+        die("Este agendamento não possui um orçamento aceito.");
     }
 }
 
@@ -662,15 +643,14 @@ unset($material);
 
                                 <label>Subtotal</label>
 
-                                
-                                
-        <input
-            type="number"
-            class="subtotal-material"
-            min="0"
-            step="0.01"
-            value="0.00"
-        >
+
+
+                                <input
+                                    type="number"
+                                    class="subtotal-material"
+                                    min="0"
+                                    step="0.01"
+                                    value="0.00"> min="0" step="0.01" value="0.00">
 
                             </div>
 
@@ -826,6 +806,16 @@ unset($material);
 
 
     <script>
+        const procedimentoExistente = <?= json_encode(
+                                            $procedimento_existente ?: null,
+                                            JSON_UNESCAPED_UNICODE |
+                                                JSON_UNESCAPED_SLASHES |
+                                                JSON_HEX_TAG |
+                                                JSON_HEX_APOS |
+                                                JSON_HEX_AMP |
+                                                JSON_HEX_QUOT
+                                        ) ?>;
+
         const materiaisDisponiveis = <?= json_encode(
                                             $materiais,
                                             JSON_UNESCAPED_UNICODE |
@@ -1344,13 +1334,13 @@ unset($material);
                 const estoqueId = item[0];
                 const dadosMaterial = item[1];
 
-                const quantidade = typeof dadosMaterial === 'object'
-                    ? Number(dadosMaterial.quantidade) || 1
-                    : Number(dadosMaterial) || 1;
+                const quantidade = typeof dadosMaterial === 'object' ?
+                    Number(dadosMaterial.quantidade) || 1 :
+                    Number(dadosMaterial) || 1;
 
-                const subtotal = typeof dadosMaterial === 'object'
-                    ? Number(dadosMaterial.subtotal) || 0
-                    : 0;
+                const subtotal = typeof dadosMaterial === 'object' ?
+                    Number(dadosMaterial.subtotal) || 0 :
+                    0;
 
                 linha.querySelector('.material').value = estoqueId;
                 linha.querySelector('.quantidade-material').value = quantidade;
@@ -1420,6 +1410,31 @@ unset($material);
 
         }
 
+
+        if (procedimentoExistente) {
+            document.getElementById('titulo').value =
+                procedimentoExistente.titulo || '';
+
+            document.getElementById('data_procedimento').value =
+                procedimentoExistente.data_procedimento || '';
+
+            document.getElementById('descricao').value =
+                procedimentoExistente.descricao || '';
+
+            document.getElementById('medicamentos').value =
+                procedimentoExistente.medicamentos || '';
+
+            document.getElementById('maoObra').value =
+                Number(procedimentoExistente.valor_mao_obra || 0).toFixed(2);
+
+            const valorFinalInput =
+                document.getElementById('valorFinalInput');
+
+            if (valorFinalInput) {
+                valorFinalInput.value =
+                    Number(procedimentoExistente.valor_final || 0).toFixed(2);
+            }
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -1569,8 +1584,7 @@ unset($material);
                     agendamento_id: document.getElementById('agendamentoId').value ?
                         Number(
                             document.getElementById('agendamentoId').value
-                        ) :
-                        null,
+                        ) : null,
 
                     titulo: document.getElementById('titulo').value.trim(),
 
