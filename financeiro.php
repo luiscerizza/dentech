@@ -136,11 +136,8 @@ $stmt_manuais = $pdo->prepare("
         lf.observacoes,
         lf.orcamento_id,
         lf.parcela_id,
-        lf.procedimento_id,
-        p_proc.paciente_id
+        lf.procedimento_id
     FROM lancamentos_financeiros lf
-    LEFT JOIN procedimentos p_proc
-        ON p_proc.id = lf.procedimento_id
     WHERE " . implode(' AND ', $where_manuais) . "
     ORDER BY lf.data DESC, lf.id DESC
     LIMIT 100
@@ -1030,7 +1027,7 @@ $tipos_nomes = [
 
                                 <?php foreach ($lancamentos as $lancamento): ?>
 
-                                    <tr class="<?= (($lancamento['categoria'] ?? '') === 'Ajuste de procedimento') ? 'linha-ajuste-procedimento' : '' ?>">
+                                    <tr>
 
                                         <td>
                                             <?= dataBR($lancamento['data']) ?>
@@ -1113,23 +1110,44 @@ $tipos_nomes = [
 
                                             <?php else: ?>
 
-                                                <?php if (($lancamento['categoria'] ?? '') === 'Ajuste de procedimento' && !empty($lancamento['procedimento_id'])): ?>
+                                                <a
+                                                    href="visualizar_lancamento.php?id=<?= (int) $lancamento['id'] ?>"
+                                                    class="btn-acao"
+                                                    title="Visualizar">
+                                                    <i class="fa-regular fa-eye"></i>
+                                                </a>
 
-                                                    <a
-                                                        href="visualizar_prontuario.php?id=<?= (int)($lancamento['paciente_id'] ?? 0) ?>"
-                                                        class="btn-acao"
-                                                        title="Ver prontuário">
-                                                        <i class="fa-regular fa-eye"></i>
-                                                    </a>
+                                                <?php if (
+                                                    ($lancamento['categoria'] ?? '') === 'Ajuste de procedimento'
+                                                    && strtolower(trim((string)$lancamento['status'])) === 'pendente'
+                                                ): ?>
+
+                                                    <form
+                                                        method="POST"
+                                                        action="pagar_ajuste_financeiro.php"
+                                                        class="form-pagar-parcela"
+                                                        onsubmit="return confirm('Confirmar recebimento deste ajuste de procedimento?');">
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="lancamento_id"
+                                                            value="<?= (int)$lancamento['id'] ?>">
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="csrf_token"
+                                                            value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
+
+                                                        <button
+                                                            type="submit"
+                                                            class="btn-acao btn-pagar-financeiro"
+                                                            title="Marcar ajuste como pago">
+                                                            <i class="fa-solid fa-check"></i>
+                                                        </button>
+
+                                                    </form>
 
                                                 <?php else: ?>
-
-                                                    <a
-                                                        href="visualizar_lancamento.php?id=<?= (int) $lancamento['id'] ?>"
-                                                        class="btn-acao"
-                                                        title="Visualizar">
-                                                        <i class="fa-regular fa-eye"></i>
-                                                    </a>
 
                                                     <a
                                                         href="editar_lancamento.php?id=<?= (int) $lancamento['id'] ?>"
@@ -1174,7 +1192,6 @@ $tipos_nomes = [
         </main>
     </div>
 
-
     <style>
         .lancamento-ajuste-badge {
             display: inline-flex;
@@ -1189,16 +1206,7 @@ $tipos_nomes = [
             font-size: 10px;
             font-weight: 700;
         }
-
-        .linha-ajuste-procedimento td {
-            background: #fffaf5;
-        }
-
-        .linha-ajuste-procedimento td strong {
-            color: #9a3412;
-        }
     </style>
-
 </body>
 
 </html>
