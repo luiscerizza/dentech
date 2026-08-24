@@ -759,10 +759,10 @@ body {
     position: relative;
     display: grid;
     grid-template-columns:
-        minmax(430px, 4fr)
-        minmax(220px, 2fr)
-        80px
-        165px
+        minmax(285px, 2.4fr)
+        minmax(165px, 1.35fr)
+        82px
+        140px
         38px;
     align-items: end;
     gap: 10px;
@@ -835,19 +835,6 @@ body {
     border-color: #1769d2;
     box-shadow: 0 0 0 3px rgba(23, 105, 210, 0.10);
 }
-
-#itens-container .servico-catalogo {
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
-}
-
-#itens-container .item-row input[name="valor[]"] {
-    min-width: 0;
-    padding-left: 12px;
-    padding-right: 12px;
-}
-
 
 #itens-container .catalogo-servico-vazio {
     color: #7a8698;
@@ -971,18 +958,6 @@ body {
    RESPONSIVIDADE
    ============================================================ */
 
-@media (max-width: 1100px) {
-
-    #itens-container .item-row {
-        grid-template-columns:
-            minmax(330px, 3.2fr)
-            minmax(180px, 1.7fr)
-            76px
-            155px
-            38px;
-    }
-}
-
 @media (max-width: 900px) {
 
     .container {
@@ -997,10 +972,10 @@ body {
 
     #itens-container .item-row {
         grid-template-columns:
-            minmax(260px, 2.5fr)
-            minmax(150px, 1.5fr)
-            72px
-            145px
+            minmax(240px, 2.2fr)
+            minmax(135px, 1.2fr)
+            76px
+            125px
             38px;
     }
 }
