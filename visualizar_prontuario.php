@@ -894,7 +894,7 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
                                                     </span>
                                                 <?php elseif ($diferenca < 0): ?>
                                                     <span class="procedure-difference difference-negative">
-                                                        R$ <?= number_format(abs($diferenca), 2, ',', '.') ?> abaixo
+                                                        -R$ <?= number_format(abs($diferenca), 2, ',', '.') ?> desconto
                                                     </span>
                                                 <?php else: ?>
                                                     <span class="procedure-difference difference-equal">
@@ -910,16 +910,29 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
                                                 <?php if (
                                                     $valorOrcado !== null &&
                                                     $diferenca !== null &&
-                                                    $diferenca > 0
+                                                    $diferenca != 0
                                                 ): ?>
 
                                                     <?php if (empty($proc['ajuste_financeiro_id'])): ?>
+
+                                                        <?php if ($diferenca > 0): ?>
+                                                            <?php
+                                                            $textoAjuste = 'Gerar cobrança adicional de R$ ' . number_format($diferenca, 2, ',', '.');
+                                                            $botaoAjuste = 'Gerar ajuste';
+                                                            ?>
+                                                        <?php else: ?>
+                                                            <?php
+                                                            $valorDesconto = abs($diferenca);
+                                                            $textoAjuste = 'Aplicar desconto de R$ ' . number_format($valorDesconto, 2, ',', '.');
+                                                            $botaoAjuste = 'Aplicar desconto';
+                                                            ?>
+                                                        <?php endif; ?>
 
                                                         <form
                                                             method="POST"
                                                             action="gerar_ajuste_financeiro.php"
                                                             class="form-ajuste-financeiro"
-                                                            onsubmit="return confirm('Gerar uma cobrança adicional de R$ <?= number_format($diferenca, 2, ',', '.') ?> para este procedimento?');">
+                                                            onsubmit="return confirm('<?= htmlspecialchars($textoAjuste, ENT_QUOTES) ?> para este procedimento?');">
 
                                                             <input
                                                                 type="hidden"
@@ -934,7 +947,7 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
                                                             <button
                                                                 type="submit"
                                                                 class="table-action btn-ajuste-financeiro">
-                                                                Gerar ajuste
+                                                                <?= htmlspecialchars($botaoAjuste) ?>
                                                             </button>
 
                                                         </form>
@@ -942,7 +955,7 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
                                                     <?php else: ?>
 
                                                         <span class="ajuste-gerado">
-                                                            Ajuste gerado
+                                                            Ajuste aplicado
                                                         </span>
 
                                                     <?php endif; ?>

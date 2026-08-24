@@ -107,15 +107,15 @@ try {
         2
     );
 
-    if ($diferenca <= 0) {
+    if (round($diferenca, 2) === 0.0) {
         throw new Exception(
-            'Não existe uma diferença positiva para gerar cobrança.'
+            'Não existe diferença entre o orçamento e o valor realizado.'
         );
     }
 
     /*
     |--------------------------------------------------------------------------
-    | 4. Evitar cobrança duplicada
+    | 4. Evitar ajuste duplicado
     |--------------------------------------------------------------------------
     */
     $stmt = $pdo->prepare("
@@ -141,14 +141,18 @@ try {
     | 5. Criar ajuste
     |--------------------------------------------------------------------------
     */
+    $ehCobranca = $diferenca > 0;
+
     $descricao = sprintf(
-        'Ajuste do procedimento #%d - %s',
+        '%s do procedimento #%d - %s',
+        $ehCobranca ? 'Cobrança adicional' : 'Desconto',
         $procedimento_id,
         $procedimento['titulo']
     );
 
     $observacoes = sprintf(
-        'Cobrança adicional gerada pela diferença entre o orçamento #%d (R$ %s) e o valor realizado do procedimento (R$ %s).',
+        '%s gerado pela diferença entre o orçamento #%d (R$ %s) e o valor realizado do procedimento (R$ %s).',
+        $ehCobranca ? 'Cobrança adicional' : 'Desconto',
         $orcamento_id,
         number_format($valor_orcado, 2, ',', '.'),
         number_format($valor_realizado, 2, ',', '.')

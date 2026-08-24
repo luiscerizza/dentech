@@ -957,8 +957,11 @@ $tipos_nomes = [
                                     </div>
 
                                     <div class="lancamento-valor <?= $lancamento['tipo'] === 'receita' ? 'valor-receita' : 'valor-despesa' ?>">
-                                        <?= $lancamento['tipo'] === 'receita' ? '+' : '-' ?>
-                                        <?= moedaBR($lancamento['valor']) ?>
+                                        <?php
+                                        $valorExibicao = (float)$lancamento['valor'];
+                                        $sinalExibicao = $valorExibicao < 0 ? '-' : ($lancamento['tipo'] === 'receita' ? '+' : '-');
+                                        ?>
+                                        <?= $sinalExibicao ?><?= moedaBR(abs($valorExibicao)) ?>
                                     </div>
 
                                 </div>
@@ -1060,8 +1063,11 @@ $tipos_nomes = [
                                         </td>
 
                                         <td class="coluna-valor <?= $lancamento['tipo'] === 'receita' ? 'valor-receita' : 'valor-despesa' ?>">
-                                            <?= $lancamento['tipo'] === 'receita' ? '+' : '-' ?>
-                                            <?= moedaBR($lancamento['valor']) ?>
+                                            <?php
+                                            $valorExibicao = (float)$lancamento['valor'];
+                                            $sinalExibicao = $valorExibicao < 0 ? '-' : ($lancamento['tipo'] === 'receita' ? '+' : '-');
+                                            ?>
+                                            <?= $sinalExibicao ?><?= moedaBR(abs($valorExibicao)) ?>
                                         </td>
 
                                         <td class="coluna-acoes">
