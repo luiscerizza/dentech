@@ -13,11 +13,27 @@ require_once 'conexao/conexao.php';
 |--------------------------------------------------------------------------
 */
 
+
 $pacientes = $pdo->query("
     SELECT id, paciente
     FROM prontuarios
     ORDER BY paciente
 ")->fetchAll();
+
+/*
+|--------------------------------------------------------------------------
+| SERVIÇOS DO CATÁLOGO
+|--------------------------------------------------------------------------
+| Apenas serviços ativos ficam disponíveis para novos orçamentos.
+| O nome e o valor são copiados para o item e continuam editáveis.
+|--------------------------------------------------------------------------
+*/
+$servicos = $pdo->query("
+    SELECT id, nome, descricao, valor_sugerido
+    FROM servicos
+    WHERE ativo = 1
+    ORDER BY nome ASC
+")->fetchAll(PDO::FETCH_ASSOC);
 
 $erro = null;
 
@@ -476,6 +492,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
     <style>
+
+        .catalogo-servico {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .catalogo-servico label {
+            color: #475569;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .catalogo-servico select {
+            width: 100%;
+            min-height: 40px;
+            padding: 0 12px;
+            border: 1px solid #d3dce7;
+            border-radius: 8px;
+            background: #fff;
+            color: #17233d;
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .catalogo-servico select:focus {
+            border-color: #1769d2;
+            box-shadow: 0 0 0 3px rgba(23, 105, 210, 0.1);
+        }
+
+        .catalogo-servico-vazio {
+            color: #7a8698;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
         .item-row {
             position: relative;
         }
@@ -623,6 +677,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div id="itens-container">
 
                     <div class="item-row">
+
+                        <div class="catalogo-servico">
+
+                            <label>
+                                Serviço do catálogo
+                            </label>
+
+                            <select
+                                class="servico-catalogo"
+                                onchange="selecionarServicoCatalogo(this)">
+
+                                <option value="">
+                                    Selecionar serviço...
+                                </option>
+
+                                <option value="__manual__">
+                                    Serviço personalizado
+                                </option>
+
+                                <?php foreach ($servicos as $servico): ?>
+                                    <option
+                                        value="<?= (int)$servico['id'] ?>"
+                                        data-nome="<?= htmlspecialchars($servico['nome'], ENT_QUOTES) ?>"
+                                        data-descricao="<?= htmlspecialchars($servico['descricao'] ?? '', ENT_QUOTES) ?>"
+                                        data-valor="<?= htmlspecialchars((string)$servico['valor_sugerido'], ENT_QUOTES) ?>">
+                                        <?= htmlspecialchars($servico['nome']) ?>
+                                        — R$
+                                        <?= number_format((float)$servico['valor_sugerido'], 2, ',', '.') ?>
+                                    </option>
+                                <?php endforeach; ?>
+
+                            </select>
+
+                            <?php if (empty($servicos)): ?>
+                                <span class="catalogo-servico-vazio">
+                                    Nenhum serviço ativo cadastrado. Você ainda pode criar um item personalizado.
+                                </span>
+                            <?php endif; ?>
+
+                        </div>
 
                         <div>
 
@@ -792,6 +886,93 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 |--------------------------------------------------------------------------
 */
 
+
+        /*
+         |--------------------------------------------------------------------------
+         | CATÁLOGO DE SERVIÇOS
+         |--------------------------------------------------------------------------
+        */
+
+        const servicosCatalogo = <?= json_encode(
+            array_map(
+                static function ($servico) {
+                    return [
+                        'id' => (int)$servico['id'],
+                        'nome' => $servico['nome'],
+                        'descricao' => $servico['descricao'] ?? '',
+                        'valor' => (float)$servico['valor_sugerido'],
+                    ];
+                },
+                $servicos
+            ),
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+        ) ?>;
+
+        function escaparHtml(valor) {
+            return String(valor ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function obterOpcoesServicos() {
+            return servicosCatalogo.map(servico => `
+                <option
+                    value="${Number(servico.id)}"
+                    data-nome="${escaparHtml(servico.nome)}"
+                    data-descricao="${escaparHtml(servico.descricao)}"
+                    data-valor="${Number(servico.valor)}">
+                    ${escaparHtml(servico.nome)}
+                    — R$ ${Number(servico.valor).toFixed(2).replace('.', ',')}
+                </option>
+            `).join('');
+        }
+
+        function selecionarServicoCatalogo(select) {
+
+            const linha = select.closest('.item-row');
+
+            if (!linha) {
+                return;
+            }
+
+            const descricaoInput =
+                linha.querySelector('[name="descricao[]"]');
+
+            const valorInput =
+                linha.querySelector('[name="valor[]"]');
+
+            if (!descricaoInput || !valorInput) {
+                return;
+            }
+
+            if (select.value === '__manual__') {
+                descricaoInput.value = '';
+                valorInput.value = '';
+                descricaoInput.focus();
+                calcularPreviewParcelas();
+                return;
+            }
+
+            if (select.value === '') {
+                calcularPreviewParcelas();
+                return;
+            }
+
+            const opcao =
+                select.options[select.selectedIndex];
+
+            descricaoInput.value =
+                opcao.dataset.nome || '';
+
+            valorInput.value =
+                Number(opcao.dataset.valor || 0).toFixed(2);
+
+            calcularPreviewParcelas();
+        }
+
         function adicionarItem() {
 
             const container =
@@ -809,6 +990,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
             div.innerHTML = `
+
+        <div class="catalogo-servico">
+
+            <label>
+                Serviço do catálogo
+            </label>
+
+            <select
+                class="servico-catalogo"
+                onchange="selecionarServicoCatalogo(this)">
+
+                <option value="">
+                    Selecionar serviço...
+                </option>
+
+                <option value="__manual__">
+                    Serviço personalizado
+                </option>
+
+                ${obterOpcoesServicos()}
+
+            </select>
+
+        </div>
 
         <div>
 
@@ -896,6 +1101,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     primeiro.querySelector('[name="descricao[]"]').value = '';
                     primeiro.querySelector('[name="quantidade[]"]').value = '1';
                     primeiro.querySelector('[name="valor[]"]').value = '';
+
+                    const catalogo =
+                        primeiro.querySelector('.servico-catalogo');
+
+                    if (catalogo) {
+                        catalogo.value = '';
+                    }
                 }
 
                 calcularPreviewParcelas();
