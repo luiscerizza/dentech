@@ -820,19 +820,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         */
 
         const servicosCatalogo = <?= json_encode(
-            array_map(
-                static function ($servico) {
-                    return [
-                        'id' => (int)$servico['id'],
-                        'nome' => $servico['nome'],
-                        'descricao' => $servico['descricao'] ?? '',
-                        'valor' => (float)$servico['valor_sugerido'],
-                    ];
-                },
-                $servicos
-            ),
-            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-        ) ?>;
+                                        array_map(
+                                            static function ($servico) {
+                                                return [
+                                                    'id' => (int)$servico['id'],
+                                                    'nome' => $servico['nome'],
+                                                    'descricao' => $servico['descricao'] ?? '',
+                                                    'valor' => (float)$servico['valor_sugerido'],
+                                                ];
+                                            },
+                                            $servicos
+                                        ),
+                                        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+                                    ) ?>;
 
         function escaparHtml(valor) {
             return String(valor ?? '')
