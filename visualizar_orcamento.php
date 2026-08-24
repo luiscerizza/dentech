@@ -331,35 +331,117 @@ $telefone_cliente = preg_replace(
 );
 
 $mensagem_whatsapp =
-    'Olá, ' .
+    '🦷 *Dentech | Orçamento Odontológico*' .
+    "\n\n";
+
+$mensagem_whatsapp .=
+    'Olá, *' .
     ($orc['paciente'] ?? '') .
-    "! Seu orçamento odontológico está disponível.\n\n";
+    '*! Tudo bem?' .
+    "\n\n";
 
 $mensagem_whatsapp .=
-    'Orçamento #' .
-    (int)$orc['id'] .
-    "\n";
+    'Preparamos seu orçamento com os procedimentos/serviços abaixo:' .
+    "\n\n";
+
+foreach ($itens as $item) {
+
+    $descricaoItem = trim(
+        (string)($item['descricao'] ?? '')
+    );
+
+    $quantidadeItem = (float)(
+        $item['quantidade'] ?? 1
+    );
+
+    $valorUnitarioItem = (float)(
+        $item['valor_unitario'] ?? 0
+    );
+
+    $subtotalItem =
+        $quantidadeItem *
+        $valorUnitarioItem;
+
+    $mensagem_whatsapp .=
+        '• *' .
+        $descricaoItem .
+        '*' .
+        "\n";
+
+    $mensagem_whatsapp .=
+        '  Quantidade: ' .
+        rtrim(
+            rtrim(
+                number_format(
+                    $quantidadeItem,
+                    2,
+                    ',',
+                    '.'
+                ),
+                '0'
+            ),
+            ','
+        ) .
+        "\n";
+
+    $mensagem_whatsapp .=
+        '  Valor: R$ ' .
+        number_format(
+            $valorUnitarioItem,
+            2,
+            ',',
+            '.'
+        ) .
+        "\n";
+
+    $mensagem_whatsapp .=
+        '  Subtotal: *R$ ' .
+        number_format(
+            $subtotalItem,
+            2,
+            ',',
+            '.'
+        ) .
+        '*' .
+        "\n\n";
+}
 
 $mensagem_whatsapp .=
-    'Total: R$ ' .
+    '💰 *Total do orçamento: R$ ' .
     number_format(
         $total_itens,
         2,
         ',',
         '.'
     ) .
+    '*' .
     "\n";
 
 $mensagem_whatsapp .=
-    'Validade: ' .
+    '📅 *Validade:* ' .
     date(
         'd/m/Y',
         strtotime($orc['validade'])
     ) .
-    "\n\n";
+    "\n";
+
+if (!empty(trim((string)($orc['observacoes'] ?? '')))) {
+
+    $mensagem_whatsapp .=
+        "\n📝 *Observações:*" .
+        "\n" .
+        trim(
+            (string)$orc['observacoes']
+        ) .
+        "\n";
+}
 
 $mensagem_whatsapp .=
-    'Confira os detalhes do orçamento no Dentech.';
+    "\nCaso tenha alguma dúvida sobre os valores ou procedimentos, estamos à disposição para conversar." .
+    "\n\n" .
+    "Atenciosamente,\n" .
+    "*Dentech*";
+
 ?>
 
 <!DOCTYPE html>
