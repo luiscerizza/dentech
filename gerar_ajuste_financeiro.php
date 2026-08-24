@@ -118,21 +118,39 @@ try {
     | 4. Evitar ajuste duplicado
     |--------------------------------------------------------------------------
     */
+    /*
+    |--------------------------------------------------------------------------
+    | 4. Evitar somente o mesmo ajuste duplicado
+    |--------------------------------------------------------------------------
+    |
+    | Ajustes diferentes são permitidos porque o procedimento pode ser
+    | alterado posteriormente:
+    |
+    | +50,00  -> cobrança
+    | -100,00 -> desconto
+    |
+    | O mesmo valor para o mesmo procedimento não pode ser lançado duas vezes.
+    |--------------------------------------------------------------------------
+    */
     $stmt = $pdo->prepare("
         SELECT id
         FROM lancamentos_financeiros
         WHERE procedimento_id = ?
           AND categoria = 'Ajuste de procedimento'
           AND tipo = 'receita'
+          AND ROUND(valor, 2) = ROUND(?, 2)
         LIMIT 1
         FOR UPDATE
     ");
 
-    $stmt->execute([$procedimento_id]);
+    $stmt->execute([
+        $procedimento_id,
+        $diferenca
+    ]);
 
     if ($stmt->fetchColumn()) {
         throw new Exception(
-            'Já existe um ajuste financeiro para este procedimento.'
+            'Este ajuste financeiro já foi gerado para a diferença atual.'
         );
     }
 
