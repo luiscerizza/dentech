@@ -555,10 +555,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: #b91c1c;
         }
 
+
+        /*
+         * Ajuste do grid dos itens:
+         * 5 colunas = catálogo, descrição, quantidade, valor e excluir.
+         */
+        #itens-container .item-row {
+            display: grid;
+            grid-template-columns:
+                minmax(360px, 3fr)
+                minmax(190px, 1.6fr)
+                90px
+                150px
+                42px;
+            align-items: end;
+            gap: 10px;
+            width: 100%;
+        }
+
+        #itens-container .item-row > div {
+            min-width: 0;
+        }
+
+        #itens-container .item-row input[type="text"],
+        #itens-container .item-row input[type="number"],
+        #itens-container .item-row .item-valor,
+        #itens-container .item-row .servico-catalogo {
+            width: 100% !important;
+            max-width: none !important;
+            box-sizing: border-box;
+        }
+
+        #itens-container .item-row .item-manual-row {
+            min-width: 0;
+        }
+
+        #itens-container .item-row .item-valor {
+            min-width: 0;
+        }
+
+        #itens-container .btn-remove-item {
+            width: 42px;
+            height: 42px;
+            margin-top: 0;
+            align-self: end;
+            justify-self: stretch;
+        }
+
+        @media (max-width: 1100px) {
+            #itens-container .item-row {
+                grid-template-columns:
+                    minmax(300px, 2.4fr)
+                    minmax(150px, 1.3fr)
+                    80px
+                    135px
+                    42px;
+            }
+        }
+
         @media (max-width: 700px) {
-            .btn-remove-item {
+
+            #itens-container .item-row {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            #itens-container .item-row > div,
+            #itens-container .item-row input,
+            #itens-container .item-row select {
+                width: 100% !important;
+            }
+
+            #itens-container .btn-remove-item {
                 width: 100%;
                 margin-top: 0;
+                height: 40px;
             }
         }
     </style>
