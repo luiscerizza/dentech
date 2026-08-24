@@ -136,7 +136,8 @@ $stmtProc = $pdo->prepare("
     SELECT
         p.*,
         oi.valor_orcado,
-        aj.id AS ajuste_financeiro_id
+        aj.id AS ajuste_financeiro_id,
+        aj.ajuste_financeiro_valor
     FROM procedimentos p
     LEFT JOIN (
         SELECT
