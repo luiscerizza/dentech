@@ -934,48 +934,157 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
 
                                                     <?php if (!$ajusteAtualJaGerado): ?>
 
+
+
                                                         <?php if ($diferenca > 0): ?>
-                                                            <?php
-                                                            $textoAjuste = 'Gerar cobrança adicional de R$ ' . number_format($diferenca, 2, ',', '.');
-                                                            $botaoAjuste = 'Gerar ajuste';
-                                                            ?>
+
+
+
+                                                            <form
+
+
+                                                                method="POST"
+
+
+                                                                action="gerar_ajuste_financeiro.php"
+
+
+                                                                class="form-ajuste-financeiro"
+
+
+                                                                onsubmit="return confirm('Gerar uma cobrança adicional de R$ <?= number_format($diferenca, 2, ',', '.') ?> para este procedimento?');">
+
+
+
+                                                                <input
+
+
+                                                                    type="hidden"
+
+
+                                                                    name="csrf_token"
+
+
+                                                                    value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
+
+
+
+                                                                <input
+
+
+                                                                    type="hidden"
+
+
+                                                                    name="procedimento_id"
+
+
+                                                                    value="<?= (int)$proc['id'] ?>">
+
+
+
+                                                                <button
+
+
+                                                                    type="submit"
+
+
+                                                                    class="table-action btn-ajuste-financeiro">
+
+
+                                                                    Gerar ajuste
+
+
+                                                                </button>
+
+
+
+                                                            </form>
+
+
+
                                                         <?php else: ?>
-                                                            <?php
-                                                            $valorDesconto = abs($diferenca);
-                                                            $textoAjuste = 'Aplicar desconto de R$ ' . number_format($valorDesconto, 2, ',', '.');
-                                                            $botaoAjuste = 'Aplicar desconto';
-                                                            ?>
+
+
+
+                                                            <form
+
+
+                                                                method="POST"
+
+
+                                                                action="gerar_ajuste_financeiro.php"
+
+
+                                                                class="form-ajuste-financeiro"
+
+
+                                                                onsubmit="return confirm('Aplicar desconto de R$ <?= number_format(abs($diferenca), 2, ',', '.') ?> para este procedimento?');">
+
+
+
+                                                                <input
+
+
+                                                                    type="hidden"
+
+
+                                                                    name="csrf_token"
+
+
+                                                                    value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
+
+
+
+                                                                <input
+
+
+                                                                    type="hidden"
+
+
+                                                                    name="procedimento_id"
+
+
+                                                                    value="<?= (int)$proc['id'] ?>">
+
+
+
+                                                                <button
+
+
+                                                                    type="submit"
+
+
+                                                                    class="table-action btn-ajuste-financeiro">
+
+
+                                                                    Aplicar desconto
+
+
+                                                                </button>
+
+
+
+                                                            </form>
+
+
+
                                                         <?php endif; ?>
 
-                                                        <form
-                                                            method="POST"
-                                                            action="gerar_ajuste_financeiro.php"
-                                                            class="form-ajuste-financeiro"
-                                                            onsubmit="return confirm('<?= htmlspecialchars($textoAjuste, ENT_QUOTES) ?> para este procedimento?');">
 
-                                                            <input
-                                                                type="hidden"
-                                                                name="csrf_token"
-                                                                value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
-
-                                                            <input
-                                                                type="hidden"
-                                                                name="procedimento_id"
-                                                                value="<?= (int)$proc['id'] ?>">
-
-                                                            <button
-                                                                type="submit"
-                                                                class="table-action btn-ajuste-financeiro">
-                                                                <?= htmlspecialchars($botaoAjuste) ?>
-                                                            </button>
-
-                                                        </form>
 
                                                     <?php else: ?>
 
+
+
                                                         <span class="ajuste-gerado">
+
+
                                                             Ajuste já gerado
+
+
                                                         </span>
+
+
 
                                                     <?php endif; ?>
 
@@ -1486,6 +1595,24 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
             });
         </script>
     <?php endif; ?>
+
+
+    <style>
+        .ajuste-gerado {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 32px;
+            padding: 0 10px;
+            border: 1px solid #86efac;
+            border-radius: 7px;
+            background: #f0fdf4;
+            color: #15803d;
+            font-size: 10px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+    </style>
 
 </body>
 
