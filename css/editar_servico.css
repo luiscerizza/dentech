@@ -1,0 +1,270 @@
+.editar-servico-page {
+  width: calc(100% - 220px);
+  margin-left: 220px;
+  min-height: 100vh;
+  padding: 32px 30px 48px;
+  box-sizing: border-box;
+}
+
+.editar-servico-container {
+  width: min(920px, 100%);
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.page-kicker {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--roxo-medio, #7b3ff2);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.2;
+}
+
+.page-header p {
+  max-width: 720px;
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.form-card {
+  padding: 28px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group-full {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.form-group label span {
+  color: #dc2626;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+  outline: none;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 108px;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
+}
+
+.form-group small {
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.money-input {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.money-input:focus-within {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
+}
+
+.money-input > span {
+  padding-left: 13px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.money-input input {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none !important;
+}
+
+.status-display {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.status-badge.ativo {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.status-badge.inativo {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 15px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.btn-primary {
+  border: 1px solid #7c3aed;
+  background: #7c3aed;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #6d28d9;
+  border-color: #6d28d9;
+}
+
+.btn-outline,
+.btn-cancel {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #475569;
+}
+
+.btn-outline:hover,
+.btn-cancel:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 13px 15px;
+  border-radius: 9px;
+  font-size: 13px;
+}
+
+.alert-error {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+@media (max-width: 900px) {
+  .editar-servico-page {
+    width: calc(100% - 70px);
+    margin-left: 70px;
+    padding: 28px 20px 40px;
+  }
+}
+
+@media (max-width: 700px) {
+  .editar-servico-page {
+    padding: 24px 16px 36px;
+  }
+
+  .page-header {
+    flex-direction: column;
+  }
+
+  .form-card {
+    padding: 20px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group-full {
+    grid-column: auto;
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .form-actions .btn {
+    width: 100%;
+  }
+}
