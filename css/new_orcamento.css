@@ -722,314 +722,215 @@ body {
   }
 }
 
-/* ============================================================
-   ITENS DO ORÇAMENTO — CATÁLOGO DE SERVIÇOS
-   ============================================================ */
+/* =========================================================
+   DENTECH — LAYOUT DEFINITIVO DOS ITENS DO ORÇAMENTO
+   Classes exclusivas para neutralizar regras antigas.
+========================================================= */
 
-#itens-container {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+#formOrcamento #itens-container .orcamento-item-linha {
+  display: flex !important;
+  align-items: flex-end !important;
+  gap: 10px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 82px !important;
+  margin: 0 !important;
+  padding: 10px !important;
+  box-sizing: border-box !important;
+  background: #ffffff !important;
+  border: 1px solid #dfe5ed !important;
+  border-radius: 10px !important;
 }
 
-#itens-container .item-row {
-  position: relative;
-  display: grid;
-  grid-template-columns:
-    minmax(285px, 2.4fr)
-    minmax(165px, 1.35fr)
-    82px
-    140px
-    38px;
-  align-items: end;
-  gap: 10px;
-  width: 100%;
-  min-height: 76px;
-  margin: 0;
-  padding: 10px 10px 12px;
-  box-sizing: border-box;
-  background: #ffffff;
-  border: 1px solid #dfe5ed;
-  border-radius: 9px;
-  transition:
-    border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    background-color 0.18s ease;
+#formOrcamento #itens-container .orcamento-item-linha > * {
+  box-sizing: border-box !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
-#itens-container .item-row:hover {
-  background: #ffffff;
-  border-color: #d7dee8;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+#formOrcamento #itens-container .orcamento-item-linha > .item-catalogo {
+  flex: 1 1 0 !important;
+  width: auto !important;
+  min-width: 360px !important;
 }
 
-#itens-container .item-row > div {
-  width: 100%;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+#formOrcamento #itens-container .orcamento-item-linha > .item-descricao {
+  flex: 0 1 280px !important;
+  width: auto !important;
+  min-width: 210px !important;
 }
 
-/* -------- Catálogo -------- */
-
-#itens-container .catalogo-servico {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  width: 100%;
-  margin: 0;
+#formOrcamento #itens-container .orcamento-item-linha > .item-quantidade {
+  flex: 0 0 82px !important;
+  width: 82px !important;
 }
 
-#itens-container .catalogo-servico label {
-  display: block;
-  margin: 0;
-  color: #475569;
-  font-size: 11px;
-  line-height: 1.2;
-  font-weight: 700;
+#formOrcamento #itens-container .orcamento-item-linha > .item-valor-container {
+  flex: 0 0 150px !important;
+  width: 150px !important;
 }
 
-#itens-container .servico-catalogo {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  height: 42px;
-  min-height: 42px;
-  padding: 0 10px;
-  box-sizing: border-box;
-  border: 1px solid #d3dce7;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #17233d;
-  font-family: inherit;
-  font-size: 12px;
-  outline: none;
-  cursor: pointer;
+#formOrcamento #itens-container .orcamento-item-linha > .item-acao {
+  flex: 0 0 38px !important;
+  width: 38px !important;
 }
 
-#itens-container .servico-catalogo:focus {
-  border-color: #1769d2;
-  box-shadow: 0 0 0 3px rgba(23, 105, 210, 0.1);
+#formOrcamento #itens-container .orcamento-item-linha .item-field,
+#formOrcamento #itens-container .orcamento-item-linha .item-catalogo {
+  max-width: 100% !important;
 }
 
-#itens-container .catalogo-servico-vazio {
-  color: #7a8698;
-  font-size: 11px;
-  line-height: 1.4;
+#formOrcamento #itens-container .orcamento-item-linha .item-field > label,
+#formOrcamento
+  #itens-container
+  .orcamento-item-linha
+  .catalogo-servico
+  > label {
+  display: block !important;
+  width: 100% !important;
+  margin: 0 0 5px !important;
+  color: #475569 !important;
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
 }
 
-/* -------- Campos do item -------- */
-
-#itens-container .item-row input {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  height: 42px;
-  min-height: 42px;
-  margin: 0;
-  padding: 0 11px;
-  box-sizing: border-box;
-  border: 1px solid #dfe3e9;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #343a45;
-  font-family: inherit;
-  font-size: 13px;
-  line-height: 42px;
+#formOrcamento #itens-container .orcamento-item-linha select.servico-catalogo {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  margin: 0 !important;
+  padding: 0 12px !important;
+  box-sizing: border-box !important;
+  border: 1px solid #d3dce7 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: #17233d !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
 }
 
-#itens-container .item-row input:focus {
-  border-color: var(--primary, #5d3a8c);
-  box-shadow: 0 0 0 3px rgba(93, 58, 140, 0.09);
-  outline: none;
+#formOrcamento #itens-container .orcamento-item-linha .item-field > input {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  margin: 0 !important;
+  padding: 0 12px !important;
+  box-sizing: border-box !important;
+  border: 1px solid #dfe3e9 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: #343a45 !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+  line-height: 42px !important;
+  outline: none !important;
 }
 
-#itens-container .item-row input[name="quantidade[]"] {
-  text-align: center;
-  padding-left: 5px;
-  padding-right: 5px;
+#formOrcamento #itens-container .orcamento-item-linha .item-quantidade input {
+  text-align: center !important;
+  padding-left: 5px !important;
+  padding-right: 5px !important;
 }
 
-#itens-container .item-row input[name="valor[]"] {
-  text-align: left;
-  font-variant-numeric: tabular-nums;
+#formOrcamento
+  #itens-container
+  .orcamento-item-linha
+  .item-valor-container
+  input {
+  text-align: left !important;
+  padding-left: 12px !important;
+  padding-right: 10px !important;
+  font-variant-numeric: tabular-nums !important;
 }
 
-/* -------- Botão excluir -------- */
-
-#itens-container .item-row .btn-remove-item {
-  width: 38px;
-  min-width: 38px;
-  max-width: 38px;
-  height: 38px;
-  min-height: 38px;
-  max-height: 38px;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  justify-self: center;
-  align-self: end;
-  box-sizing: border-box;
-  border: 1px solid #e7caca;
-  border-radius: 7px;
-  background: #ffffff;
-  color: #c73b3b;
-  cursor: pointer;
-  font-size: 0;
-  line-height: 1;
-  box-shadow: none;
-  transform: none;
-  transition:
-    background-color 0.18s ease,
-    border-color 0.18s ease,
-    color 0.18s ease;
+#formOrcamento #itens-container .orcamento-item-linha .item-acao {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  padding: 0 !important;
+  border: 1px solid #e7caca !important;
+  border-radius: 7px !important;
+  background: #ffffff !important;
+  color: #c73b3b !important;
+  cursor: pointer !important;
 }
 
-#itens-container .item-row .btn-remove-item i {
-  display: block;
-  margin: 0;
-  font-size: 12px;
-  line-height: 1;
+#formOrcamento #itens-container .orcamento-item-linha .item-acao i {
+  margin: 0 !important;
+  font-size: 12px !important;
+  line-height: 1 !important;
 }
 
-#itens-container .item-row .btn-remove-item:hover {
-  background: #fff5f5;
-  border-color: #dca6a6;
-  color: #b52f2f;
+@media (max-width: 1200px) {
+  #formOrcamento #itens-container .orcamento-item-linha > .item-catalogo {
+    min-width: 300px !important;
+  }
+  #formOrcamento #itens-container .orcamento-item-linha > .item-descricao {
+    min-width: 160px !important;
+    flex-basis: 220px !important;
+  }
+  #formOrcamento
+    #itens-container
+    .orcamento-item-linha
+    > .item-valor-container {
+    flex-basis: 140px !important;
+    width: 140px !important;
+  }
 }
-
-#itens-container .item-row .btn-remove-item:focus-visible {
-  outline: 2px solid rgba(199, 59, 59, 0.18);
-  outline-offset: 2px;
-}
-
-/* -------- Botão adicionar -------- */
-
-#itens-container + .btn-add-item {
-  margin-top: 10px;
-}
-
-#preview_parcelas {
-  margin-top: 8px;
-  min-height: 18px;
-  padding: 0;
-  font-size: 13px;
-}
-
-/* ============================================================
-   SIDEBAR / CONTEÚDO
-   ============================================================ */
-
-.container {
-  width: calc(100% - 220px);
-  max-width: none;
-  margin-left: 220px;
-  margin-right: 0;
-  box-sizing: border-box;
-}
-
-/* ============================================================
-   RESPONSIVIDADE
-   ============================================================ */
 
 @media (max-width: 900px) {
-  .container {
-    width: calc(100% - 70px);
-    margin-left: 70px;
-    padding: 30px;
+  #formOrcamento #itens-container .orcamento-item-linha {
+    gap: 8px !important;
   }
-
-  #formOrcamento {
-    padding: 25px;
+  #formOrcamento #itens-container .orcamento-item-linha > .item-catalogo {
+    min-width: 220px !important;
   }
-
-  #itens-container .item-row {
-    grid-template-columns:
-      minmax(240px, 2.2fr)
-      minmax(135px, 1.2fr)
-      76px
-      125px
-      38px;
+  #formOrcamento #itens-container .orcamento-item-linha > .item-descricao {
+    min-width: 130px !important;
+    flex-basis: 170px !important;
+  }
+  #formOrcamento #itens-container .orcamento-item-linha > .item-quantidade {
+    flex-basis: 70px !important;
+    width: 70px !important;
+  }
+  #formOrcamento
+    #itens-container
+    .orcamento-item-linha
+    > .item-valor-container {
+    flex-basis: 120px !important;
+    width: 120px !important;
   }
 }
 
 @media (max-width: 700px) {
-  .container {
-    padding: 25px 18px 40px;
+  #formOrcamento #itens-container .orcamento-item-linha {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 9px !important;
+    min-height: 0 !important;
+    padding: 12px !important;
   }
-
-  .container h1 {
-    font-size: 25px;
-    margin-bottom: 22px;
+  #formOrcamento #itens-container .orcamento-item-linha > * {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
   }
-
-  #formOrcamento {
-    padding: 20px;
-    border-radius: 11px;
-  }
-
-  #itens-container .item-row {
-    grid-template-columns: 1fr;
-    gap: 9px;
-    min-height: 0;
-    padding: 12px;
-  }
-
-  #itens-container .item-row > div {
-    width: 100%;
-  }
-
-  #itens-container .item-row .btn-remove-item {
-    width: 100%;
-    max-width: none;
-    height: 40px;
-  }
-
-  .btn-add-item {
-    width: 100%;
-  }
-
-  #formOrcamento > .btn {
-    width: 100%;
-  }
-
-  #formOrcamento > a {
-    width: 100%;
-    justify-content: center;
-    margin-left: 0 !important;
-    margin-top: 8px;
-    padding: 0;
-  }
-}
-
-@media (max-width: 480px) {
-  .container {
-    padding: 18px 10px 30px;
-  }
-
-  .container h1 {
-    font-size: 22px;
-  }
-
-  #formOrcamento {
-    padding: 16px;
-  }
-
-  .form-group {
-    margin-bottom: 20px;
-  }
-
-  .form-group input,
-  .form-group select,
-  .form-group textarea {
-    font-size: 14px;
-  }
-
-  .btn {
-    min-height: 45px;
+  #formOrcamento #itens-container .orcamento-item-linha .item-acao {
+    width: 100% !important;
+    height: 40px !important;
+    max-height: 40px !important;
   }
 }

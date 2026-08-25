@@ -482,7 +482,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="css/variables.css">
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/navbar.css">
-    <link rel="stylesheet" href="css/new_orcamento.css?v=4">
+    <link rel="stylesheet" href="css/new_orcamento.css?v=6">
 
     <link
         rel="stylesheet"
@@ -602,9 +602,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div id="itens-container">
 
-                    <div class="item-row">
+                    <div class="item-row orcamento-item-linha">
 
-                        <div class="catalogo-servico">
+                        <div class="item-catalogo catalogo-servico">
 
                             <label>
                                 Serviço do catálogo
@@ -682,7 +682,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         <button
                             type="button"
-                            class="btn-remove-item"
+                            class="item-acao btn-remove-item"
                             onclick="removerItem(this)"
                             title="Excluir item">
                             <i class="fa-solid fa-trash"></i>
@@ -912,12 +912,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
             div.className =
-                'item-row';
+                'item-row orcamento-item-linha';
 
 
             div.innerHTML = `
 
-        <div class="catalogo-servico">
+        <div class="item-catalogo catalogo-servico">
 
             <label>
                 Serviço do catálogo
@@ -977,7 +977,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <button
             type="button"
-            class="btn-remove-item"
+            class="item-acao btn-remove-item"
             onclick="removerItem(this)"
             title="Excluir item">
             <i class="fa-solid fa-trash"></i>
