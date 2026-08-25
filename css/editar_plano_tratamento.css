@@ -1,0 +1,397 @@
+.editar-plano-page {
+  width: calc(100% - 220px);
+  margin-left: 220px;
+  min-height: 100vh;
+  padding: 32px 30px 48px;
+  box-sizing: border-box;
+}
+
+.editar-plano-container {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.page-kicker,
+.section-kicker {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--roxo-medio, #7b3ff2);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.page-header h1 {
+  margin: 0;
+  color: #17233d;
+  font-size: 30px;
+  line-height: 1.2;
+}
+
+.page-header p {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.message {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 13px 15px;
+  border-radius: 9px;
+  font-size: 13px;
+}
+
+.message-error {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.form-card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.section-card {
+  padding: 24px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.section-header {
+  margin-bottom: 20px;
+}
+
+.section-header h2 {
+  margin: 0;
+  color: #17233d;
+  font-size: 18px;
+}
+
+.section-header p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group-full {
+  grid-column: 1 / -1;
+}
+
+.form-group label,
+.item-field label {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.form-group label span,
+.item-field label span {
+  color: #dc2626;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea,
+.item-field input,
+.item-field select {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #17233d;
+  font: inherit;
+  outline: none;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.form-group textarea {
+  min-height: 110px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus,
+.item-field input:focus,
+.item-field select:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.itens-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tratamento-item {
+  display: grid;
+  grid-template-columns:
+    minmax(190px, 1.2fr)
+    minmax(220px, 1.7fr)
+    minmax(130px, 0.9fr)
+    120px
+    155px
+    140px
+    minmax(180px, 1.3fr)
+    38px;
+  align-items: end;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 11px;
+  background: #fbfcfe;
+}
+
+.item-field {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.money-input {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.money-input > span {
+  padding-left: 12px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.money-input input {
+  border: 0 !important;
+  border-radius: 0 !important;
+  min-height: 40px;
+  box-shadow: none !important;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 15px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  box-sizing: border-box;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  border: 1px solid #7c3aed;
+  background: #7c3aed;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #6d28d9;
+  border-color: #6d28d9;
+}
+
+.btn-outline,
+.btn-cancel {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #475569;
+}
+
+.btn-outline:hover,
+.btn-cancel:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.btn-remove-item {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #e7caca;
+  border-radius: 7px;
+  background: #fff;
+  color: #c73b3b;
+  cursor: pointer;
+}
+
+.btn-remove-item:hover {
+  background: #fff5f5;
+  border-color: #dca6a6;
+  color: #b52f2f;
+}
+
+.btn-add-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  margin-top: 14px;
+  padding: 0 15px;
+  border: 1px solid #ded2e9;
+  border-radius: 8px;
+  background: #f6f2fa;
+  color: var(--primary, #5d3a8c);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-add-item:hover {
+  background: #eee7f5;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 1200px) {
+  .tratamento-item {
+    grid-template-columns:
+      minmax(170px, 1.1fr)
+      minmax(190px, 1.4fr)
+      minmax(115px, 0.8fr)
+      105px
+      140px
+      135px
+      minmax(150px, 1.1fr)
+      38px;
+  }
+}
+
+@media (max-width: 1050px) {
+  .tratamento-item {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .item-observation {
+    grid-column: 1 / -1;
+  }
+
+  .btn-remove-item {
+    justify-self: end;
+  }
+}
+
+@media (max-width: 900px) {
+  .editar-plano-page {
+    width: calc(100% - 70px);
+    margin-left: 70px;
+    padding: 28px 20px 40px;
+  }
+}
+
+@media (max-width: 700px) {
+  .editar-plano-page {
+    padding: 24px 16px 36px;
+  }
+
+  .page-header {
+    flex-direction: column;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .header-actions .btn {
+    flex: 1;
+  }
+
+  .section-card {
+    padding: 20px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group-full {
+    grid-column: auto;
+  }
+
+  .tratamento-item {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .item-observation {
+    grid-column: auto;
+  }
+
+  .btn-remove-item {
+    width: 100%;
+    height: 40px;
+  }
+
+  .btn-add-item {
+    width: 100%;
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .form-actions .btn {
+    width: 100%;
+  }
+}
