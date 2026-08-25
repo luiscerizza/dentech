@@ -168,13 +168,13 @@
 .tratamento-item {
   display: grid;
   grid-template-columns:
-    minmax(190px, 1.2fr)
-    minmax(220px, 1.7fr)
-    minmax(130px, 0.9fr)
-    120px
-    155px
-    140px
-    minmax(180px, 1.3fr)
+    minmax(150px, 1.25fr)
+    minmax(180px, 1.5fr)
+    minmax(100px, 0.85fr)
+    105px
+    135px
+    125px
+    minmax(125px, 1.15fr)
     38px;
   align-items: end;
   gap: 10px;
@@ -307,13 +307,13 @@
 @media (max-width: 1200px) {
   .tratamento-item {
     grid-template-columns:
-      minmax(170px, 1.1fr)
-      minmax(190px, 1.4fr)
-      minmax(115px, 0.8fr)
-      105px
-      140px
-      135px
-      minmax(150px, 1.1fr)
+      minmax(135px, 1.15fr)
+      minmax(160px, 1.35fr)
+      minmax(95px, 0.8fr)
+      100px
+      125px
+      115px
+      minmax(110px, 1fr)
       38px;
   }
 }
