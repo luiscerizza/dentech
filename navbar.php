@@ -79,6 +79,17 @@ function menuAtivo($paginas)
             <span>Estoque</span>
         </a>
 
+        <a
+            href="servicos.php"
+            class="nav-link <?= menuAtivo([
+                                'servicos.php',
+                                'novo_servico.php',
+                                'editar_servico.php'
+                            ]) ?>">
+            <i class="fa-solid fa-list-check"></i>
+            <span>Serviços</span>
+        </a>
+
         <div class="nav-link">
             <i class="fa-regular fa-circle-question"></i>
             <span>Ajuda</span>
