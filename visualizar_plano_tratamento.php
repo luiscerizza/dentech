@@ -592,9 +592,12 @@ $sucesso = $_GET['sucesso'] ?? '';
                                     </div>
 
                                     <?php if (
-                                        !empty($item['observacoes'])
+                                        !in_array(
+                                            $item['status'],
+                                            ['concluido', 'cancelado'],
+                                            true
+                                        )
                                     ): ?>
-
 
                                         <div class="step-actions">
 
@@ -611,10 +614,13 @@ $sucesso = $_GET['sucesso'] ?? '';
 
                                         </div>
 
+                                    <?php endif; ?>
+
+                                    <?php if (!empty($item['observacoes'])): ?>
+
                                         <div class="step-observation">
 
-                                            <i
-                                                class="fa-regular fa-note-sticky"></i>
+                                            <i class="fa-regular fa-note-sticky"></i>
 
                                             <span>
                                                 <?= nl2br(
