@@ -1068,3 +1068,136 @@ body {
   color: #7c6f90;
   font-size: 11px;
 }
+
+/* =========================================================
+   CORREÇÃO REAL — ITENS DO ORÇAMENTO
+   5 colunas: catálogo | descrição | quantidade | valor | ação
+   Este bloco fica por último para sobrescrever as regras antigas.
+========================================================= */
+
+#itens-container .item-row {
+  display: grid !important;
+  grid-template-columns:
+    minmax(300px, 2.1fr)
+    minmax(220px, 1.5fr)
+    84px
+    155px
+    40px !important;
+  gap: 10px !important;
+  align-items: end !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 76px !important;
+  box-sizing: border-box !important;
+}
+
+#itens-container .item-row > div {
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+#itens-container .catalogo-servico {
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+#itens-container .servico-catalogo {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  box-sizing: border-box !important;
+  padding: 0 34px 0 12px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 13px !important;
+  line-height: 42px !important;
+}
+
+#itens-container .item-row input {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 11px !important;
+  font-size: 13px !important;
+}
+
+#itens-container .item-row input[name="descricao[]"] {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+#itens-container .item-row input[name="quantidade[]"] {
+  width: 100% !important;
+  min-width: 0 !important;
+  text-align: center !important;
+  padding-left: 5px !important;
+  padding-right: 5px !important;
+}
+
+#itens-container .item-row input[name="valor[]"] {
+  width: 100% !important;
+  min-width: 0 !important;
+  text-align: left !important;
+  padding-left: 11px !important;
+  padding-right: 11px !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+#itens-container .item-row .btn-remove-item {
+  width: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  justify-self: center !important;
+  align-self: end !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 1050px) {
+  #itens-container .item-row {
+    grid-template-columns:
+      minmax(260px, 1.8fr)
+      minmax(190px, 1.3fr)
+      78px
+      140px
+      40px !important;
+  }
+}
+
+@media (max-width: 850px) {
+  #itens-container .item-row {
+    grid-template-columns:
+      minmax(220px, 1.7fr)
+      minmax(160px, 1.2fr)
+      75px
+      125px
+      40px !important;
+  }
+}
+
+@media (max-width: 700px) {
+  #itens-container .item-row {
+    grid-template-columns: 1fr !important;
+    gap: 9px !important;
+    min-height: 0 !important;
+  }
+
+  #itens-container .item-row .btn-remove-item {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 40px !important;
+  }
+}
