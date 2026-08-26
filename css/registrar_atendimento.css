@@ -5,7 +5,10 @@
 .container {
   width: min(1100px, calc(100% - 40px));
   margin: 40px auto;
+  box-sizing: border-box;
+  min-width: 0;
 }
+
 
 /* ---------------------------------------------------------
    Cabeçalho
@@ -290,35 +293,88 @@
 }
 
 /* =========================================================
-   AJUSTE PARA SIDEBAR EM TELAS MENORES
+   RESPONSIVIDADE COM SIDEBAR
    ========================================================= */
 
+/*
+ * Em telas menores, o conteúdo precisa ficar
+ * completamente dentro da área disponível.
+ */
 @media (max-width: 900px) {
   .container {
-    width: auto;
-    max-width: none;
-    margin-left: 20px;
-    margin-right: 20px;
+    width: calc(100% - 30px);
+    max-width: 100%;
+    margin-left: 15px;
+    margin-right: 15px;
+    box-sizing: border-box;
   }
 
   .card {
     width: 100%;
+    max-width: 100%;
     box-sizing: border-box;
-  }
-}
-
-@media (max-width: 600px) {
-  .container {
-    width: auto;
-    margin-left: 15px;
-    margin-right: 15px;
-  }
-
-  .card {
-    padding: 16px;
   }
 
   .info-paciente {
+    grid-template-columns: 1fr;
+  }
+
+  .material-item {
+    flex-wrap: wrap;
+  }
+
+  .material-item select {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+/*
+ * Celulares / sidebar recolhida ou ocupando
+ * uma parte significativa da tela.
+ */
+@media (max-width: 600px) {
+  .container {
+    width: calc(100% - 20px);
+    margin: 20px 10px;
+    padding: 0;
+  }
+
+  .container h1 {
+    font-size: 24px;
+    line-height: 1.2;
+  }
+
+  .card {
     padding: 15px;
+  }
+
+  .info-paciente {
+    display: block;
+  }
+
+  .info-paciente p {
+    margin-bottom: 12px;
+  }
+
+  .info-paciente p:last-child {
+    margin-bottom: 0;
+  }
+
+  .material-item {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .material-item select,
+  .material-item input[type="number"] {
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  .btn-save {
+    width: 100%;
   }
 }
