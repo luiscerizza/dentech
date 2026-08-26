@@ -336,6 +336,7 @@ body {
 .appointments-column {
   position: relative;
   min-height: 0;
+  
   background: #fff;
 }
 
