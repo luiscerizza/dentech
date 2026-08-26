@@ -959,6 +959,43 @@ body {
   border: 1px solid #f0c4c7;
 }
 
+.agenda-plano-context {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid #ddd6fe;
+  border-radius: 10px;
+  background: #faf5ff;
+}
+.agenda-plano-context-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  background: #ede9fe;
+  color: #7c3aed;
+}
+.agenda-plano-context > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.agenda-plano-context strong {
+  color: #5b21b6;
+  font-size: 12px;
+}
+.agenda-plano-context span {
+  color: #7c6f90;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 /* =========================================================
    RESPONSIVO
 ========================================================= */

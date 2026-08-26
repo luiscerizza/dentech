@@ -595,6 +595,22 @@ $sucesso = $_GET['sucesso'] ?? '';
                                         !empty($item['observacoes'])
                                     ): ?>
 
+
+                                        <div class="step-actions">
+
+                                            <a
+                                                href="agendamentos.php?plano_item_id=<?= (int)$item['id'] ?>"
+                                                class="step-action-button schedule"
+                                                title="Agendar esta etapa">
+
+                                                <i class="fa-regular fa-calendar-plus"></i>
+
+                                                Agendar etapa
+
+                                            </a>
+
+                                        </div>
+
                                         <div class="step-observation">
 
                                             <i
