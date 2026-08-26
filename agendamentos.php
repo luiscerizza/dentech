@@ -14,7 +14,7 @@ $planoItemId = (int)($_GET['plano_item_id'] ?? 0);
 $planoItem = null;
 
 if ($planoItemId > 0) {
-$stmtPlanoItem = $pdo->prepare("
+    $stmtPlanoItem = $pdo->prepare("
 SELECT
 pti.id,
 pti.plano_id,
@@ -34,12 +34,12 @@ LEFT JOIN servicos s ON s.id = pti.servico_id
 WHERE pti.id = ?
 LIMIT 1
 ");
-$stmtPlanoItem->execute([$planoItemId]);
-$planoItem = $stmtPlanoItem->fetch(PDO::FETCH_ASSOC);
+    $stmtPlanoItem->execute([$planoItemId]);
+    $planoItem = $stmtPlanoItem->fetch(PDO::FETCH_ASSOC);
 
-if (!$planoItem) {
-$planoItemId = 0;
-}
+    if (!$planoItem) {
+        $planoItemId = 0;
+    }
 }
 
 
@@ -55,8 +55,8 @@ $data_filtro = $_GET['data'] ?? date('Y-m-d');
 $dataAtual = DateTime::createFromFormat('Y-m-d', $data_filtro);
 
 if (!$dataAtual || $dataAtual->format('Y-m-d') !== $data_filtro) {
-$dataAtual = new DateTime();
-$data_filtro = $dataAtual->format('Y-m-d');
+    $dataAtual = new DateTime();
+    $data_filtro = $dataAtual->format('Y-m-d');
 }
 
 /*
@@ -66,12 +66,12 @@ $data_filtro = $dataAtual->format('Y-m-d');
 */
 
 $dataAnterior = (clone $dataAtual)
-->modify('-1 day')
-->format('Y-m-d');
+    ->modify('-1 day')
+    ->format('Y-m-d');
 
 $dataProxima = (clone $dataAtual)
-->modify('+1 day')
-->format('Y-m-d');
+    ->modify('+1 day')
+    ->format('Y-m-d');
 
 $dataHoje = date('Y-m-d');
 
@@ -154,7 +154,7 @@ $proximos = $stmt_proximos->fetchAll(PDO::FETCH_ASSOC);
 */
 
 $mesCalendario = (clone $dataAtual)
-->modify('first day of this month');
+    ->modify('first day of this month');
 
 $anoMes = (int)$mesCalendario->format('Y');
 $mesMes = (int)$mesCalendario->format('m');
@@ -183,26 +183,26 @@ $quantidadeDias = (int)$mesCalendario->format('t');
 $primeiroDiaSemana = (int)$mesCalendario->format('N') % 7;
 
 $mesAnterior = (clone $mesCalendario)
-->modify('-1 month')
-->format('Y-m-d');
+    ->modify('-1 month')
+    ->format('Y-m-d');
 
 $mesProximo = (clone $mesCalendario)
-->modify('+1 month')
-->format('Y-m-d');
+    ->modify('+1 month')
+    ->format('Y-m-d');
 
 $nomesMeses = [
-1 => 'Janeiro',
-2 => 'Fevereiro',
-3 => 'Março',
-4 => 'Abril',
-5 => 'Maio',
-6 => 'Junho',
-7 => 'Julho',
-8 => 'Agosto',
-9 => 'Setembro',
-10 => 'Outubro',
-11 => 'Novembro',
-12 => 'Dezembro'
+    1 => 'Janeiro',
+    2 => 'Fevereiro',
+    3 => 'Março',
+    4 => 'Abril',
+    5 => 'Maio',
+    6 => 'Junho',
+    7 => 'Julho',
+    8 => 'Agosto',
+    9 => 'Setembro',
+    10 => 'Outubro',
+    11 => 'Novembro',
+    12 => 'Dezembro'
 ];
 
 $nomeMes = $nomesMeses[$mesMes];
@@ -223,99 +223,99 @@ $nomeMes = $nomesMeses[$mesMes];
 $horarios = [];
 
 for ($hora = 8; $hora <= 18; $hora++) {
-    $horarios[]=sprintf('%02d:00', $hora);
-    }
+    $horarios[] = sprintf('%02d:00', $hora);
+}
 
-    /*
+/*
     | Descobrir horas fora da grade padrão.
     */
-    foreach ($agendamentos as $agendamento) {
-    $horaEvento=substr(
-    (string)$agendamento['horario'],
-    0,
-    5
+foreach ($agendamentos as $agendamento) {
+    $horaEvento = substr(
+        (string)$agendamento['horario'],
+        0,
+        5
     );
 
     if (preg_match('/^(\d{2}):(\d{2})$/', $horaEvento, $match)) {
-    $horaInteira=(int)$match[1];
-    $minutoInteiro=(int)$match[2];
+        $horaInteira = (int)$match[1];
+        $minutoInteiro = (int)$match[2];
 
-    $horarioGrade=sprintf('%02d:00', $horaInteira);
+        $horarioGrade = sprintf('%02d:00', $horaInteira);
 
-    if (!in_array($horarioGrade, $horarios, true)) {
-    $horarios[]=$horarioGrade;
-    }
+        if (!in_array($horarioGrade, $horarios, true)) {
+            $horarios[] = $horarioGrade;
+        }
 
-    if ($minutoInteiro> 0) {
-    $proximaHora = sprintf('%02d:00', $horaInteira + 1);
+        if ($minutoInteiro > 0) {
+            $proximaHora = sprintf('%02d:00', $horaInteira + 1);
 
-    if (!in_array($proximaHora, $horarios, true)) {
-    $horarios[] = $proximaHora;
+            if (!in_array($proximaHora, $horarios, true)) {
+                $horarios[] = $proximaHora;
+            }
+        }
     }
-    }
-    }
-    }
+}
 
-    usort(
+usort(
     $horarios,
     function ($a, $b) {
-    return strcmp($a, $b);
+        return strcmp($a, $b);
     }
-    );
+);
 
-    $horaInicioGrade = !empty($horarios)
+$horaInicioGrade = !empty($horarios)
     ? (int)substr($horarios[0], 0, 2)
     : 8;
 
-    $alturaHora = 59;
-    $alturaEvento = 54;
-    $eventosVisuais = [];
+$alturaHora = 59;
+$alturaEvento = 54;
+$eventosVisuais = [];
 
-    /*
+/*
     | Preparar eventos com posição vertical exata.
     */
-    foreach ($agendamentos as $agendamento) {
+foreach ($agendamentos as $agendamento) {
 
     $horarioEvento = substr(
-    (string)$agendamento['horario'],
-    0,
-    5
+        (string)$agendamento['horario'],
+        0,
+        5
     );
 
     if (
-    !preg_match(
-    '/^(\d{2}):(\d{2})$/',
-    $horarioEvento,
-    $match
-    )
+        !preg_match(
+            '/^(\d{2}):(\d{2})$/',
+            $horarioEvento,
+            $match
+        )
     ) {
-    continue;
+        continue;
     }
 
     $horaEvento = (int)$match[1];
     $minutoEvento = (int)$match[2];
 
     $minutosDesdeInicio =
-    (
-    ($horaEvento - $horaInicioGrade) * 60
-    ) +
-    $minutoEvento;
+        (
+            ($horaEvento - $horaInicioGrade) * 60
+        ) +
+        $minutoEvento;
 
     $top = max(
-    4,
-    (
-    $minutosDesdeInicio / 60
-    ) * $alturaHora + 4
+        4,
+        (
+            $minutosDesdeInicio / 60
+        ) * $alturaHora + 4
     );
 
     $eventosVisuais[] = [
-    'agendamento' => $agendamento,
-    'top' => $top,
-    'bottom' => $top + $alturaEvento
+        'agendamento' => $agendamento,
+        'top' => $top,
+        'bottom' => $top + $alturaEvento
     ];
-    }
+}
 
-    /*
+/*
     |--------------------------------------------------------------------------
     | DETECTAR EVENTOS QUE SE SOBREPOEM
     |--------------------------------------------------------------------------
@@ -326,1275 +326,1275 @@ for ($hora = 8; $hora <= 18; $hora++) {
     |--------------------------------------------------------------------------
     */
 
-    $componentes = [];
-    $totalEventos = count($eventosVisuais);
-    $visitados = array_fill(0, $totalEventos, false);
+$componentes = [];
+$totalEventos = count($eventosVisuais);
+$visitados = array_fill(0, $totalEventos, false);
 
-    for ($i = 0; $i < $totalEventos; $i++) {
+for ($i = 0; $i < $totalEventos; $i++) {
 
-        if ($visitados[$i]) {
+    if ($visitados[$i]) {
         continue;
+    }
+
+    $fila = [$i];
+    $visitados[$i] = true;
+    $grupo = [];
+
+    while (!empty($fila)) {
+
+        $atual = array_pop($fila);
+        $grupo[] = $atual;
+
+        for ($j = 0; $j < $totalEventos; $j++) {
+
+            if ($visitados[$j]) {
+                continue;
+            }
+
+            $sobrepoe = $eventosVisuais[$atual]['top']
+                <
+                $eventosVisuais[$j]['bottom']
+                &&
+                $eventosVisuais[$atual]['bottom'] >
+                $eventosVisuais[$j]['top'];
+
+            if ($sobrepoe) {
+                $visitados[$j] = true;
+                $fila[] = $j;
+            }
         }
+    }
 
-        $fila=[$i];
-        $visitados[$i]=true;
-        $grupo=[];
+    $componentes[] = $grupo;
+}
 
-        while (!empty($fila)) {
-
-        $atual=array_pop($fila);
-        $grupo[]=$atual;
-
-        for ($j=0; $j < $totalEventos; $j++) {
-
-        if ($visitados[$j]) {
-        continue;
-        }
-
-        $sobrepoe=$eventosVisuais[$atual]['top']
-        <
-        $eventosVisuais[$j]['bottom']
-        &&
-        $eventosVisuais[$atual]['bottom']>
-        $eventosVisuais[$j]['top'];
-
-        if ($sobrepoe) {
-        $visitados[$j] = true;
-        $fila[] = $j;
-        }
-        }
-        }
-
-        $componentes[] = $grupo;
-        }
-
-        /*
+/*
         |--------------------------------------------------------------------------
         | DISTRIBUIR COLUNAS DOS EVENTOS SOBREPOSTOS
         |--------------------------------------------------------------------------
         */
 
-        foreach ($componentes as $grupo) {
+foreach ($componentes as $grupo) {
 
-        usort(
+    usort(
         $grupo,
         function ($a, $b) use ($eventosVisuais) {
-        return $eventosVisuais[$a]['top']
-        <=> $eventosVisuais[$b]['top'];
-            }
-            );
+            return $eventosVisuais[$a]['top']
+                <=> $eventosVisuais[$b]['top'];
+        }
+    );
 
-            $colunas = [];
+    $colunas = [];
 
-            foreach ($grupo as $indiceEvento) {
+    foreach ($grupo as $indiceEvento) {
 
-            $colunaEscolhida = null;
+        $colunaEscolhida = null;
 
-            foreach ($colunas as $indiceColuna => $fimColuna) {
+        foreach ($colunas as $indiceColuna => $fimColuna) {
 
             if (
-            $fimColuna
-            <=
+                $fimColuna
+                <=
                 $eventosVisuais[$indiceEvento]['top']
-                ) {
-                $colunaEscolhida=$indiceColuna;
+            ) {
+                $colunaEscolhida = $indiceColuna;
                 break;
-                }
-                }
+            }
+        }
 
-                if ($colunaEscolhida===null) {
-                $colunaEscolhida=count($colunas);
-                $colunas[]=0;
-                }
+        if ($colunaEscolhida === null) {
+            $colunaEscolhida = count($colunas);
+            $colunas[] = 0;
+        }
 
-                $eventosVisuais[$indiceEvento]['coluna']=$colunaEscolhida;
+        $eventosVisuais[$indiceEvento]['coluna'] = $colunaEscolhida;
 
-                $colunas[$colunaEscolhida]=$eventosVisuais[$indiceEvento]['bottom'];
-                }
+        $colunas[$colunaEscolhida] = $eventosVisuais[$indiceEvento]['bottom'];
+    }
 
-                $totalColunas=count($colunas);
+    $totalColunas = count($colunas);
 
-                foreach ($grupo as $indiceEvento) {
-                $eventosVisuais[$indiceEvento]['total_colunas']=$totalColunas;
-                }
-                }
+    foreach ($grupo as $indiceEvento) {
+        $eventosVisuais[$indiceEvento]['total_colunas'] = $totalColunas;
+    }
+}
 
-                ?>
-                <!DOCTYPE html>
-                <html lang="pt-BR">
+?>
+<!DOCTYPE html>
+<html lang="pt-BR">
 
-                <head>
+<head>
 
-                    <meta charset="UTF-8">
+    <meta charset="UTF-8">
 
-                    <meta
-                        name="viewport"
-                        content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
 
-                    <title>Agendamentos - Dentech</title>
+    <title>Agendamentos - Dentech</title>
 
-                    <link
-                        rel="stylesheet"
-                        href="css/global.css">
+    <link
+        rel="stylesheet"
+        href="css/global.css">
 
-                    <link
-                        rel="stylesheet"
-                        href="css/variables.css">
+    <link
+        rel="stylesheet"
+        href="css/variables.css">
 
-                    <link
-                        rel="stylesheet"
-                        href="css/layout.css">
+    <link
+        rel="stylesheet"
+        href="css/layout.css">
 
-                    <link
-                        rel="stylesheet"
-                        href="css/agendamento.css">
+    <link
+        rel="stylesheet"
+        href="css/agendamento.css">
 
-                    <link
-                        rel="stylesheet"
-                        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
-                    <link
-                        rel="icon"
-                        type="image/png"
-                        href="img/icon.PNG">
+    <link
+        rel="icon"
+        type="image/png"
+        href="img/icon.PNG">
 
-                </head>
+</head>
 
-                <body>
+<body>
 
-                    <?php include 'navbar.php'; ?>
+    <?php include 'navbar.php'; ?>
 
-                    <div class="agenda-page">
+    <div class="agenda-page">
 
-                        <!-- =========================================================
+        <!-- =========================================================
              CABEÇALHO
         ========================================================== -->
 
-                        <header class="agenda-header">
+        <header class="agenda-header">
 
-                            <div>
+            <div>
 
-                                <h1>Agendamentos</h1>
+                <h1>Agendamentos</h1>
 
-                            </div>
+            </div>
 
-                            <button
-                                type="button"
-                                class="btn-novo-agendamento"
-                                id="abrirModal">
+            <button
+                type="button"
+                class="btn-novo-agendamento"
+                id="abrirModal">
 
-                                <i class="fa-solid fa-plus"></i>
+                <i class="fa-solid fa-plus"></i>
 
-                                Novo agendamento
+                Novo agendamento
 
-                            </button>
+            </button>
 
-                        </header>
+        </header>
 
 
-                        <!-- =========================================================
+        <!-- =========================================================
              BARRA SUPERIOR
         ========================================================== -->
 
-                        <section class="agenda-toolbar">
+        <section class="agenda-toolbar">
 
-                            <div class="agenda-navigation">
+            <div class="agenda-navigation">
 
-                                <a
-                                    href="?data=<?= htmlspecialchars($dataHoje) ?>"
-                                    class="btn-hoje">
+                <a
+                    href="?data=<?= htmlspecialchars($dataHoje) ?>"
+                    class="btn-hoje">
 
-                                    Hoje
+                    Hoje
 
-                                </a>
-
-
-                                <div class="date-navigation">
-
-                                    <a
-                                        href="?data=<?= htmlspecialchars($dataAnterior) ?>"
-                                        class="date-arrow"
-                                        title="Dia anterior">
-
-                                        <i class="fa-solid fa-chevron-left"></i>
-
-                                    </a>
+                </a>
 
 
-                                    <div class="selected-date">
+                <div class="date-navigation">
 
-                                        <i class="fa-regular fa-calendar"></i>
+                    <a
+                        href="?data=<?= htmlspecialchars($dataAnterior) ?>"
+                        class="date-arrow"
+                        title="Dia anterior">
 
-                                        <span>
+                        <i class="fa-solid fa-chevron-left"></i>
 
-                                            <?= $dataAtual->format('d') ?>
-
-                                            de
-
-                                            <?= htmlspecialchars($nomeMes) ?>
-
-                                            de
-
-                                            <?= $dataAtual->format('Y') ?>
-
-                                        </span>
-
-                                    </div>
+                    </a>
 
 
-                                    <a
-                                        href="?data=<?= htmlspecialchars($dataProxima) ?>"
-                                        class="date-arrow"
-                                        title="Próximo dia">
+                    <div class="selected-date">
 
-                                        <i class="fa-solid fa-chevron-right"></i>
+                        <i class="fa-regular fa-calendar"></i>
 
-                                    </a>
+                        <span>
 
-                                </div>
+                            <?= $dataAtual->format('d') ?>
 
-                            </div>
+                            de
 
+                            <?= htmlspecialchars($nomeMes) ?>
 
-                            <div class="view-buttons">
+                            de
 
-                                <button
-                                    type="button"
-                                    class="view-button active">
+                            <?= $dataAtual->format('Y') ?>
 
-                                    Dia
+                        </span>
 
-                                </button>
+                    </div>
 
 
-                                <button
-                                    type="button"
-                                    class="view-button"
-                                    onclick="window.location.href='listar_mes.php?mes=<?= htmlspecialchars($dataAtual->format('Y-m')) ?>'">
+                    <a
+                        href="?data=<?= htmlspecialchars($dataProxima) ?>"
+                        class="date-arrow"
+                        title="Próximo dia">
 
-                                    Mês
+                        <i class="fa-solid fa-chevron-right"></i>
 
-                                </button>
+                    </a>
 
-                            </div>
+                </div>
 
-                        </section>
+            </div>
 
 
-                        <!-- =========================================================
+            <div class="view-buttons">
+
+                <button
+                    type="button"
+                    class="view-button active">
+
+                    Dia
+
+                </button>
+
+
+                <button
+                    type="button"
+                    class="view-button"
+                    onclick="window.location.href='listar_mes.php?mes=<?= htmlspecialchars($dataAtual->format('Y-m')) ?>'">
+
+                    Mês
+
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================================================
              CONTEÚDO PRINCIPAL
         ========================================================== -->
 
-                        <div class="agenda-layout">
+        <div class="agenda-layout">
 
 
-                            <!-- =====================================================
+            <!-- =====================================================
                  AGENDA DO DIA
             ====================================================== -->
 
-                            <section class="agenda-card">
+            <section class="agenda-card">
 
-                                <div class="agenda-grid">
+                <div class="agenda-grid">
 
 
-                                    <!-- =================================================
+                    <!-- =================================================
                          COLUNA DE HORÁRIOS
                     ================================================== -->
 
-                                    <div class="time-column">
+                    <div class="time-column">
 
-                                        <?php foreach ($horarios as $horario): ?>
+                        <?php foreach ($horarios as $horario): ?>
 
-                                            <div class="time-slot">
+                            <div class="time-slot">
 
-                                                <?= htmlspecialchars($horario) ?>
+                                <?= htmlspecialchars($horario) ?>
 
-                                            </div>
+                            </div>
 
-                                        <?php endforeach; ?>
+                        <?php endforeach; ?>
 
-                                    </div>
+                    </div>
 
 
-                                    <!-- =================================================
+                    <!-- =================================================
                          COLUNA DE AGENDAMENTOS
                     ================================================== -->
 
-                                    <div class="appointments-column">
+                    <div class="appointments-column">
 
-                                        <?php foreach ($horarios as $horario): ?>
+                        <?php foreach ($horarios as $horario): ?>
 
-                                            <div class="hour-row"></div>
+                            <div class="hour-row"></div>
 
-                                        <?php endforeach; ?>
+                        <?php endforeach; ?>
 
 
-                                        <div class="appointments-events-layer">
+                        <div class="appointments-events-layer">
 
-                                            <?php foreach ($eventosVisuais as $indexEvento => $evento): ?>
+                            <?php foreach ($eventosVisuais as $indexEvento => $evento): ?>
 
-                                                <?php
-                                                $ag = $evento['agendamento'];
+                                <?php
+                                $ag = $evento['agendamento'];
 
-                                                $classesEvento = [
-                                                    'event-blue',
-                                                    'event-green',
-                                                    'event-purple'
-                                                ];
+                                $classesEvento = [
+                                    'event-blue',
+                                    'event-green',
+                                    'event-purple'
+                                ];
 
-                                                $classeEvento =
-                                                    $classesEvento[$indexEvento
-                                                        %
-                                                        count($classesEvento)];
+                                $classeEvento =
+                                    $classesEvento[$indexEvento
+                                        %
+                                        count($classesEvento)];
 
-                                                $totalColunas =
-                                                    max(
-                                                        1,
-                                                        (int)$evento['total_colunas']
-                                                    );
+                                $totalColunas =
+                                    max(
+                                        1,
+                                        (int)$evento['total_colunas']
+                                    );
 
-                                                $coluna =
-                                                    (int)$evento['coluna'];
+                                $coluna =
+                                    (int)$evento['coluna'];
 
-                                                $gap = 8;
-                                                $margemLateral = 8;
+                                $gap = 8;
+                                $margemLateral = 8;
 
-                                                $largura =
-                                                    "calc(((100% - " .
-                                                    (($totalColunas - 1) * $gap) .
-                                                    "px) / " .
-                                                    $totalColunas .
-                                                    ") - " .
-                                                    ($margemLateral * 2) .
-                                                    "px)";
+                                $largura =
+                                    "calc(((100% - " .
+                                    (($totalColunas - 1) * $gap) .
+                                    "px) / " .
+                                    $totalColunas .
+                                    ") - " .
+                                    ($margemLateral * 2) .
+                                    "px)";
 
-                                                $left =
-                                                    "calc(" .
-                                                    $margemLateral .
-                                                    "px + (" .
-                                                    $coluna .
-                                                    " * ((100% - " .
-                                                    (($totalColunas - 1) * $gap) .
-                                                    "px) / " .
-                                                    $totalColunas .
-                                                    " + " .
-                                                    $gap .
-                                                    "px))";
+                                $left =
+                                    "calc(" .
+                                    $margemLateral .
+                                    "px + (" .
+                                    $coluna .
+                                    " * ((100% - " .
+                                    (($totalColunas - 1) * $gap) .
+                                    "px) / " .
+                                    $totalColunas .
+                                    " + " .
+                                    $gap .
+                                    "px))";
 
-                                                $top =
-                                                    number_format(
-                                                        (float)$evento['top'],
-                                                        2,
-                                                        '.',
-                                                        ''
-                                                    );
-                                                ?>
+                                $top =
+                                    number_format(
+                                        (float)$evento['top'],
+                                        2,
+                                        '.',
+                                        ''
+                                    );
+                                ?>
 
-                                                <div
-                                                    class="appointment-event <?= htmlspecialchars($classeEvento) ?>"
-                                                    style="
+                                <div
+                                    class="appointment-event <?= htmlspecialchars($classeEvento) ?>"
+                                    style="
                                             top: <?= $top ?>px;
                                             left: <?= $left ?>;
                                             width: <?= $largura ?>;
                                         ">
 
-                                                    <div class="event-content">
+                                    <div class="event-content">
 
-                                                        <strong>
-                                                            <?= htmlspecialchars(
-                                                                $ag['nome_paciente']
-                                                            ) ?>
-                                                        </strong>
+                                        <strong>
+                                            <?= htmlspecialchars(
+                                                $ag['nome_paciente']
+                                            ) ?>
+                                        </strong>
 
-                                                        <span>
-                                                            <?= htmlspecialchars(
-                                                                $ag['procedimento']
-                                                            ) ?>
-                                                        </span>
+                                        <span>
+                                            <?= htmlspecialchars(
+                                                $ag['procedimento']
+                                            ) ?>
+                                        </span>
 
-                                                        <small>
-                                                            <?= htmlspecialchars(
-                                                                substr(
-                                                                    $ag['horario'],
-                                                                    0,
-                                                                    5
-                                                                )
-                                                            ) ?>
-                                                        </small>
+                                        <small>
+                                            <?= htmlspecialchars(
+                                                substr(
+                                                    $ag['horario'],
+                                                    0,
+                                                    5
+                                                )
+                                            ) ?>
+                                        </small>
 
-                                                    </div>
-
-
-                                                    <div class="event-actions">
-
-                                                        <?php if (!empty($ag['paciente_id'])): ?>
-
-                                                            <a
-                                                                href="visualizar_prontuario.php?id=<?= (int)$ag['paciente_id'] ?>"
-                                                                title="Visualizar prontuário">
-
-                                                                <i class="fa-regular fa-folder-open"></i>
-
-                                                            </a>
-
-                                                        <?php endif; ?>
+                                    </div>
 
 
-                                                        <form
-                                                            method="POST"
-                                                            action="registrar_atendimento.php"
-                                                            onsubmit="return confirm('Confirmar atendimento e registrar procedimento?')">
+                                    <div class="event-actions">
 
-                                                            <?= csrf_field() ?>
+                                        <?php if (!empty($ag['paciente_id'])): ?>
 
-                                                            <input
-                                                                type="hidden"
-                                                                name="id"
-                                                                value="<?= (int)$ag['id'] ?>">
+                                            <a
+                                                href="visualizar_prontuario.php?id=<?= (int)$ag['paciente_id'] ?>"
+                                                title="Visualizar prontuário">
 
-                                                            <button
-                                                                type="submit"
-                                                                title="Confirmar atendimento">
+                                                <i class="fa-regular fa-folder-open"></i>
 
-                                                                <i class="fa-solid fa-check"></i>
+                                            </a>
 
-                                                            </button>
-
-                                                        </form>
+                                        <?php endif; ?>
 
 
-                                                        <form
-                                                            method="POST"
-                                                            action="excluir_agendamento.php"
-                                                            onsubmit="return confirm('Excluir este agendamento?')">
+                                        <form
+                                            method="POST"
+                                            action="registrar_atendimento.php"
+                                            onsubmit="return confirm('Confirmar atendimento e registrar procedimento?')">
 
-                                                            <?= csrf_field() ?>
+                                            <?= csrf_field() ?>
 
-                                                            <input
-                                                                type="hidden"
-                                                                name="id"
-                                                                value="<?= (int)$ag['id'] ?>">
+                                            <input
+                                                type="hidden"
+                                                name="id"
+                                                value="<?= (int)$ag['id'] ?>">
 
-                                                            <button
-                                                                type="submit"
-                                                                title="Excluir agendamento">
+                                            <button
+                                                type="submit"
+                                                title="Confirmar atendimento">
 
-                                                                <i class="fa-solid fa-trash"></i>
+                                                <i class="fa-solid fa-check"></i>
 
-                                                            </button>
+                                            </button>
 
-                                                        </form>
+                                        </form>
 
-                                                    </div>
 
-                                                </div>
+                                        <form
+                                            method="POST"
+                                            action="excluir_agendamento.php"
+                                            onsubmit="return confirm('Excluir este agendamento?')">
 
-                                            <?php endforeach; ?>
+                                            <?= csrf_field() ?>
 
-                                        </div>
+                                            <input
+                                                type="hidden"
+                                                name="id"
+                                                value="<?= (int)$ag['id'] ?>">
+
+                                            <button
+                                                type="submit"
+                                                title="Excluir agendamento">
+
+                                                <i class="fa-solid fa-trash"></i>
+
+                                            </button>
+
+                                        </form>
 
                                     </div>
 
                                 </div>
 
-                            </section>
+                            <?php endforeach; ?>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
 
 
-                            <!-- =====================================================
+            <!-- =====================================================
                  COLUNA DIREITA
             ====================================================== -->
 
-                            <aside class="agenda-sidebar">
+            <aside class="agenda-sidebar">
 
 
-                                <!-- =================================================
+                <!-- =================================================
                      CALENDÁRIO
                 ================================================== -->
 
-                                <section class="calendar-card">
+                <section class="calendar-card">
 
-                                    <div class="calendar-header">
+                    <div class="calendar-header">
 
-                                        <a
-                                            href="?data=<?= htmlspecialchars($mesAnterior) ?>"
-                                            class="calendar-arrow">
+                        <a
+                            href="?data=<?= htmlspecialchars($mesAnterior) ?>"
+                            class="calendar-arrow">
 
-                                            <i class="fa-solid fa-chevron-left"></i>
+                            <i class="fa-solid fa-chevron-left"></i>
 
-                                        </a>
-
-
-                                        <h2>
-
-                                            <?= htmlspecialchars($nomeMes) ?>
-
-                                            <?= $anoMes ?>
-
-                                        </h2>
+                        </a>
 
 
-                                        <a
-                                            href="?data=<?= htmlspecialchars($mesProximo) ?>"
-                                            class="calendar-arrow">
+                        <h2>
 
-                                            <i class="fa-solid fa-chevron-right"></i>
+                            <?= htmlspecialchars($nomeMes) ?>
 
-                                        </a>
+                            <?= $anoMes ?>
 
-                                    </div>
+                        </h2>
 
 
-                                    <!-- =================================================
+                        <a
+                            href="?data=<?= htmlspecialchars($mesProximo) ?>"
+                            class="calendar-arrow">
+
+                            <i class="fa-solid fa-chevron-right"></i>
+
+                        </a>
+
+                    </div>
+
+
+                    <!-- =================================================
                          DIAS DA SEMANA
                     ================================================== -->
 
-                                    <div class="calendar-weekdays">
+                    <div class="calendar-weekdays">
 
-                                        <span>D</span>
-                                        <span>S</span>
-                                        <span>T</span>
-                                        <span>Q</span>
-                                        <span>Q</span>
-                                        <span>S</span>
-                                        <span>S</span>
+                        <span>D</span>
+                        <span>S</span>
+                        <span>T</span>
+                        <span>Q</span>
+                        <span>Q</span>
+                        <span>S</span>
+                        <span>S</span>
 
-                                    </div>
+                    </div>
 
 
-                                    <!-- =================================================
+                    <!-- =================================================
                          DIAS
                     ================================================== -->
 
-                                    <div class="calendar-days">
+                    <div class="calendar-days">
 
-                                        <?php
+                        <?php
 
-                                        /*
+                        /*
                         | Dias do mês anterior
                         |
                         | Como o calendário começa no domingo,
                         | o deslocamento agora está correto.
                         */
 
-                                        $mesAnteriorCalendario = (clone $mesCalendario)
-                                            ->modify('-1 month');
+                        $mesAnteriorCalendario = (clone $mesCalendario)
+                            ->modify('-1 month');
 
-                                        $diasMesAnterior =
-                                            (int)$mesAnteriorCalendario->format('t');
+                        $diasMesAnterior =
+                            (int)$mesAnteriorCalendario->format('t');
 
 
-                                        /*
+                        /*
                         | Preencher dias anteriores ao primeiro dia
                         */
 
-                                        for (
-                                            $i = $primeiroDiaSemana - 1;
-                                            $i >= 0;
-                                            $i--
-                                        ):
+                        for (
+                            $i = $primeiroDiaSemana - 1;
+                            $i >= 0;
+                            $i--
+                        ):
 
-                                            $diaAnterior =
-                                                $diasMesAnterior - $i;
+                            $diaAnterior =
+                                $diasMesAnterior - $i;
 
-                                        ?>
+                        ?>
 
-                                            <a
-                                                href="?data=<?= htmlspecialchars(
-                                                                $mesAnteriorCalendario->format('Y-m-')
-                                                            ) . sprintf('%02d', $diaAnterior) ?>"
-                                                class="other-month">
+                            <a
+                                href="?data=<?= htmlspecialchars(
+                                                $mesAnteriorCalendario->format('Y-m-')
+                                            ) . sprintf('%02d', $diaAnterior) ?>"
+                                class="other-month">
 
-                                                <?= $diaAnterior ?>
+                                <?= $diaAnterior ?>
 
-                                            </a>
+                            </a>
 
-                                        <?php endfor; ?>
+                        <?php endfor; ?>
 
 
-                                        <!-- =============================================
+                        <!-- =============================================
                              DIAS DO MÊS ATUAL
                         ============================================== -->
 
-                                        <?php for (
-                                            $dia = 1;
-                                            $dia <= $quantidadeDias;
-                                            $dia++
-                                        ): ?>
+                        <?php for (
+                            $dia = 1;
+                            $dia <= $quantidadeDias;
+                            $dia++
+                        ): ?>
 
-                                            <?php
+                            <?php
 
-                                            $dataDia = sprintf(
-                                                '%04d-%02d-%02d',
-                                                $anoMes,
-                                                $mesMes,
-                                                $dia
-                                            );
+                            $dataDia = sprintf(
+                                '%04d-%02d-%02d',
+                                $anoMes,
+                                $mesMes,
+                                $dia
+                            );
 
-                                            $classes = [];
-
-
-                                            if ($dataDia === $data_filtro) {
-
-                                                $classes[] = 'selected';
-                                            }
+                            $classes = [];
 
 
-                                            if ($dataDia === $dataHoje) {
+                            if ($dataDia === $data_filtro) {
 
-                                                $classes[] = 'today';
-                                            }
-
-                                            ?>
+                                $classes[] = 'selected';
+                            }
 
 
-                                            <a
-                                                href="?data=<?= htmlspecialchars($dataDia) ?>"
-                                                class="<?= htmlspecialchars(
-                                                            implode(' ', $classes)
-                                                        ) ?>">
+                            if ($dataDia === $dataHoje) {
 
-                                                <?= $dia ?>
+                                $classes[] = 'today';
+                            }
 
-                                            </a>
-
-                                        <?php endfor; ?>
+                            ?>
 
 
-                                        <?php
+                            <a
+                                href="?data=<?= htmlspecialchars($dataDia) ?>"
+                                class="<?= htmlspecialchars(
+                                            implode(' ', $classes)
+                                        ) ?>">
 
-                                        /*
+                                <?= $dia ?>
+
+                            </a>
+
+                        <?php endfor; ?>
+
+
+                        <?php
+
+                        /*
                         | Preencher os dias restantes da última semana
                         |
                         | Isso mantém a grade visualmente organizada.
                         */
 
-                                        $totalCelulas =
-                                            $primeiroDiaSemana + $quantidadeDias;
+                        $totalCelulas =
+                            $primeiroDiaSemana + $quantidadeDias;
 
-                                        $celulasRestantes =
-                                            (7 - ($totalCelulas % 7)) % 7;
+                        $celulasRestantes =
+                            (7 - ($totalCelulas % 7)) % 7;
 
-                                        $mesProximoCalendario =
-                                            (clone $mesCalendario)
-                                            ->modify('+1 month');
+                        $mesProximoCalendario =
+                            (clone $mesCalendario)
+                            ->modify('+1 month');
 
-                                        for (
-                                            $dia = 1;
-                                            $dia <= $celulasRestantes;
-                                            $dia++
-                                        ):
+                        for (
+                            $dia = 1;
+                            $dia <= $celulasRestantes;
+                            $dia++
+                        ):
 
-                                            $dataProximoMes =
-                                                $mesProximoCalendario->format('Y-m-')
-                                                . sprintf('%02d', $dia);
+                            $dataProximoMes =
+                                $mesProximoCalendario->format('Y-m-')
+                                . sprintf('%02d', $dia);
 
-                                        ?>
+                        ?>
 
-                                            <a
-                                                href="?data=<?= htmlspecialchars($dataProximoMes) ?>"
-                                                class="other-month">
+                            <a
+                                href="?data=<?= htmlspecialchars($dataProximoMes) ?>"
+                                class="other-month">
 
-                                                <?= $dia ?>
+                                <?= $dia ?>
 
-                                            </a>
+                            </a>
 
-                                        <?php endfor; ?>
+                        <?php endfor; ?>
 
-                                    </div>
+                    </div>
 
-                                </section>
+                </section>
 
 
-                                <!-- =================================================
+                <!-- =================================================
                      PRÓXIMOS AGENDAMENTOS
                 ================================================== -->
 
-                                <section class="next-appointments-card">
+                <section class="next-appointments-card">
 
-                                    <div class="next-header">
+                    <div class="next-header">
 
-                                        <h2>
+                        <h2>
 
-                                            Próximos agendamentos
+                            Próximos agendamentos
 
-                                        </h2>
-
-                                    </div>
-
-
-                                    <?php if (empty($proximos)): ?>
-
-                                        <div class="next-empty">
-
-                                            <i class="fa-regular fa-calendar-xmark"></i>
-
-                                            <span>
-
-                                                Nenhum agendamento próximo.
-
-                                            </span>
-
-                                        </div>
-
-                                    <?php else: ?>
-
-                                        <div class="next-list">
-
-                                            <?php foreach ($proximos as $proximo): ?>
-
-                                                <a
-                                                    href="?data=<?= htmlspecialchars($proximo['data']) ?>"
-                                                    class="next-item">
-
-
-                                                    <div class="next-date">
-
-                                                        <strong>
-
-                                                            <?= date(
-                                                                'd/m',
-                                                                strtotime(
-                                                                    $proximo['data']
-                                                                )
-                                                            ) ?>
-
-                                                        </strong>
-
-
-                                                        <span>
-
-                                                            <?= htmlspecialchars(
-                                                                substr(
-                                                                    $proximo['horario'],
-                                                                    0,
-                                                                    5
-                                                                )
-                                                            ) ?>
-
-                                                        </span>
-
-                                                    </div>
-
-
-                                                    <div class="next-patient">
-
-                                                        <strong>
-
-                                                            <?= htmlspecialchars(
-                                                                $proximo['nome_paciente']
-                                                            ) ?>
-
-                                                        </strong>
-
-
-                                                        <span>
-
-                                                            <?= htmlspecialchars(
-                                                                $proximo['procedimento']
-                                                            ) ?>
-
-                                                        </span>
-
-                                                    </div>
-
-                                                </a>
-
-                                            <?php endforeach; ?>
-
-                                        </div>
-
-                                    <?php endif; ?>
-
-                                </section>
-
-                            </aside>
-
-                        </div>
+                        </h2>
 
                     </div>
 
 
-                    <!-- =============================================================
+                    <?php if (empty($proximos)): ?>
+
+                        <div class="next-empty">
+
+                            <i class="fa-regular fa-calendar-xmark"></i>
+
+                            <span>
+
+                                Nenhum agendamento próximo.
+
+                            </span>
+
+                        </div>
+
+                    <?php else: ?>
+
+                        <div class="next-list">
+
+                            <?php foreach ($proximos as $proximo): ?>
+
+                                <a
+                                    href="?data=<?= htmlspecialchars($proximo['data']) ?>"
+                                    class="next-item">
+
+
+                                    <div class="next-date">
+
+                                        <strong>
+
+                                            <?= date(
+                                                'd/m',
+                                                strtotime(
+                                                    $proximo['data']
+                                                )
+                                            ) ?>
+
+                                        </strong>
+
+
+                                        <span>
+
+                                            <?= htmlspecialchars(
+                                                substr(
+                                                    $proximo['horario'],
+                                                    0,
+                                                    5
+                                                )
+                                            ) ?>
+
+                                        </span>
+
+                                    </div>
+
+
+                                    <div class="next-patient">
+
+                                        <strong>
+
+                                            <?= htmlspecialchars(
+                                                $proximo['nome_paciente']
+                                            ) ?>
+
+                                        </strong>
+
+
+                                        <span>
+
+                                            <?= htmlspecialchars(
+                                                $proximo['procedimento']
+                                            ) ?>
+
+                                        </span>
+
+                                    </div>
+
+                                </a>
+
+                            <?php endforeach; ?>
+
+                        </div>
+
+                    <?php endif; ?>
+
+                </section>
+
+            </aside>
+
+        </div>
+
+    </div>
+
+
+    <!-- =============================================================
          MODAL NOVO AGENDAMENTO
     ============================================================== -->
 
-                    <div
-                        class="modal-overlay"
-                        id="modalAgendamento">
+    <div
+        class="modal-overlay"
+        id="modalAgendamento">
 
 
-                        <div class="modal-agendamento">
+        <div class="modal-agendamento">
 
 
-                            <!-- =====================================================
+            <!-- =====================================================
                  CABEÇALHO DO MODAL
             ====================================================== -->
 
-                            <div class="modal-header">
+            <div class="modal-header">
 
-                                <div>
+                <div>
 
-                                    <span class="modal-kicker">
+                    <span class="modal-kicker">
 
-                                        AGENDAMENTOS
+                        AGENDAMENTOS
 
-                                    </span>
-
-
-                                    <h2>
-
-                                        Novo agendamento
-
-                                    </h2>
-
-                                </div>
+                    </span>
 
 
-                                <button
-                                    type="button"
-                                    class="modal-close"
-                                    id="fecharModal">
+                    <h2>
 
-                                    <i class="fa-solid fa-xmark"></i>
+                        Novo agendamento
 
-                                </button>
+                    </h2>
 
-                            </div>
+                </div>
 
 
-                            <!-- =====================================================
+                <button
+                    type="button"
+                    class="modal-close"
+                    id="fecharModal">
+
+                    <i class="fa-solid fa-xmark"></i>
+
+                </button>
+
+            </div>
+
+
+            <!-- =====================================================
                  MENSAGEM
             ====================================================== -->
 
-                            <div
-                                id="mensagem"
-                                class="mensagem"
-                                style="display:none;">
+            <div
+                id="mensagem"
+                class="mensagem"
+                style="display:none;">
 
-                            </div>
+            </div>
 
 
-                            <!-- =====================================================
+            <!-- =====================================================
                  FORMULÁRIO
             ====================================================== -->
 
-                            <?php if ($planoItem): ?>
-                                <div class="agenda-plano-context">
-                                    <div class="agenda-plano-context-icon">
-                                        <i class="fa-solid fa-layer-group"></i>
-                                    </div>
-                                    <div>
-                                        <strong>Agendamento a partir do plano de tratamento</strong>
-                                        <span>
-                                            <?= htmlspecialchars($planoItem['plano_titulo']) ?>
-                                            ·
-                                            <?= htmlspecialchars($planoItem['descricao']) ?>
-                                        </span>
-                                    </div>
-                                </div>
-                            <?php endif; ?>
+            <?php if ($planoItem): ?>
+                <div class="agenda-plano-context">
+                    <div class="agenda-plano-context-icon">
+                        <i class="fa-solid fa-layer-group"></i>
+                    </div>
+                    <div>
+                        <strong>Agendamento a partir do plano de tratamento</strong>
+                        <span>
+                            <?= htmlspecialchars($planoItem['plano_titulo']) ?>
+                            ·
+                            <?= htmlspecialchars($planoItem['descricao']) ?>
+                        </span>
+                    </div>
+                </div>
+            <?php endif; ?>
 
-                            <form
-                                id="formAgendamento">
+            <form
+                id="formAgendamento">
 
 
-                                <input
-                                    type="hidden"
-                                    name="csrf_token"
-                                    value="<?= htmlspecialchars(
-                                                $_SESSION['csrf_token']
-                                            ) ?>">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= htmlspecialchars(
+                                $_SESSION['csrf_token']
+                            ) ?>">
 
-                                <?php if ($planoItemId > 0): ?>
-                                    <input
-                                        type="hidden"
-                                        name="plano_item_id"
-                                        value="<?= (int)$planoItemId ?>">
-                                <?php endif; ?>
+                <?php if ($planoItemId > 0): ?>
+                    <input
+                        type="hidden"
+                        name="plano_item_id"
+                        value="<?= (int)$planoItemId ?>">
+                <?php endif; ?>
 
 
 
-                                <!-- PACIENTE -->
+                <!-- PACIENTE -->
 
-                                <div class="form-group">
+                <div class="form-group">
 
-                                    <label for="paciente_id">
+                    <label for="paciente_id">
 
-                                        Paciente cadastrado
+                        Paciente cadastrado
 
-                                    </label>
+                    </label>
 
 
-                                    <select
-                                        name="paciente_id"
-                                        id="paciente_id">
+                    <select
+                        name="paciente_id"
+                        id="paciente_id">
 
-                                        <option value="">
+                        <option value="">
 
-                                            Selecione o paciente
+                            Selecione o paciente
 
-                                        </option>
+                        </option>
 
 
-                                        <?php foreach ($prontuarios as $p): ?>
+                        <?php foreach ($prontuarios as $p): ?>
 
-                                            <option
-                                                value="<?= htmlspecialchars(
-                                                            $p['id']
-                                                        ) ?>"
-                                                <?= (
-                                                    $planoItem &&
-                                                    (int)$planoItem['paciente_id'] === (int)$p['id']
-                                                ) ? ' selected' : '' ?>>
+                            <option
+                                value="<?= htmlspecialchars(
+                                            $p['id']
+                                        ) ?>"
+                                <?= (
+                                    $planoItem &&
+                                    (int)$planoItem['paciente_id'] === (int)$p['id']
+                                ) ? ' selected' : '' ?>>
 
-                                                <?= htmlspecialchars(
-                                                    $p['paciente']
-                                                ) ?>
+                                <?= htmlspecialchars(
+                                    $p['paciente']
+                                ) ?>
 
-                                            </option>
+                            </option>
 
-                                        <?php endforeach; ?>
+                        <?php endforeach; ?>
 
-                                    </select>
+                    </select>
 
-                                </div>
+                </div>
 
 
-                                <!-- NOME AVULSO -->
+                <!-- NOME AVULSO -->
 
-                                <div class="form-group">
+                <div class="form-group">
 
-                                    <label for="paciente_nome">
+                    <label for="paciente_nome">
 
-                                        Nome avulso
+                        Nome avulso
 
-                                    </label>
+                    </label>
 
 
-                                    <input
-                                        type="text"
-                                        name="paciente_nome"
-                                        id="paciente_nome"
-                                        placeholder="Opcional">
+                    <input
+                        type="text"
+                        name="paciente_nome"
+                        id="paciente_nome"
+                        placeholder="Opcional">
 
-                                </div>
+                </div>
 
 
-                                <!-- PROCEDIMENTO -->
+                <!-- PROCEDIMENTO -->
 
-                                <div class="form-group">
+                <div class="form-group">
 
-                                    <label for="procedimento">
+                    <label for="procedimento">
 
-                                        Procedimento
+                        Procedimento
 
-                                    </label>
+                    </label>
 
 
-                                    <input
-                                        type="text"
-                                        name="procedimento"
-                                        id="procedimento"
-                                        required
-                                        value="<?= htmlspecialchars(
-                                                    $planoItem
-                                                        ? (
-                                                            !empty($planoItem['servico_nome'])
-                                                            ? $planoItem['servico_nome']
-                                                            : $planoItem['descricao']
-                                                        )
-                                                        : ''
-                                                ) ?>"
-                                        placeholder="Ex.: Limpeza, Consulta, Clareamento">
+                    <input
+                        type="text"
+                        name="procedimento"
+                        id="procedimento"
+                        required
+                        value="<?= htmlspecialchars(
+                                    $planoItem
+                                        ? (
+                                            !empty($planoItem['servico_nome'])
+                                            ? $planoItem['servico_nome']
+                                            : $planoItem['descricao']
+                                        )
+                                        : ''
+                                ) ?>"
+                        placeholder="Ex.: Limpeza, Consulta, Clareamento">
 
-                                </div>
+                </div>
 
 
-                                <!-- DATA E HORÁRIO -->
+                <!-- DATA E HORÁRIO -->
 
-                                <div class="form-row">
+                <div class="form-row">
 
 
-                                    <div class="form-group">
+                    <div class="form-group">
 
-                                        <label for="data">
+                        <label for="data">
 
-                                            Data
+                            Data
 
-                                        </label>
+                        </label>
 
 
-                                        <input
-                                            type="date"
-                                            name="data"
-                                            id="data"
-                                            value="<?= htmlspecialchars(
-                                                        $dataFormulario
-                                                    ) ?>">
-                                        required>
-
-                                    </div>
-
-
-                                    <div class="form-group">
-
-                                        <label for="horario">
-
-                                            Horário
-
-                                        </label>
-
-
-                                        <input
-                                            type="time"
-                                            name="horario"
-                                            id="horario"
-                                            required>
-
-                                    </div>
-
-
-                                </div>
-
-
-                                <!-- BOTÕES -->
-
-                                <div class="modal-actions">
-
-
-                                    <button
-                                        type="button"
-                                        class="btn-cancelar"
-                                        id="cancelarModal">
-
-                                        Cancelar
-
-                                    </button>
-
-
-                                    <button
-                                        type="submit"
-                                        class="btn-salvar">
-
-                                        <i class="fa-solid fa-check"></i>
-
-                                        Agendar
-
-                                    </button>
-
-
-                                </div>
-
-
-                            </form>
-
-                        </div>
+                        <input
+                            type="date"
+                            name="data"
+                            id="data"
+                            value="<?= htmlspecialchars(
+                                        $dataFormulario
+                                    ) ?>">
+                        required>
 
                     </div>
 
 
-                    <!-- =============================================================
+                    <div class="form-group">
+
+                        <label for="horario">
+
+                            Horário
+
+                        </label>
+
+
+                        <input
+                            type="time"
+                            name="horario"
+                            id="horario"
+                            required>
+
+                    </div>
+
+
+                </div>
+
+
+                <!-- BOTÕES -->
+
+                <div class="modal-actions">
+
+
+                    <button
+                        type="button"
+                        class="btn-cancelar"
+                        id="cancelarModal">
+
+                        Cancelar
+
+                    </button>
+
+
+                    <button
+                        type="submit"
+                        class="btn-salvar">
+
+                        <i class="fa-solid fa-check"></i>
+
+                        Agendar
+
+                    </button>
+
+
+                </div>
+
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <!-- =============================================================
          JAVASCRIPT
     ============================================================== -->
 
-                    <script>
-                        /*
+    <script>
+        /*
         |--------------------------------------------------------------------------
         | MODAL
         |--------------------------------------------------------------------------
         */
 
-                        const modal =
-                            document.getElementById('modalAgendamento');
+        const modal =
+            document.getElementById('modalAgendamento');
 
-                        const abrirModal =
-                            document.getElementById('abrirModal');
+        const abrirModal =
+            document.getElementById('abrirModal');
 
-                        const fecharModal =
-                            document.getElementById('fecharModal');
+        const fecharModal =
+            document.getElementById('fecharModal');
 
-                        const cancelarModal =
-                            document.getElementById('cancelarModal');
+        const cancelarModal =
+            document.getElementById('cancelarModal');
 
 
-                        function fecharModalAgendamento() {
+        function fecharModalAgendamento() {
 
-                            modal.classList.remove('show');
+            modal.classList.remove('show');
+
+        }
+
+
+        abrirModal.addEventListener(
+            'click',
+            function() {
+
+                modal.classList.add('show');
+
+            }
+        );
+
+
+        fecharModal.addEventListener(
+            'click',
+            fecharModalAgendamento
+        );
+
+
+        cancelarModal.addEventListener(
+            'click',
+            fecharModalAgendamento
+        );
+
+
+        modal.addEventListener(
+            'click',
+            function(event) {
+
+                if (event.target === modal) {
+
+                    fecharModalAgendamento();
+
+                }
+
+            }
+        );
+
+
+        document.addEventListener(
+            'keydown',
+            function(event) {
+
+                if (event.key === 'Escape') {
+
+                    fecharModalAgendamento();
+
+                }
+
+            }
+        );
+
+
+        <?php if ($planoItemId > 0): ?>
+            document.addEventListener('DOMContentLoaded', function() {
+                modal.classList.add('show');
+            });
+        <?php endif; ?>
+
+        /*
+        |--------------------------------------------------------------------------
+        | SALVAR AGENDAMENTO
+        |--------------------------------------------------------------------------
+        */
+
+        document
+            .getElementById('formAgendamento')
+            .addEventListener(
+                'submit',
+                async function(e) {
+
+                    e.preventDefault();
+
+
+                    const form = this;
+
+                    const formData =
+                        new FormData(form);
+
+                    const mensagem =
+                        document.getElementById(
+                            'mensagem'
+                        );
+
+
+                    mensagem.style.display =
+                        'none';
+
+
+                    try {
+
+                        const response =
+                            await fetch(
+                                <?= $planoItemId > 0
+                                    ? "'salvar_agendamento_plano.php'"
+                                    : "'salvar_agendamento.php'" ?>, {
+                                    method: 'POST',
+                                    body: formData
+                                }
+                            );
+
+
+                        const result =
+                            await response.json();
+
+
+                        if (result.success) {
+
+                            mensagem.className =
+                                'mensagem sucesso';
+
+                            mensagem.textContent =
+                                'Agendamento salvo com sucesso!';
+
+                            mensagem.style.display =
+                                'block';
+
+
+                            const data =
+                                formData.get('data');
+
+
+                            setTimeout(
+                                function() {
+
+                                    window.location.href =
+                                        '?data=' +
+                                        encodeURIComponent(
+                                            data
+                                        );
+
+                                },
+                                700
+                            );
+
+
+                        } else {
+
+                            mensagem.className =
+                                'mensagem erro';
+
+                            mensagem.textContent =
+                                'Erro: ' +
+                                (
+                                    result.error ||
+                                    'Não foi possível salvar.'
+                                );
+
+                            mensagem.style.display =
+                                'block';
 
                         }
 
 
-                        abrirModal.addEventListener(
-                            'click',
-                            function() {
+                    } catch (error) {
 
-                                modal.classList.add('show');
-
-                            }
-                        );
+                        console.error(error);
 
 
-                        fecharModal.addEventListener(
-                            'click',
-                            fecharModalAgendamento
-                        );
+                        mensagem.className =
+                            'mensagem erro';
 
+                        mensagem.textContent =
+                            'Erro de conexão. Tente novamente.';
 
-                        cancelarModal.addEventListener(
-                            'click',
-                            fecharModalAgendamento
-                        );
+                        mensagem.style.display =
+                            'block';
 
+                    }
 
-                        modal.addEventListener(
-                            'click',
-                            function(event) {
+                }
+            );
+    </script>
 
-                                if (event.target === modal) {
+</body>
 
-                                    fecharModalAgendamento();
-
-                                }
-
-                            }
-                        );
-
-
-                        document.addEventListener(
-                            'keydown',
-                            function(event) {
-
-                                if (event.key === 'Escape') {
-
-                                    fecharModalAgendamento();
-
-                                }
-
-                            }
-                        );
-
-
-                        <?php if ($planoItemId > 0): ?>
-                            document.addEventListener('DOMContentLoaded', function() {
-                                modal.classList.add('show');
-                            });
-                        <?php endif; ?>
-
-                        /*
-                        |--------------------------------------------------------------------------
-                        | SALVAR AGENDAMENTO
-                        |--------------------------------------------------------------------------
-                        */
-
-                        document
-                            .getElementById('formAgendamento')
-                            .addEventListener(
-                                'submit',
-                                async function(e) {
-
-                                    e.preventDefault();
-
-
-                                    const form = this;
-
-                                    const formData =
-                                        new FormData(form);
-
-                                    const mensagem =
-                                        document.getElementById(
-                                            'mensagem'
-                                        );
-
-
-                                    mensagem.style.display =
-                                        'none';
-
-
-                                    try {
-
-                                        const response =
-                                            await fetch(
-                                                <?= $planoItemId > 0
-                                                    ? "'salvar_agendamento_plano.php'"
-                                                    : "'salvar_agendamento.php'" ?>, {
-                                                    method: 'POST',
-                                                    body: formData
-                                                }
-                                            );
-
-
-                                        const result =
-                                            await response.json();
-
-
-                                        if (result.success) {
-
-                                            mensagem.className =
-                                                'mensagem sucesso';
-
-                                            mensagem.textContent =
-                                                'Agendamento salvo com sucesso!';
-
-                                            mensagem.style.display =
-                                                'block';
-
-
-                                            const data =
-                                                formData.get('data');
-
-
-                                            setTimeout(
-                                                function() {
-
-                                                    window.location.href =
-                                                        '?data=' +
-                                                        encodeURIComponent(
-                                                            data
-                                                        );
-
-                                                },
-                                                700
-                                            );
-
-
-                                        } else {
-
-                                            mensagem.className =
-                                                'mensagem erro';
-
-                                            mensagem.textContent =
-                                                'Erro: ' +
-                                                (
-                                                    result.error ||
-                                                    'Não foi possível salvar.'
-                                                );
-
-                                            mensagem.style.display =
-                                                'block';
-
-                                        }
-
-
-                                    } catch (error) {
-
-                                        console.error(error);
-
-
-                                        mensagem.className =
-                                            'mensagem erro';
-
-                                        mensagem.textContent =
-                                            'Erro de conexão. Tente novamente.';
-
-                                        mensagem.style.display =
-                                            'block';
-
-                                    }
-
-                                }
-                            );
-                    </script>
-
-                </body>
-
-                </html>
+</html>
