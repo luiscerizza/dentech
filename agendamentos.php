@@ -1187,8 +1187,8 @@ for ($hora = 8; $hora <= 18; $hora++) {
                                 id="data"
                                 value="<?= htmlspecialchars(
                                             $dataFormulario
-                                        ) ?>">
-                            required>
+                                        )?>"
+                                required>
 
                         </div>
 

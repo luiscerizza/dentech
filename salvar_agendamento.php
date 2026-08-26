@@ -108,21 +108,63 @@ try {
         }
     }
 
-    if ($pacienteId > 0) {
-        $stmt = $pdo->prepare("
-            SELECT id
-            FROM agendamentos
-            WHERE paciente_id = ?
-              AND data = ?
-              AND horario = ?
-              AND status <> 'cancelado'
-            LIMIT 1
-        ");
-        $stmt->execute([$pacienteId, $data, $horario]);
+    /*
+    |--------------------------------------------------------------------------
+    | CONFLITO DE HORÁRIO
+    |--------------------------------------------------------------------------
+    |
+    | A agenda atual trabalha com uma única grade de atendimento.
+    | Portanto, não permitimos dois agendamentos ativos no mesmo
+    | dia e horário, mesmo que sejam pacientes diferentes.
+    |
+    | Agendamentos cancelados não bloqueiam o horário.
+    |
+    */
+    $stmt = $pdo->prepare("
+        SELECT id, paciente_id, paciente_nome, procedimento
+        FROM agendamentos
+        WHERE data = ?
+          AND horario = ?
+          AND status <> 'cancelado'
+        LIMIT 1
+    ");
 
-        if ($stmt->fetchColumn()) {
-            throw new Exception('Este paciente já possui um agendamento neste horário.');
+    $stmt->execute([$data, $horario]);
+
+    $conflito = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($conflito) {
+        $nomeConflito = trim(
+            $conflito['paciente_nome'] ?? ''
+        );
+
+        if ($nomeConflito === '' && !empty($conflito['paciente_id'])) {
+            $stmtPacienteConflito = $pdo->prepare("
+                SELECT paciente
+                FROM prontuarios
+                WHERE id = ?
+                LIMIT 1
+            ");
+
+            $stmtPacienteConflito->execute([
+                (int)$conflito['paciente_id']
+            ]);
+
+            $nomeConflito =
+                (string)$stmtPacienteConflito->fetchColumn();
         }
+
+        $horarioFormatado = substr($horario, 0, 5);
+
+        throw new Exception(
+            'Já existe um agendamento para ' .
+                ($nomeConflito !== '' ? '"' . $nomeConflito . '"' : 'outro paciente') .
+                ' em ' .
+                date('d/m/Y', strtotime($data)) .
+                ' às ' .
+                $horarioFormatado .
+                '. Escolha outro horário.'
+        );
     }
 
     $pdo->beginTransaction();
