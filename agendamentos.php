@@ -1,3 +1,4 @@
+<?php
 require_once 'config/auth.php';
 exigirLogin();
 
@@ -1370,9 +1371,7 @@ for ($hora = 8; $hora <= 18; $hora++) {
 
                             const response =
                                 await fetch(
-                                    <?= $planoItemId > 0
-                                        ? "'salvar_agendamento_plano.php'"
-                                        : "'salvar_agendamento.php'" ?>, {
+                                    'salvar_agendamento.php', {
                                         method: 'POST',
                                         body: formData
                                     }
