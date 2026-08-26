@@ -693,10 +693,10 @@ foreach ($componentes as $grupo) {
                                 <div
                                     class="appointment-event <?= htmlspecialchars($classeEvento) ?>"
                                     style="
-                                                        top: <?= $top ?>px;
-                                                        --evento-coluna: <?= $coluna ?>;
-                                                        --evento-total-colunas: <?= $totalColunas ?>;
-                                                    ">
+                                            top: <?= $top ?>px;
+                                            left: <?= $left ?>;
+                                            width: <?= $largura ?>;
+                                        ">
 
                                     <div class="event-content">
 
@@ -1514,9 +1514,7 @@ foreach ($componentes as $grupo) {
 
                         const response =
                             await fetch(
-                                <?= $planoItemId > 0
-                                    ? "'salvar_agendamento_plano.php'"
-                                    : "'salvar_agendamento.php'" ?>, {
+                                'salvar_agendamento.php', {
                                     method: 'POST',
                                     body: formData
                                 }
