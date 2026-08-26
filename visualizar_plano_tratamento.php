@@ -82,6 +82,57 @@ foreach ($itens as $item) {
 
 /*
 |--------------------------------------------------------------------------
+| ORÇAMENTOS VINCULADOS ÀS ETAPAS
+|--------------------------------------------------------------------------
+*/
+
+$orcamentosPorItem = [];
+
+if (!empty($itens)) {
+
+    $idsItens = array_map(
+        static fn($item) => (int)$item['id'],
+        $itens
+    );
+
+    $placeholders = implode(',', array_fill(
+        0,
+        count($idsItens),
+        '?'
+    ));
+
+    $stmtOrcamentos = $pdo->prepare("
+        SELECT
+            pio.plano_item_id,
+            o.id,
+            o.status,
+            o.data_criacao,
+            o.validade,
+            COALESCE(SUM(oi.quantidade * oi.valor_unitario), 0) AS total
+        FROM planos_tratamento_itens_orcamentos pio
+        INNER JOIN orcamentos o
+            ON o.id = pio.orcamento_id
+        LEFT JOIN orcamentos_itens oi
+            ON oi.orcamento_id = o.id
+        WHERE pio.plano_item_id IN ($placeholders)
+        GROUP BY
+            pio.plano_item_id,
+            o.id,
+            o.status,
+            o.data_criacao,
+            o.validade
+        ORDER BY o.id DESC
+    ");
+
+    $stmtOrcamentos->execute($idsItens);
+
+    foreach ($stmtOrcamentos->fetchAll(PDO::FETCH_ASSOC) as $orcamento) {
+        $orcamentosPorItem[(int)$orcamento['plano_item_id']][] = $orcamento;
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
 | STATUS
 |--------------------------------------------------------------------------
 */
@@ -464,6 +515,77 @@ $sucesso = $_GET['sucesso'] ?? '';
                                                 ) ?>
 
                                             </span>
+
+                                        <?php endif; ?>
+
+                                    </div>
+
+                                    <?php
+                                    $orcamentosItem = $orcamentosPorItem[(int)$item['id']] ?? [];
+                                    ?>
+
+                                    <div class="step-budget">
+
+                                        <div class="step-budget-heading">
+
+                                            <span>
+                                                <i class="fa-solid fa-file-invoice-dollar"></i>
+                                                Orçamento
+                                            </span>
+
+                                        </div>
+
+                                        <?php if (!empty($orcamentosItem)): ?>
+
+                                            <div class="step-budget-list">
+
+                                                <?php foreach ($orcamentosItem as $orcamento): ?>
+
+                                                    <div class="step-budget-row">
+
+                                                        <div>
+                                                            <strong>#<?= (int)$orcamento['id'] ?></strong>
+                                                            <span>
+                                                                <?= htmlspecialchars(ucfirst($orcamento['status'])) ?>
+                                                            </span>
+                                                        </div>
+
+                                                        <strong>
+                                                            R$
+                                                            <?= number_format(
+                                                                (float)$orcamento['total'],
+                                                                2,
+                                                                ',',
+                                                                '.'
+                                                            ) ?>
+                                                        </strong>
+
+                                                        <a
+                                                            href="visualizar_orcamento.php?id=<?= (int)$orcamento['id'] ?>"
+                                                            class="step-budget-action">
+                                                            Visualizar
+                                                        </a>
+
+                                                    </div>
+
+                                                <?php endforeach; ?>
+
+                                            </div>
+
+                                        <?php else: ?>
+
+                                            <div class="step-budget-empty">
+                                                <span>
+                                                    Nenhum orçamento vinculado a esta etapa.
+                                                </span>
+
+                                                <a
+                                                    href="novo_orcamento.php?plano_item_id=<?= (int)$item['id'] ?>"
+                                                    class="step-budget-action primary">
+                                                    <i class="fa-solid fa-plus"></i>
+                                                    Criar orçamento
+                                                </a>
+                                            </div>
 
                                         <?php endif; ?>
 

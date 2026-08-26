@@ -39,6 +39,48 @@ $erro = null;
 
 /*
 |--------------------------------------------------------------------------
+| ORIGEM: ETAPA DO PLANO DE TRATAMENTO
+|--------------------------------------------------------------------------
+| Quando o orçamento é aberto a partir de uma etapa do plano,
+| o formulário é pré-preenchido e o vínculo é salvo em uma tabela
+| intermediária.
+|
+| O orçamento continua sendo independente: depois de criado, seus
+| valores podem ser alterados sem modificar o plano.
+|--------------------------------------------------------------------------
+*/
+$plano_item_id = (int)($_GET['plano_item_id'] ?? $_POST['plano_item_id'] ?? 0);
+$plano_item_origem = null;
+
+if ($plano_item_id > 0) {
+
+    $stmtOrigem = $pdo->prepare("
+        SELECT
+            pti.id,
+            pti.plano_id,
+            pti.servico_id,
+            pti.descricao,
+            pti.valor_estimado,
+            pti.status,
+            pt.paciente_id,
+            pt.titulo AS plano_titulo
+        FROM planos_tratamento_itens pti
+        INNER JOIN planos_tratamento pt
+            ON pt.id = pti.plano_id
+        WHERE pti.id = ?
+        LIMIT 1
+    ");
+
+    $stmtOrigem->execute([$plano_item_id]);
+    $plano_item_origem = $stmtOrigem->fetch(PDO::FETCH_ASSOC);
+
+    if (!$plano_item_origem) {
+        $plano_item_id = 0;
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
 | SALVAR ORÇAMENTO
 |--------------------------------------------------------------------------
 */
@@ -65,6 +107,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_POST['observacoes'] ?? ''
         );
 
+        $plano_item_id_post = (int)(
+            $_POST['plano_item_id'] ?? 0
+        );
+
+        if ($plano_item_id_post > 0) {
+            $stmtOrigemPost = $pdo->prepare("
+                SELECT
+                    pti.id,
+                    pt.paciente_id
+                FROM planos_tratamento_itens pti
+                INNER JOIN planos_tratamento pt
+                    ON pt.id = pti.plano_id
+                WHERE pti.id = ?
+                LIMIT 1
+            ");
+
+            $stmtOrigemPost->execute([
+                $plano_item_id_post
+            ]);
+
+            $origemValida = $stmtOrigemPost->fetch(
+                PDO::FETCH_ASSOC
+            );
+
+            if (!$origemValida) {
+                throw new Exception(
+                    'A etapa do plano de tratamento não foi encontrada.'
+                );
+            }
+
+            if ((int)$origemValida['paciente_id'] !== $paciente_id) {
+                throw new Exception(
+                    'A etapa do plano não pertence ao paciente selecionado.'
+                );
+            }
+
+            $plano_item_id = $plano_item_id_post;
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -384,6 +464,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /*
         |--------------------------------------------------------------------------
+        | VINCULAR AO PLANO DE TRATAMENTO
+        |--------------------------------------------------------------------------
+        */
+
+        if ($plano_item_id > 0) {
+
+            $stmtVinculo = $pdo->prepare("
+                INSERT INTO planos_tratamento_itens_orcamentos (
+                    plano_item_id,
+                    orcamento_id
+                )
+                VALUES (?, ?)
+            ");
+
+            $stmtVinculo->execute([
+                $plano_item_id,
+                $orcamento_id
+            ]);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
         | FINALIZAR TRANSAÇÃO
         |--------------------------------------------------------------------------
         */
@@ -482,7 +584,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="css/variables.css">
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/navbar.css">
-    <link rel="stylesheet" href="css/new_orcamento.css?v=6">
+    <link rel="stylesheet" href="css/new_orcamento.css?v=7">
 
     <link
         rel="stylesheet"
@@ -530,6 +632,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <?= csrf_field() ?>
 
+            <input
+                type="hidden"
+                name="plano_item_id"
+                value="<?= (int)$plano_item_id ?>">
+
+            <?php if ($plano_item_origem): ?>
+
+                <div class="orcamento-origem-plano">
+                    <i class="fa-solid fa-link"></i>
+                    <div>
+                        <strong>Orçamento a partir do plano de tratamento</strong>
+                        <span>
+                            Etapa: <?= htmlspecialchars($plano_item_origem['descricao']) ?>
+                            • Plano: <?= htmlspecialchars($plano_item_origem['plano_titulo']) ?>
+                        </span>
+                    </div>
+                </div>
+
+            <?php endif; ?>
+
 
             <!-- =====================================================
              PACIENTE
@@ -552,7 +674,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php foreach ($pacientes as $p): ?>
 
                         <option
-                            value="<?= $p['id'] ?>">
+                            value="<?= $p['id'] ?>"
+                            <?= (
+                                ($plano_item_origem && (int)$plano_item_origem['paciente_id'] === (int)$p['id'])
+                                || (!$plano_item_origem && (string)($_POST['paciente_id'] ?? '') === (string)$p['id'])
+                            ) ? 'selected' : '' ?>>
 
                             <?= htmlspecialchars(
                                 $p['paciente']
@@ -602,9 +728,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div id="itens-container">
 
-                    <div class="item-row orcamento-item-linha">
+                    <div class="item-row">
 
-                        <div class="item-catalogo catalogo-servico">
+                        <div class="catalogo-servico">
 
                             <label>
                                 Serviço do catálogo
@@ -627,7 +753,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         value="<?= (int)$servico['id'] ?>"
                                         data-nome="<?= htmlspecialchars($servico['nome'], ENT_QUOTES) ?>"
                                         data-descricao="<?= htmlspecialchars($servico['descricao'] ?? '', ENT_QUOTES) ?>"
-                                        data-valor="<?= htmlspecialchars((string)$servico['valor_sugerido'], ENT_QUOTES) ?>">
+                                        data-valor="<?= htmlspecialchars((string)$servico['valor_sugerido'], ENT_QUOTES) ?>"
+                                        <?= (
+                                            $plano_item_origem &&
+                                            (int)($plano_item_origem['servico_id'] ?? 0) === (int)$servico['id']
+                                        ) ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($servico['nome']) ?>
                                         — R$
                                         <?= number_format((float)$servico['valor_sugerido'], 2, ',', '.') ?>
@@ -650,6 +780,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 type="text"
                                 name="descricao[]"
                                 placeholder="Ex: Clareamento dental"
+                                value="<?= htmlspecialchars(
+                                            $plano_item_origem['descricao'] ?? '',
+                                            ENT_QUOTES
+                                        ) ?>"
                                 required>
 
                         </div>
@@ -675,6 +809,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 step="0.01"
                                 min="0"
                                 placeholder="0.00"
+                                value="<?= htmlspecialchars(
+                                            $plano_item_origem['valor_estimado'] ?? '',
+                                            ENT_QUOTES
+                                        ) ?>"
                                 required
                                 class="item-valor">
 
@@ -682,7 +820,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         <button
                             type="button"
-                            class="item-acao btn-remove-item"
+                            class="btn-remove-item"
                             onclick="removerItem(this)"
                             title="Excluir item">
                             <i class="fa-solid fa-trash"></i>
@@ -912,12 +1050,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
             div.className =
-                'item-row orcamento-item-linha';
+                'item-row';
 
 
             div.innerHTML = `
 
-        <div class="item-catalogo catalogo-servico">
+        <div class="catalogo-servico">
 
             <label>
                 Serviço do catálogo
@@ -977,7 +1115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <button
             type="button"
-            class="item-acao btn-remove-item"
+            class="btn-remove-item"
             onclick="removerItem(this)"
             title="Excluir item">
             <i class="fa-solid fa-trash"></i>

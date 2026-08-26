@@ -529,3 +529,115 @@
     font-size: 20px;
   }
 }
+
+/* =========================================================
+   ORÇAMENTO DA ETAPA
+========================================================= */
+
+.step-budget {
+  margin-top: 13px;
+  padding: 11px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #ffffff;
+}
+
+.step-budget-heading {
+  margin-bottom: 8px;
+  color: #475569;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.step-budget-heading span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.step-budget-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.step-budget-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.step-budget-row > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.step-budget-row strong {
+  color: #17233d;
+  font-size: 12px;
+}
+
+.step-budget-row span {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.step-budget-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.step-budget-action:hover {
+  background: #f8fafc;
+}
+
+.step-budget-action.primary {
+  border-color: #ddd6fe;
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+
+.step-budget-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.step-budget-empty span {
+  color: #64748b;
+  font-size: 11px;
+}
+
+@media (max-width: 700px) {
+  .step-budget-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .step-budget-action {
+    width: 100%;
+  }
+
+  .step-budget-empty {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
