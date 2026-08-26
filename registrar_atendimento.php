@@ -23,6 +23,8 @@ $stmt = $pdo->prepare("
         a.paciente_id,
         a.procedimento,
         a.data,
+        a.status,
+        a.plano_item_id,
         COALESCE(p.paciente, a.paciente_nome) AS nome_paciente
     FROM agendamentos a
     LEFT JOIN prontuarios p ON a.paciente_id = p.id
@@ -53,17 +55,46 @@ if ($_POST) {
         $descricao = trim($_POST['descricao'] ?? '');
         $medicamentos = trim($_POST['medicamentos'] ?? '');
 
+        /*
+        |--------------------------------------------------------------------------
+        | 1. Criar procedimento
+        |--------------------------------------------------------------------------
+        |
+        | Mantém o paciente e a data do atendimento e registra a origem:
+        | - agendamento_id para o atendimento que gerou o procedimento;
+        | - plano_item_id quando o agendamento veio de uma etapa do plano.
+        |
+        | Os dois campos são opcionais no banco, então atendimentos antigos
+        | continuam compatíveis.
+        |
+        */
+
         $stmt = $pdo->prepare("
-            INSERT INTO procedimentos (paciente_id, titulo, descricao, medicamentos, data_procedimento)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO procedimentos (
+                paciente_id,
+                titulo,
+                descricao,
+                medicamentos,
+                data_procedimento,
+                plano_item_id,
+                agendamento_id
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
+
         $stmt->execute([
-            $agendamento['paciente_id'],
+            (int)$agendamento['paciente_id'],
             $agendamento['procedimento'],
             $descricao ?: null,
-            $medicamentos ?: null, // ← novo campo!
-            $agendamento['data']
+            $medicamentos ?: null,
+            $agendamento['data'],
+            !empty($agendamento['plano_item_id'])
+                ? (int)$agendamento['plano_item_id']
+                : null,
+            $agendamento_id
         ]);
+
+        $procedimento_id = (int)$pdo->lastInsertId();
 
         // 2. Atualizar estoque (se houver itens selecionados)
         if (!empty($_POST['materiais'])) {
@@ -88,16 +119,118 @@ if ($_POST) {
             }
         }
 
-        // 3. Excluir agendamento
-        $stmt = $pdo->prepare("DELETE FROM agendamentos WHERE id = ?");
-        $stmt->execute([$agendamento_id]);
+        /*
+        |--------------------------------------------------------------------------
+        | 3. Atualizar a etapa do plano, quando houver
+        |--------------------------------------------------------------------------
+        |
+        | O atendimento concluído encerra a etapa clínica. Não criamos um
+        | procedimento "do nada": ele já foi criado acima e está ligado
+        | à etapa e ao agendamento.
+        |
+        */
+
+        if (!empty($agendamento['plano_item_id'])) {
+
+            $stmt = $pdo->prepare("
+                UPDATE planos_tratamento_itens
+                SET status = 'concluido'
+                WHERE id = ?
+            ");
+
+            $stmt->execute([
+                (int)$agendamento['plano_item_id']
+            ]);
+
+            /*
+            | Atualizar o plano somente com base nas etapas existentes:
+            | - concluído se todas as etapas estão concluídas/canceladas;
+            | - em andamento se ainda houver etapas não finalizadas.
+            */
+            $stmt = $pdo->prepare("
+                SELECT
+                    pti.plano_id,
+                    COUNT(*) AS total_etapas,
+                    SUM(
+                        CASE
+                            WHEN pti.status IN ('concluido', 'cancelado')
+                            THEN 1
+                            ELSE 0
+                        END
+                    ) AS etapas_finalizadas
+                FROM planos_tratamento_itens pti
+                WHERE pti.plano_id = (
+                    SELECT plano_id
+                    FROM planos_tratamento_itens
+                    WHERE id = ?
+                    LIMIT 1
+                )
+                GROUP BY pti.plano_id
+            ");
+
+            $stmt->execute([
+                (int)$agendamento['plano_item_id']
+            ]);
+
+            $resumoPlano = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($resumoPlano) {
+
+                if (
+                    (int)$resumoPlano['total_etapas'] > 0
+                    &&
+                    (int)$resumoPlano['etapas_finalizadas']
+                    ===
+                    (int)$resumoPlano['total_etapas']
+                ) {
+                    $novoStatusPlano = 'concluido';
+                } else {
+                    $novoStatusPlano = 'em_andamento';
+                }
+
+                $stmt = $pdo->prepare("
+                    UPDATE planos_tratamento
+                    SET status = ?
+                    WHERE id = ?
+                ");
+
+                $stmt->execute([
+                    $novoStatusPlano,
+                    (int)$resumoPlano['plano_id']
+                ]);
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 4. Preservar o agendamento como histórico
+        |--------------------------------------------------------------------------
+        |
+        | Não apagamos mais o registro. Como procedimentos.agendamento_id
+        | aponta para este registro, excluí-lo perderia a referência histórica.
+        | O agendamento passa a representar um atendimento realizado.
+        |
+        */
+
+        $stmt = $pdo->prepare("
+            UPDATE agendamentos
+            SET status = 'concluido'
+            WHERE id = ?
+        ");
+
+        $stmt->execute([
+            $agendamento_id
+        ]);
 
         $pdo->commit();
 
         header("Location: agendamentos.php?data=" . $agendamento['data'] . "&msg=atendimento_confirmado");
         exit;
     } catch (Exception $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
         $message = "Erro: " . $e->getMessage();
     }
 }
