@@ -347,21 +347,15 @@ body {
    EVENTO
 ========================================================= */
 
-.appointments-events-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  pointer-events: none;
-}
-
 .appointment-event {
   position: absolute;
 
+  left: 18px;
+  right: 18px;
+
   min-height: 54px;
 
-  padding: 8px 12px;
-
-  pointer-events: auto;
+  top: 4px;
 
   border-radius: 6px;
 
@@ -1087,29 +1081,26 @@ body {
 }
 
 /* =========================================================
-   AGENDA DINÂMICA POR HORÁRIO EXATO
+   OVERRIDE FINAL - AGENDA DINÂMICA
 ========================================================= */
 
-.appointments-events-layer {
-  min-height: 100%;
+.appointments-column {
+  position: relative !important;
+  overflow: visible !important;
 }
 
-@media (max-width: 700px) {
-  .appointment-event {
-    padding: 7px 9px;
-  }
+.appointments-events-layer {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 20 !important;
+  min-height: 100% !important;
+  pointer-events: none !important;
+}
 
-  .event-content strong {
-    font-size: 13px;
-  }
-
-  .event-content span {
-    font-size: 12px;
-  }
-
-  .event-actions a,
-  .event-actions button {
-    width: 26px;
-    height: 26px;
-  }
+.appointment-event {
+  position: absolute !important;
+  right: auto !important;
+  box-sizing: border-box !important;
+  min-height: 54px !important;
+  pointer-events: auto !important;
 }
