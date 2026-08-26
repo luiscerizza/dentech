@@ -77,6 +77,11 @@ $dataHoje = date('Y-m-d');
 
 $dataFormulario = $data_filtro;
 
+$mensagem = '';
+if (($_GET['msg'] ?? '') === 'atendimento_confirmado') {
+    $mensagem = 'Atendimento registrado com sucesso.';
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -107,7 +112,8 @@ a.paciente_id,
 COALESCE(p.paciente, a.paciente_nome) AS nome_paciente,
 a.procedimento,
 a.data,
-a.horario
+a.horario,
+a.status
 FROM agendamentos a
 LEFT JOIN prontuarios p
 ON a.paciente_id = p.id
@@ -132,11 +138,13 @@ a.paciente_id,
 COALESCE(p.paciente, a.paciente_nome) AS nome_paciente,
 a.procedimento,
 a.data,
-a.horario
+a.horario,
+a.status
 FROM agendamentos a
 LEFT JOIN prontuarios p
 ON a.paciente_id = p.id
 WHERE a.data >= ?
+  AND a.status NOT IN ('concluido', 'cancelado')
 ORDER BY
 a.data ASC,
 a.horario ASC
@@ -581,6 +589,13 @@ foreach ($componentes as $grupo) {
         </section>
 
 
+        <?php if ($mensagem): ?>
+            <div class="alerta-sucesso">
+                <?= htmlspecialchars($mensagem) ?>
+            </div>
+        <?php endif; ?>
+
+
         <!-- =========================================================
              CONTEÚDO PRINCIPAL
         ========================================================== -->
@@ -646,6 +661,10 @@ foreach ($componentes as $grupo) {
                                     $classesEvento[$indexEvento
                                         %
                                         count($classesEvento)];
+
+                                if (($ag['status'] ?? '') === 'concluido') {
+                                    $classeEvento .= ' event-completed';
+                                }
 
                                 $totalColunas =
                                     max(
@@ -740,27 +759,26 @@ foreach ($componentes as $grupo) {
                                         <?php endif; ?>
 
 
-                                        <form
-                                            method="POST"
-                                            action="registrar_atendimento.php"
-                                            onsubmit="return confirm('Confirmar atendimento e registrar procedimento?')">
+                                        <?php if (($ag['status'] ?? '') === 'concluido'): ?>
 
-                                            <?= csrf_field() ?>
+                                            <span
+                                                class="attendance-completed"
+                                                title="Atendimento concluído">
+                                                <i class="fa-solid fa-circle-check"></i>
+                                            </span>
 
-                                            <input
-                                                type="hidden"
-                                                name="id"
-                                                value="<?= (int)$ag['id'] ?>">
+                                        <?php else: ?>
 
-                                            <button
-                                                type="submit"
-                                                title="Confirmar atendimento">
+                                            <a
+                                                href="registrar_atendimento.php?id=<?= (int)$ag['id'] ?>"
+                                                class="btn-registrar-atendimento"
+                                                title="Registrar atendimento">
 
                                                 <i class="fa-solid fa-check"></i>
 
-                                            </button>
+                                            </a>
 
-                                        </form>
+                                        <?php endif; ?>
 
 
                                         <form
@@ -1331,7 +1349,7 @@ foreach ($componentes as $grupo) {
                             value="<?= htmlspecialchars(
                                         $dataFormulario
                                     ) ?>"
-                        required>
+                            required>
 
                     </div>
 

@@ -4,17 +4,23 @@ require_once 'config/csrf.php';
 exigirLogin();
 require_once 'conexao/conexao.php';
 
-if (
-    $_SERVER['REQUEST_METHOD'] !== 'POST' ||
-    !isset($_POST['id']) ||
-    !is_numeric($_POST['id'])
-) {
+$metodo = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+
+// A página é aberta por GET a partir da agenda.
+// O formulário desta própria página é enviado por POST para confirmar o atendimento.
+$agendamento_id = filter_input(
+    $metodo === 'POST' ? INPUT_POST : INPUT_GET,
+    'id',
+    FILTER_VALIDATE_INT
+);
+
+if (!$agendamento_id || $agendamento_id < 1) {
     die("Agendamento não especificado.");
 }
 
-validar_csrf();
-
-$agendamento_id = (int)$_POST['id'];
+if ($metodo === 'POST') {
+    validar_csrf();
+}
 
 // Buscar agendamento com dados do paciente
 $stmt = $pdo->prepare("
@@ -38,7 +44,12 @@ if (!$agendamento) {
 }
 
 if (!$agendamento['paciente_id']) {
-    die("Não é possível registrar atendimento para agendamento avulso.");
+    die("Não é possível registrar atendimento sem paciente vinculado.");
+}
+
+if (($agendamento['status'] ?? '') === 'concluido') {
+    header("Location: agendamentos.php?data=" . urlencode($agendamento['data']) . "&msg=atendimento_ja_confirmado");
+    exit;
 }
 
 // Buscar todos os materiais (para o select)
@@ -47,7 +58,7 @@ $materiais = $stmt->fetchAll();
 
 $message = '';
 
-if ($_POST) {
+if ($metodo === 'POST') {
     try {
         $pdo->beginTransaction();
 
@@ -110,7 +121,10 @@ if ($_POST) {
                     }
 
                     if ($estoque_atual < $qtd) {
-                        throw new Exception("Estoque insuficiente para o material: " . ($materiais[$material_id]['nome'] ?? 'ID ' . $material_id));
+                        $stmtMaterial = $pdo->prepare("SELECT nome FROM estoque WHERE id = ?");
+                        $stmtMaterial->execute([$material_id]);
+                        $nomeMaterial = $stmtMaterial->fetchColumn() ?: ('ID ' . $material_id);
+                        throw new Exception("Estoque insuficiente para o material: " . $nomeMaterial);
                     }
 
                     $stmt = $pdo->prepare("UPDATE estoque SET quantidade = quantidade - ? WHERE id = ?");
@@ -224,7 +238,7 @@ if ($_POST) {
 
         $pdo->commit();
 
-        header("Location: agendamentos.php?data=" . $agendamento['data'] . "&msg=atendimento_confirmado");
+        header("Location: agendamentos.php?data=" . urlencode($agendamento['data']) . "&msg=atendimento_confirmado");
         exit;
     } catch (Exception $e) {
         if ($pdo->inTransaction()) {
@@ -266,7 +280,10 @@ if ($_POST) {
                 <p><strong>Data:</strong> <?= date('d/m/Y', strtotime($agendamento['data'])) ?></p>
             </div>
 
-            <form method="POST" id="formAtendimento">
+            <form method="POST" action="registrar_atendimento.php?id=<?= (int)$agendamento['id'] ?>" id="formAtendimento">
+
+                <?= csrf_field() ?>
+                <input type="hidden" name="id" value="<?= (int)$agendamento['id'] ?>">
 
                 <!-- Descrição do procedimento -->
                 <div class="form-group">
