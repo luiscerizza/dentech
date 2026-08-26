@@ -257,7 +257,7 @@ if ($metodo === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registrar Atendimento - Dentech</title>
     <link rel="stylesheet" href="css/navbar.css">
-    <link rel="stylesheet" href="css/re_atendimento.css">
+    <link rel="stylesheet" href="css/registrar_atendimento.css">
     <link rel="icon" type="image/png" href="img/icon.PNG">
 </head>
 
