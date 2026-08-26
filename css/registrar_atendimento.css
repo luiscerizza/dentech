@@ -289,40 +289,36 @@
   transform: translateY(0);
 }
 
-/* ---------------------------------------------------------
-   Responsividade
-   --------------------------------------------------------- */
+/* =========================================================
+   AJUSTE PARA SIDEBAR EM TELAS MENORES
+   ========================================================= */
 
-@media (max-width: 800px) {
+@media (max-width: 900px) {
   .container {
-    width: min(100% - 24px, 1100px);
-    margin: 25px auto;
-  }
-
-  .container h1 {
-    font-size: 25px;
+    width: auto;
+    max-width: none;
+    margin-left: 20px;
+    margin-right: 20px;
   }
 
   .card {
-    padding: 20px;
-  }
-
-  .info-paciente {
-    grid-template-columns: 1fr;
+    width: 100%;
+    box-sizing: border-box;
   }
 }
 
 @media (max-width: 600px) {
-  .material-item {
-    flex-direction: column;
-    align-items: stretch;
+  .container {
+    width: auto;
+    margin-left: 15px;
+    margin-right: 15px;
   }
 
-  .material-item input[type="number"] {
-    width: 100% !important;
+  .card {
+    padding: 16px;
   }
 
-  .btn-save {
-    width: 100%;
+  .info-paciente {
+    padding: 15px;
   }
 }
