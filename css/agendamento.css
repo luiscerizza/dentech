@@ -1081,56 +1081,68 @@ body {
 }
 
 /* =========================================================
-   OVERRIDE FINAL - AGENDA DINÂMICA
+   CONTEXTO DO PLANO NO MODAL
 ========================================================= */
 
-.appointments-column {
-  position: relative !important;
-  overflow: visible !important;
+.agenda-plano-context {
+  margin: 0 26px 20px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  border: 1px solid #d8e5f5;
+  border-radius: 9px;
+
+  background: #f7fbff;
+  color: #17233d;
 }
 
-.appointments-events-layer {
-  position: absolute !important;
-  inset: 0 !important;
-  z-index: 20 !important;
-  min-height: 100% !important;
-  pointer-events: none !important;
+.agenda-plano-context-icon {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 8px;
+
+  background: #e7f1ff;
+  color: #1769d2;
+
+  font-size: 14px;
 }
 
-.appointment-event {
-  position: absolute !important;
-  right: auto !important;
-  box-sizing: border-box !important;
-  min-height: 54px !important;
-  pointer-events: auto !important;
+.agenda-plano-context > div:last-child {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-/* =========================================================
-   POSICIONAMENTO DEFINITIVO DOS EVENTOS SOBREPOSTOS
-========================================================= */
+.agenda-plano-context strong {
+  display: block;
 
-.appointments-column {
-  position: relative !important;
-  overflow: visible !important;
+  color: #17233d;
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 700;
 }
 
-.appointments-events-layer {
-  position: absolute !important;
-  inset: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  min-height: 100% !important;
-  z-index: 20 !important;
-  pointer-events: none !important;
+.agenda-plano-context span {
+  display: block;
+
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
+
+  overflow-wrap: anywhere;
 }
 
-.appointment-event {
-  position: absolute !important;
-  left: calc(
-    (100% / var(--evento-total-colunas)) * var(--evento-coluna) + 8px
-  ) !important;
-  right: auto !important;
-  width: calc((100% / var(--evento-total-colunas)) - 16px) !important;
-  box-sizing: border-box !important;
-  pointer-events: auto !important;
+/* Evita que regras genéricas de links/forms interfiram no contexto. */
+.agenda-plano-context * {
+  box-sizing: border-box;
 }

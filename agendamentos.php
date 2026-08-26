@@ -1330,7 +1330,7 @@ foreach ($componentes as $grupo) {
                             id="data"
                             value="<?= htmlspecialchars(
                                         $dataFormulario
-                                    ) ?>">
+                                    ) ?>"
                         required>
 
                     </div>
