@@ -63,7 +63,7 @@ function menuAtivo($paginas)
         <a
             href="planos_tratamento.php"
             class="nav-link <?= menuAtivo([
-                                'planos_tratamento.php',
+                                'plano_tratamento.php',
                                 'novo_plano_tratamento.php',
                                 'visualizar_plano_tratamento.php',
                                 'editar_plano_tratamento.php'
