@@ -61,6 +61,18 @@ function menuAtivo($paginas)
         </a>
 
         <a
+            href="planos_tratamento.php"
+            class="nav-link <?= menuAtivo([
+                                'planos_tratamento.php',
+                                'novo_plano_tratamento.php',
+                                'visualizar_plano_tratamento.php',
+                                'editar_plano_tratamento.php'
+                            ]) ?>">
+            <i class="fa-solid fa-tooth"></i>
+            <span>Planos de Tratamento</span>
+        </a>
+
+        <a
             href="financeiro.php"
             class="nav-link <?= menuAtivo([
                                 'financeiro.php',
