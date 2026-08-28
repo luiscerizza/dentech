@@ -134,38 +134,8 @@ $iniciais = mb_strtoupper($iniciais);
 
 $stmtProc = $pdo->prepare("
     SELECT
-        p.*,
-        oi.valor_orcado,
-        aj.id AS ajuste_financeiro_id,
-        aj.ajuste_financeiro_valor
+        p.*
     FROM procedimentos p
-    LEFT JOIN (
-        SELECT
-            orcamento_id,
-            ROUND(SUM(quantidade * valor_unitario), 2) AS valor_orcado
-        FROM orcamentos_itens
-        GROUP BY orcamento_id
-    ) oi
-        ON oi.orcamento_id = p.orcamento_id
-    LEFT JOIN (
-        SELECT
-            l.procedimento_id,
-            l.id,
-            l.valor AS ajuste_financeiro_valor
-        FROM lancamentos_financeiros l
-        INNER JOIN (
-            SELECT
-                procedimento_id,
-                MAX(id) AS id
-            FROM lancamentos_financeiros
-            WHERE procedimento_id IS NOT NULL
-              AND categoria = 'Ajuste de procedimento'
-              AND tipo = 'receita'
-            GROUP BY procedimento_id
-        ) ult
-            ON ult.id = l.id
-    ) aj
-        ON aj.procedimento_id = p.id
     WHERE p.paciente_id = ?
     ORDER BY p.data_procedimento DESC
 ");
