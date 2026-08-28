@@ -840,227 +840,33 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
 
 
                                         <td class="procedure-values">
-                                            <?php
-                                            $valorOrcado = isset($proc['valor_orcado'])
-                                                ? (float)$proc['valor_orcado']
-                                                : null;
 
-                                            $valorRealizado = (float)($proc['valor_final'] ?? 0);
+                                            <div class="procedure-value-line">
+                                                <span>Valor final</span>
 
-                                            $diferenca = $valorOrcado !== null
-                                                ? round($valorRealizado - $valorOrcado, 2)
-                                                : null;
-                                            ?>
+                                                <strong>
+                                                    R$
+                                                    <?= number_format(
+                                                        (float)($proc['valor_final'] ?? 0),
+                                                        2,
+                                                        ',',
+                                                        '.'
+                                                    ) ?>
+                                                </strong>
+                                            </div>
 
-                                            <?php if ($valorOrcado === null): ?>
-                                                <span class="procedure-value-muted">
-                                                    Sem orçamento vinculado
-                                                </span>
-                                            <?php else: ?>
-                                                <div class="procedure-value-line">
-                                                    <span>Orçado</span>
-                                                    <strong>R$ <?= number_format($valorOrcado, 2, ',', '.') ?></strong>
-                                                </div>
-
-                                                <div class="procedure-value-line">
-                                                    <span>Realizado</span>
-                                                    <strong>R$ <?= number_format($valorRealizado, 2, ',', '.') ?></strong>
-                                                </div>
-
-                                                <?php if ($diferenca > 0): ?>
-                                                    <span class="procedure-difference difference-positive">
-                                                        +R$ <?= number_format($diferenca, 2, ',', '.') ?> acima
-                                                    </span>
-                                                <?php elseif ($diferenca < 0): ?>
-                                                    <span class="procedure-difference difference-negative">
-                                                        -R$ <?= number_format(abs($diferenca), 2, ',', '.') ?> desconto
-                                                    </span>
-                                                <?php else: ?>
-                                                    <span class="procedure-difference difference-equal">
-                                                        Sem diferença
-                                                    </span>
-                                                <?php endif; ?>
-                                            <?php endif; ?>
                                         </td>
 
                                         <?php if (!$isPrint): ?>
+
                                             <td class="procedure-actions">
 
-                                                <?php if (
-                                                    $valorOrcado !== null &&
-                                                    $diferenca !== null &&
-                                                    $diferenca != 0
-                                                ): ?>
-
-                                                    <?php
-                                                    $ajusteAnteriorValor =
-                                                        isset($proc['ajuste_financeiro_valor'])
-                                                        ? (float)$proc['ajuste_financeiro_valor']
-                                                        : null;
-
-                                                    $ajusteAtualJaGerado =
-                                                        $ajusteAnteriorValor !== null &&
-                                                        abs($ajusteAnteriorValor - $diferenca) < 0.005;
-                                                    ?>
-
-                                                    <?php if (!$ajusteAtualJaGerado): ?>
-
-
-
-                                                        <?php if ($diferenca > 0): ?>
-
-
-
-                                                            <form
-
-
-                                                                method="POST"
-
-
-                                                                action="gerar_ajuste_financeiro.php"
-
-
-                                                                class="form-ajuste-financeiro"
-
-
-                                                                onsubmit="return confirm('Gerar uma cobrança adicional de R$ <?= number_format($diferenca, 2, ',', '.') ?> para este procedimento?');">
-
-
-
-                                                                <input
-
-
-                                                                    type="hidden"
-
-
-                                                                    name="csrf_token"
-
-
-                                                                    value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
-
-
-
-                                                                <input
-
-
-                                                                    type="hidden"
-
-
-                                                                    name="procedimento_id"
-
-
-                                                                    value="<?= (int)$proc['id'] ?>">
-
-
-
-                                                                <button
-
-
-                                                                    type="submit"
-
-
-                                                                    class="table-action btn-ajuste-financeiro">
-
-
-                                                                    Gerar ajuste
-
-
-                                                                </button>
-
-
-
-                                                            </form>
-
-
-
-                                                        <?php else: ?>
-
-
-
-                                                            <form
-
-
-                                                                method="POST"
-
-
-                                                                action="gerar_ajuste_financeiro.php"
-
-
-                                                                class="form-ajuste-financeiro"
-
-
-                                                                onsubmit="return confirm('Aplicar desconto de R$ <?= number_format(abs($diferenca), 2, ',', '.') ?> para este procedimento?');">
-
-
-
-                                                                <input
-
-
-                                                                    type="hidden"
-
-
-                                                                    name="csrf_token"
-
-
-                                                                    value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
-
-
-
-                                                                <input
-
-
-                                                                    type="hidden"
-
-
-                                                                    name="procedimento_id"
-
-
-                                                                    value="<?= (int)$proc['id'] ?>">
-
-
-
-                                                                <button
-
-
-                                                                    type="submit"
-
-
-                                                                    class="table-action btn-ajuste-financeiro">
-
-
-                                                                    Aplicar desconto
-
-
-                                                                </button>
-
-
-
-                                                            </form>
-
-
-
-                                                        <?php endif; ?>
-
-
-
-                                                    <?php else: ?>
-
-
-
-                                                        <span class="ajuste-gerado">
-
-
-                                                            Ajuste já gerado
-
-
-                                                        </span>
-
-
-
-                                                    <?php endif; ?>
-
-                                                <?php endif; ?>
-
+                                                <button
+                                                    type="button"
+                                                    class="table-action btn-gerar-cobranca"
+                                                    onclick="alert('A geração de cobrança será implementada na próxima etapa.');">
+                                                    Gerar cobrança
+                                                </button>
 
                                                 <a
                                                     class="table-action btn-editar-procedimento"
@@ -1089,20 +895,56 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
                                                                         $proc['data_procedimento']
                                                                     )
                                                                 ) ?>"
-                                                    data-valor-materiais="<?= htmlspecialchars($proc['valor_materiais'] ?? '0', ENT_QUOTES) ?>"
-                                                    data-valor-mao-obra="<?= htmlspecialchars($proc['valor_mao_obra'] ?? '0', ENT_QUOTES) ?>"
-                                                    data-valor-final="<?= htmlspecialchars($proc['valor_final'] ?? '0', ENT_QUOTES) ?>">
+                                                    data-valor-materiais="<?= htmlspecialchars(
+                                                                                $proc['valor_materiais'] ?? '0',
+                                                                                ENT_QUOTES
+                                                                            ) ?>"
+                                                    data-valor-mao-obra="<?= htmlspecialchars(
+                                                                                $proc['valor_mao_obra'] ?? '0',
+                                                                                ENT_QUOTES
+                                                                            ) ?>"
+                                                    data-valor-final="<?= htmlspecialchars(
+                                                                            $proc['valor_final'] ?? '0',
+                                                                            ENT_QUOTES
+                                                                        ) ?>">
 
                                                     Visualizar
 
                                                 </button>
 
-                                                <form method="POST" class="form-excluir-procedimento" onsubmit="return confirm('Excluir este procedimento? Os materiais utilizados serão devolvidos ao estoque.');">
-                                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
-                                                    <input type="hidden" name="acao" value="excluir_procedimento">
-                                                    <input type="hidden" name="prontuario_id" value="<?= (int)$id ?>">
-                                                    <input type="hidden" name="procedimento_id" value="<?= (int)$proc['id'] ?>">
-                                                    <button type="submit" class="table-action btn-excluir-procedimento">Excluir</button>
+                                                <form
+                                                    method="POST"
+                                                    class="form-excluir-procedimento"
+                                                    onsubmit="return confirm('Excluir este procedimento? Os materiais utilizados serão devolvidos ao estoque.');">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="csrf_token"
+                                                        value="<?= htmlspecialchars(
+                                                                    $_SESSION['csrf_token'] ?? ''
+                                                                ) ?>">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="acao"
+                                                        value="excluir_procedimento">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="prontuario_id"
+                                                        value="<?= (int)$id ?>">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="procedimento_id"
+                                                        value="<?= (int)$proc['id'] ?>">
+
+                                                    <button
+                                                        type="submit"
+                                                        class="table-action btn-excluir-procedimento">
+                                                        Excluir
+                                                    </button>
+
                                                 </form>
 
                                             </td>
