@@ -126,19 +126,27 @@ body {
 }
 
 .filtros-card {
-  padding: 16px;
+  padding: 18px;
   margin-bottom: 20px;
 }
 
 .filtros-form {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
+  display: grid;
+  grid-template-columns:
+    minmax(150px, 1.05fr)
+    minmax(150px, 0.95fr)
+    minmax(180px, 1.15fr)
+    minmax(150px, 1fr)
+    minmax(150px, 1fr)
+    auto
+    auto
+    auto;
+  align-items: end;
+  gap: 14px;
 }
 
 .filtro-grupo {
-  min-width: 220px;
-  flex: 1;
+  min-width: 0;
 }
 
 .filtro-grupo label {
@@ -147,52 +155,91 @@ body {
   color: #334155;
   font-size: 13px;
   font-weight: 700;
+  line-height: 1.2;
 }
 
 .select-wrapper {
   position: relative;
+  width: 100%;
 }
 
 .select-wrapper > i {
   position: absolute;
   left: 13px;
   top: 50%;
+  z-index: 1;
   transform: translateY(-50%);
   color: #64748b;
   pointer-events: none;
 }
 
-.select-wrapper select {
+.select-wrapper select,
+.select-wrapper input[type="month"] {
   width: 100%;
   height: 44px;
+  min-width: 0;
   padding: 0 38px 0 38px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   background: #fff;
   color: var(--texto);
+  font-family: inherit;
   font-size: 14px;
+  line-height: 44px;
   outline: none;
-  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
 }
 
-.select-wrapper select:focus {
+.select-wrapper select {
+  cursor: pointer;
+  appearance: auto;
+}
+
+.select-wrapper input[type="month"] {
+  cursor: pointer;
+  color-scheme: light;
+}
+
+.select-wrapper select:hover,
+.select-wrapper input[type="month"]:hover {
+  border-color: #94a3b8;
+}
+
+.select-wrapper select:focus,
+.select-wrapper input[type="month"]:focus {
   border-color: var(--azul);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.select-wrapper input[type="month"]::-webkit-calendar-picker-indicator {
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+  cursor: pointer;
+  opacity: 0.7;
 }
 
 .btn-filtrar,
 .btn-limpar {
   height: 44px;
-  padding: 0 18px;
+  padding: 0 17px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
   border-radius: 8px;
+  font-family: inherit;
   font-size: 14px;
   font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .btn-filtrar {
@@ -204,16 +251,43 @@ body {
 
 .btn-filtrar:hover {
   background: var(--azul-hover);
+  border-color: var(--azul-hover);
+  transform: translateY(-1px);
+}
+
+.btn-filtrar:active {
+  transform: translateY(0);
 }
 
 .btn-limpar {
   border: 1px solid #cbd5e1;
   color: #475569;
   background: #fff;
+  cursor: pointer;
 }
 
 .btn-limpar:hover {
   background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+@media (max-width: 1350px) {
+  .filtros-form {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr))
+      repeat(3, minmax(0, 1fr));
+  }
+
+  .filtros-form .btn-filtrar,
+  .filtros-form .btn-limpar {
+    width: 100%;
+  }
+}
+
+@media (max-width: 1000px) {
+  .filtros-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .resumo-grid {
@@ -804,8 +878,8 @@ body {
   }
 
   .filtros-form {
-    flex-direction: column;
-    align-items: stretch;
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .filtro-grupo {
