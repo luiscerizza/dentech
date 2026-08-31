@@ -75,7 +75,7 @@ function textoStatus($status): string
 |--------------------------------------------------------------------------
 */
 
-$periodo = $_GET['periodo'] ?? 'mes';
+$periodo = $_GET['periodo'] ?? 'todos';
 $tipo_filtro = $_GET['tipo'] ?? 'todos';
 
 $periodos_validos = [
