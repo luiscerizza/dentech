@@ -124,210 +124,29 @@ $data_padrao = date(
     <title>Gerar cobrança | Dentech</title>
 
     <link
-        rel="icon"
-        type="image/png"
-        href="img/icon.PNG">
+        rel="stylesheet"
+        href="css/global.css">
 
     <link
         rel="stylesheet"
-        href="css/navbar.css">
+        href="css/variables.css">
+
+    <link
+        rel="stylesheet"
+        href="css/layout.css">
+
+    <link
+        rel="stylesheet"
+        href="css/gerar_cobranca.css">
 
     <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
-    <style>
-        .cobranca-container {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 40px;
-        }
-
-        .page-header {
-            margin-bottom: 30px;
-        }
-
-        .page-kicker {
-            display: block;
-            margin-bottom: 6px;
-            color: #6d28d9;
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        .page-header h1 {
-            margin: 0;
-            color: #172554;
-            font-size: 30px;
-        }
-
-        .page-header p {
-            margin-top: 8px;
-            color: #64748b;
-        }
-
-        .cobranca-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-        }
-
-        .card {
-            padding: 26px;
-            border: 1px solid #e2e8f0;
-            border-radius: 14px;
-            background: #ffffff;
-            box-shadow: 0 4px 15px rgba(15, 23, 42, 0.04);
-        }
-
-        .card h2 {
-            margin-top: 0;
-            margin-bottom: 20px;
-            color: #172554;
-            font-size: 19px;
-        }
-
-        .info-item {
-            margin-bottom: 18px;
-        }
-
-        .info-label {
-            display: block;
-            margin-bottom: 5px;
-            color: #64748b;
-            font-size: 13px;
-        }
-
-        .info-value {
-            color: #172554;
-            font-size: 16px;
-            font-weight: 600;
-        }
-
-        .valor-total {
-            margin-top: 25px;
-            padding: 20px;
-            border: 1px solid #bae6fd;
-            border-radius: 10px;
-            background: #f0f9ff;
-        }
-
-        .valor-total span {
-            display: block;
-            margin-bottom: 5px;
-            color: #64748b;
-            font-size: 13px;
-        }
-
-        .valor-total strong {
-            color: #0284c7;
-            font-size: 28px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 7px;
-            color: #334155;
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        .form-group select,
-        .form-group input {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 11px 13px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            background: #ffffff;
-            color: #172554;
-            font-size: 14px;
-        }
-
-        .form-help {
-            margin-top: 6px;
-            color: #64748b;
-            font-size: 12px;
-        }
-
-        .resumo {
-            margin-top: 25px;
-            padding: 18px;
-            border-radius: 10px;
-            background: #f8fafc;
-        }
-
-        .resumo-linha {
-            display: flex;
-            justify-content: space-between;
-            gap: 20px;
-            margin-bottom: 10px;
-            color: #475569;
-            font-size: 14px;
-        }
-
-        .resumo-linha:last-child {
-            margin-bottom: 0;
-            padding-top: 12px;
-            border-top: 1px solid #e2e8f0;
-            color: #172554;
-            font-weight: 700;
-        }
-
-        .acoes {
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-            margin-top: 25px;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 11px 18px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        .btn-cancelar {
-            border: 1px solid #cbd5e1;
-            background: #ffffff;
-            color: #334155;
-        }
-
-        .btn-primary {
-            border: 0;
-            background: #7c3aed;
-            color: #ffffff;
-        }
-
-        .btn-primary:hover {
-            background: #6d28d9;
-        }
-
-        @media (max-width: 800px) {
-
-            .cobranca-container {
-                padding: 20px;
-            }
-
-            .cobranca-grid {
-                grid-template-columns: 1fr;
-            }
-
-        }
-    </style>
+    <link
+        rel="icon"
+        type="image/png"
+        href="img/icon.PNG">
 
 </head>
 
