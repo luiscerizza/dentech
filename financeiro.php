@@ -75,9 +75,9 @@ function textoStatus($status): string
 |--------------------------------------------------------------------------
 */
 
-$periodo = $_GET['periodo'] ?? 'mes';
+$periodo = $_GET['periodo'] ?? 'todos';
 $tipo_filtro = $_GET['tipo'] ?? 'todos';
-$mes_filtro = $_GET['mes'] ?? '';
+$mes_filtro = $_GET['mes'] ?? date('Y-m');
 $paciente_filtro = isset($_GET['paciente_id']) ? (int)$_GET['paciente_id'] : 0;
 $status_filtro = $_GET['status'] ?? 'todos';
 
@@ -168,9 +168,14 @@ switch ($periodo) {
         break;
 }
 
-if ($mes_filtro !== '') {
+$mes_ativo = isset($_GET['mes_ativo']) && $_GET['mes_ativo'] === '1';
+
+if ($mes_ativo && $mes_filtro !== '') {
     $data_inicio = $mes_filtro . '-01';
     $data_fim = date('Y-m-t', strtotime($data_inicio));
+} else {
+    // The current month is only a visual default until the user selects it.
+    $mes_filtro = date('Y-m');
 }
 
 /*
@@ -1038,7 +1043,18 @@ $pacientes = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
                         <label for="mes">Mês específico</label>
                         <div class="select-wrapper">
                             <i class="fa-regular fa-calendar-days"></i>
-                            <input type="month" id="mes" name="mes" value="<?= htmlspecialchars($mes_filtro) ?>">
+                            <input
+                                type="month"
+                                id="mes"
+                                name="mes"
+                                value="<?= htmlspecialchars($mes_filtro) ?>"
+                                data-default-month="<?= htmlspecialchars(date('Y-m')) ?>"
+                                <?= isset($_GET['mes']) && $_GET['mes'] !== '' ? '' : 'disabled' ?>>
+                            <input
+                                type="hidden"
+                                id="mes_ativo"
+                                name="mes_ativo"
+                                value="<?= isset($_GET['mes']) && $_GET['mes'] !== '' ? '1' : '0' ?>">
                         </div>
                     </div>
 
@@ -1952,6 +1968,61 @@ $pacientes = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
             });
 
             atualizarLista();
+        });
+    </script>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('.filtros-form');
+            const periodo = document.getElementById('periodo');
+            const mes = document.getElementById('mes');
+            const mesAtivo = document.getElementById('mes_ativo');
+
+            if (!form || !periodo || !mes || !mesAtivo) {
+                return;
+            }
+
+            const mesFoiSelecionado = mesAtivo.value === '1';
+
+            function atualizarMes() {
+                const usandoMesEspecifico = mesAtivo.value === '1';
+
+                mes.disabled = false;
+
+                if (!usandoMesEspecifico) {
+                    mes.value = mes.dataset.defaultMonth || '';
+                    mes.disabled = false;
+                }
+            }
+
+            mes.addEventListener('change', function() {
+                mesAtivo.value = mes.value ? '1' : '0';
+            });
+
+            periodo.addEventListener('change', function() {
+                // Selecting a period explicitly removes the independent month filter.
+                if (periodo.value !== 'todos') {
+                    mesAtivo.value = '0';
+                    mes.value = mes.dataset.defaultMonth || '';
+                }
+            });
+
+            form.addEventListener('submit', function() {
+                if (!mes.value) {
+                    mesAtivo.value = '0';
+                }
+            });
+
+            // Keep the selected month active after a filtered request.
+            if (mesFoiSelecionado) {
+                mes.disabled = false;
+            } else {
+                mes.disabled = false;
+                mes.value = mes.dataset.defaultMonth || '';
+            }
+
+            atualizarMes();
         });
     </script>
 
