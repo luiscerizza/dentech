@@ -75,7 +75,7 @@ function textoStatus($status): string
 |--------------------------------------------------------------------------
 */
 
-$periodo = $_GET['periodo'] ?? 'todos';
+$periodo = $_GET['periodo'] ?? 'mes';
 $tipo_filtro = $_GET['tipo'] ?? 'todos';
 
 $periodos_validos = [
@@ -684,28 +684,7 @@ usort(
 |--------------------------------------------------------------------------
 */
 
-/*
-|--------------------------------------------------------------------------
-| LANÇAMENTOS RECENTES
-|--------------------------------------------------------------------------
-|
-| Somente movimentações efetivamente realizadas:
-| receitas pagas e despesas pagas.
-|
-*/
-$lancamentos_realizados = array_values(array_filter(
-    $lancamentos,
-    function ($lancamento) {
-        return ($lancamento['status'] ?? '') === 'pago'
-            && (
-                ($lancamento['tipo'] ?? '') === 'receita' ||
-                ($lancamento['tipo'] ?? '') === 'despesa'
-            );
-    }
-));
-
-$lancamentos_recentes = array_slice($lancamentos_realizados, 0, 20);
-$lancamentos_recentes_total = count($lancamentos_realizados);
+$lancamentos_recentes = array_slice($lancamentos, 0, 20);
 
 /*
 |--------------------------------------------------------------------------
@@ -1350,9 +1329,9 @@ $tipos_nomes = [
 
                         <div class="lista-lancamentos">
 
-                            <?php foreach ($lancamentos_recentes as $loop_index => $lancamento): ?>
+                            <?php foreach ($lancamentos_recentes as $lancamento): ?>
 
-                                <div data-recente-index="<?= $loop_index ?>" class="lancamento-item">
+                                <div class="lancamento-item">
 
                                     <div class="lancamento-data">
 
@@ -1412,24 +1391,6 @@ $tipos_nomes = [
                                 </div>
 
                             <?php endforeach; ?>
-                            <?php if ($lancamentos_recentes_total > 20): ?>
-                                <div class="recentes-acoes">
-                                    <button
-                                        type="button"
-                                        class="btn-secundario"
-                                        id="btnMostrarMaisRecentes">
-                                        Mostrar mais
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        class="btn-secundario"
-                                        id="btnMostrarTudoRecentes">
-                                        Mostrar tudo
-                                    </button>
-                                </div>
-                            <?php endif; ?>
-
 
                         </div>
 
@@ -1891,53 +1852,6 @@ $tipos_nomes = [
         </main>
 
     </div>
-
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const items = Array.from(document.querySelectorAll('[data-recente-index]'));
-            const btnMais = document.getElementById('btnMostrarMaisRecentes');
-            const btnTudo = document.getElementById('btnMostrarTudoRecentes');
-
-            if (!items.length || (!btnMais && !btnTudo)) {
-                return;
-            }
-
-            let visible = 20;
-
-            function atualizar() {
-                items.forEach(function(item, index) {
-                    item.style.display = index < visible ? '' : 'none';
-                });
-
-                const terminou = visible >= items.length;
-
-                if (btnMais) {
-                    btnMais.style.display = terminou ? 'none' : '';
-                }
-
-                if (btnTudo) {
-                    btnTudo.style.display = terminou ? 'none' : '';
-                }
-            }
-
-            if (btnMais) {
-                btnMais.addEventListener('click', function() {
-                    visible += 20;
-                    atualizar();
-                });
-            }
-
-            if (btnTudo) {
-                btnTudo.addEventListener('click', function() {
-                    visible = items.length;
-                    atualizar();
-                });
-            }
-
-            atualizar();
-        });
-    </script>
 
 </body>
 
