@@ -78,6 +78,7 @@ function textoStatus($status): string
 $periodo = $_GET['periodo'] ?? 'todos';
 $tipo_filtro = $_GET['tipo'] ?? 'todos';
 $mes_filtro = $_GET['mes'] ?? date('Y-m');
+$mes_ativo = isset($_GET['mes_ativo']) && $_GET['mes_ativo'] === '1';
 $paciente_filtro = isset($_GET['paciente_id']) ? (int)$_GET['paciente_id'] : 0;
 $status_filtro = $_GET['status'] ?? 'todos';
 
@@ -95,6 +96,8 @@ $tipos_validos = [
     'despesa'
 ];
 
+$status_validos = ['todos', 'pago', 'pendente', 'atrasada'];
+
 if (!in_array($periodo, $periodos_validos, true)) {
     $periodo = 'mes';
 }
@@ -102,8 +105,6 @@ if (!in_array($periodo, $periodos_validos, true)) {
 if (!in_array($tipo_filtro, $tipos_validos, true)) {
     $tipo_filtro = 'todos';
 }
-
-$status_validos = ['todos', 'pago', 'pendente', 'atrasada'];
 
 if (!in_array($status_filtro, $status_validos, true)) {
     $status_filtro = 'todos';
@@ -168,14 +169,9 @@ switch ($periodo) {
         break;
 }
 
-$mes_ativo = isset($_GET['mes_ativo']) && $_GET['mes_ativo'] === '1';
-
 if ($mes_ativo && $mes_filtro !== '') {
     $data_inicio = $mes_filtro . '-01';
     $data_fim = date('Y-m-t', strtotime($data_inicio));
-} else {
-    // The current month is only a visual default until the user selects it.
-    $mes_filtro = date('Y-m');
 }
 
 /*
@@ -205,7 +201,7 @@ if ($tipo_filtro !== 'todos') {
 if ($paciente_filtro > 0 || $status_filtro === 'atrasada') {
     $where_manual[] = '1 = 0';
 } elseif ($status_filtro !== 'todos') {
-    $where_manual[] = "status = :status_manual";
+    $where_manual[] = 'status = :status_manual';
     $params_manual[':status_manual'] = $status_filtro;
 }
 
@@ -560,7 +556,7 @@ $stmt_procedimentos = $pdo->prepare("
         p.data_pagamento,
 
         proc.titulo AS procedimento_titulo,
-        proc.paciente_id AS paciente_id,
+        proc.paciente_id,
 
         COALESCE(pr.paciente, 'Paciente não encontrado') AS paciente,
 
@@ -907,7 +903,6 @@ $tipos_nomes = [
     'despesa' => 'Despesas'
 ];
 
-
 $status_nomes = [
     'todos' => 'Todos os status',
     'pago' => 'Pagos',
@@ -915,12 +910,7 @@ $status_nomes = [
     'atrasada' => 'Atrasados'
 ];
 
-$stmt_pacientes = $pdo->query("
-    SELECT id, paciente
-    FROM prontuarios
-    ORDER BY paciente ASC
-");
-
+$stmt_pacientes = $pdo->query("SELECT id, paciente FROM prontuarios ORDER BY paciente ASC");
 $pacientes = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
 
 ?>
@@ -1043,18 +1033,8 @@ $pacientes = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
                         <label for="mes">Mês específico</label>
                         <div class="select-wrapper">
                             <i class="fa-regular fa-calendar-days"></i>
-                            <input
-                                type="month"
-                                id="mes"
-                                name="mes"
-                                value="<?= htmlspecialchars($mes_filtro) ?>"
-                                data-default-month="<?= htmlspecialchars(date('Y-m')) ?>"
-                                <?= isset($_GET['mes']) && $_GET['mes'] !== '' ? '' : 'disabled' ?>>
-                            <input
-                                type="hidden"
-                                id="mes_ativo"
-                                name="mes_ativo"
-                                value="<?= isset($_GET['mes']) && $_GET['mes'] !== '' ? '1' : '0' ?>">
+                            <input type="month" id="mes" name="mes" value="<?= htmlspecialchars($mes_filtro) ?>" data-default-month="<?= htmlspecialchars(date('Y-m')) ?>">
+                            <input type="hidden" id="mes_ativo" name="mes_ativo" value="<?= $mes_ativo ? '1' : '0' ?>">
                         </div>
                     </div>
 
@@ -1111,9 +1091,15 @@ $pacientes = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
                         Ver atrasados
                     </a>
 
-                    <a href="financeiro.php" class="btn-limpar">
-                        Limpar
-                    </a>
+                    <?php if (
+                        $periodo !== 'mes' ||
+                        $mes_filtro !== '' ||
+                        $paciente_filtro > 0 ||
+                        $status_filtro !== 'todos' ||
+                        $tipo_filtro !== 'todos'
+                    ): ?>
+                        <a href="financeiro.php" class="btn-limpar">Limpar</a>
+                    <?php endif; ?>
 
                 </form>
 
@@ -1764,13 +1750,19 @@ $pacientes = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
                                             ): ?>
 
                                                 <a
-                                                    href="visualizar_orcamento.php?id=<?= (int)$lancamento['orcamento_id'] ?>"
+                                                    href="visualizar_cobranca.php?parcela_id=<?= (int)$lancamento['parcela_id'] ?>"
                                                     class="btn-acao"
-                                                    title="Visualizar orçamento">
+                                                    title="Visualizar cobrança">
 
                                                     <i class="fa-regular fa-eye"></i>
 
                                                 </a>
+
+                                                <?php if (!empty($lancamento['parcela_id'])): ?>
+                                                    <a href="editar_cobranca.php?parcela_id=<?= (int)$lancamento['parcela_id'] ?>" class="btn-acao" title="Editar cobrança">
+                                                        <i class="fa-solid fa-pen"></i>
+                                                    </a>
+                                                <?php endif; ?>
 
                                                 <?php if (
                                                     in_array(
@@ -1815,13 +1807,19 @@ $pacientes = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
                                             ): ?>
 
                                                 <a
-                                                    href="visualizar_prontuario.php?id=<?= (int)$lancamento['paciente_id'] ?>"
+                                                    href="visualizar_cobranca.php?parcela_id=<?= (int)$lancamento['parcela_id'] ?>"
                                                     class="btn-acao"
-                                                    title="Visualizar prontuário">
+                                                    title="Visualizar cobrança">
 
                                                     <i class="fa-regular fa-eye"></i>
 
                                                 </a>
+
+                                                <?php if (!empty($lancamento['parcela_id'])): ?>
+                                                    <a href="editar_cobranca.php?parcela_id=<?= (int)$lancamento['parcela_id'] ?>" class="btn-acao" title="Editar cobrança">
+                                                        <i class="fa-solid fa-pen"></i>
+                                                    </a>
+                                                <?php endif; ?>
 
                                                 <?php if (
                                                     in_array(
@@ -1947,8 +1945,8 @@ $pacientes = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
 
             let visible = Math.min(20, items.length);
 
-            function atualizarLista() {
-                items.forEach(function(item, index) {
+            function atualizar() {
+                items.forEach((item, index) => {
                     item.style.display = index < visible ? '' : 'none';
                 });
 
@@ -1957,20 +1955,23 @@ $pacientes = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
                 if (btnTudo) btnTudo.style.display = terminou ? 'none' : '';
             }
 
-            if (btnMais) btnMais.addEventListener('click', function() {
-                visible = Math.min(visible + 20, items.length);
-                atualizarLista();
-            });
+            if (btnMais) {
+                btnMais.addEventListener('click', function() {
+                    visible = Math.min(visible + 20, items.length);
+                    atualizar();
+                });
+            }
 
-            if (btnTudo) btnTudo.addEventListener('click', function() {
-                visible = items.length;
-                atualizarLista();
-            });
+            if (btnTudo) {
+                btnTudo.addEventListener('click', function() {
+                    visible = items.length;
+                    atualizar();
+                });
+            }
 
-            atualizarLista();
+            atualizar();
         });
     </script>
-
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -1978,54 +1979,20 @@ $pacientes = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
             const periodo = document.getElementById('periodo');
             const mes = document.getElementById('mes');
             const mesAtivo = document.getElementById('mes_ativo');
-
-            if (!form || !periodo || !mes || !mesAtivo) {
-                return;
-            }
-
-            const mesFoiSelecionado = mesAtivo.value === '1';
-
-            function atualizarMes() {
-                const usandoMesEspecifico = mesAtivo.value === '1';
-
-                mes.disabled = false;
-
-                if (!usandoMesEspecifico) {
-                    mes.value = mes.dataset.defaultMonth || '';
-                    mes.disabled = false;
-                }
-            }
-
+            if (!form || !periodo || !mes || !mesAtivo) return;
+            if (mesAtivo.value !== '1') mes.value = mes.dataset.defaultMonth || '';
             mes.addEventListener('change', function() {
                 mesAtivo.value = mes.value ? '1' : '0';
             });
-
             periodo.addEventListener('change', function() {
-                // Selecting a period explicitly removes the independent month filter.
-                if (periodo.value !== 'todos') {
-                    mesAtivo.value = '0';
-                    mes.value = mes.dataset.defaultMonth || '';
-                }
+                mesAtivo.value = '0';
+                if (periodo.value !== 'todos') mes.value = mes.dataset.defaultMonth || '';
             });
-
             form.addEventListener('submit', function() {
-                if (!mes.value) {
-                    mesAtivo.value = '0';
-                }
+                if (!mes.value) mesAtivo.value = '0';
             });
-
-            // Keep the selected month active after a filtered request.
-            if (mesFoiSelecionado) {
-                mes.disabled = false;
-            } else {
-                mes.disabled = false;
-                mes.value = mes.dataset.defaultMonth || '';
-            }
-
-            atualizarMes();
         });
     </script>
-
 </body>
 
 </html>
