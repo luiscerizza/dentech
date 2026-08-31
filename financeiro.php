@@ -77,6 +77,9 @@ function textoStatus($status): string
 
 $periodo = $_GET['periodo'] ?? 'mes';
 $tipo_filtro = $_GET['tipo'] ?? 'todos';
+$mes_filtro = $_GET['mes'] ?? '';
+$paciente_filtro = isset($_GET['paciente_id']) ? (int)$_GET['paciente_id'] : 0;
+$status_filtro = $_GET['status'] ?? 'todos';
 
 $periodos_validos = [
     'mes',
@@ -98,6 +101,16 @@ if (!in_array($periodo, $periodos_validos, true)) {
 
 if (!in_array($tipo_filtro, $tipos_validos, true)) {
     $tipo_filtro = 'todos';
+}
+
+$status_validos = ['todos', 'pago', 'pendente', 'atrasada'];
+
+if (!in_array($status_filtro, $status_validos, true)) {
+    $status_filtro = 'todos';
+}
+
+if ($mes_filtro !== '' && !preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $mes_filtro)) {
+    $mes_filtro = '';
 }
 
 /*
@@ -155,6 +168,11 @@ switch ($periodo) {
         break;
 }
 
+if ($mes_filtro !== '') {
+    $data_inicio = $mes_filtro . '-01';
+    $data_fim = date('Y-m-t', strtotime($data_inicio));
+}
+
 /*
 |--------------------------------------------------------------------------
 | CONDIÇÃO DOS LANÇAMENTOS MANUAIS
@@ -177,6 +195,13 @@ if ($tipo_filtro !== 'todos') {
     $where_manual[] = "tipo = :tipo";
 
     $params_manual[':tipo'] = $tipo_filtro;
+}
+
+if ($paciente_filtro > 0 || $status_filtro === 'atrasada') {
+    $where_manual[] = '1 = 0';
+} elseif ($status_filtro !== 'todos') {
+    $where_manual[] = "status = :status_manual";
+    $params_manual[':status_manual'] = $status_filtro;
 }
 
 /*
@@ -252,6 +277,19 @@ $where_orcamento = [
 ];
 
 $params_orcamento = [];
+
+if ($paciente_filtro > 0) {
+    $where_orcamento[] = 'o.paciente_id = :orc_paciente_id';
+    $params_orcamento[':orc_paciente_id'] = $paciente_filtro;
+}
+
+if ($status_filtro === 'pago') {
+    $where_orcamento[] = "LOWER(TRIM(p.status)) = 'paga'";
+} elseif ($status_filtro === 'pendente') {
+    $where_orcamento[] = "LOWER(TRIM(p.status)) = 'pendente'";
+} elseif ($status_filtro === 'atrasada') {
+    $where_orcamento[] = "(LOWER(TRIM(p.status)) = 'atrasada' OR (LOWER(TRIM(p.status)) = 'pendente' AND p.vencimento < CURDATE()))";
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -447,6 +485,19 @@ $where_procedimento = [
 
 $params_procedimento = [];
 
+if ($paciente_filtro > 0) {
+    $where_procedimento[] = 'proc.paciente_id = :proc_paciente_id';
+    $params_procedimento[':proc_paciente_id'] = $paciente_filtro;
+}
+
+if ($status_filtro === 'pago') {
+    $where_procedimento[] = "LOWER(TRIM(p.status)) = 'paga'";
+} elseif ($status_filtro === 'pendente') {
+    $where_procedimento[] = "LOWER(TRIM(p.status)) = 'pendente'";
+} elseif ($status_filtro === 'atrasada') {
+    $where_procedimento[] = "(LOWER(TRIM(p.status)) = 'atrasada' OR (LOWER(TRIM(p.status)) = 'pendente' AND p.vencimento < CURDATE()))";
+}
+
 /*
 |--------------------------------------------------------------------------
 | FILTRO DE DATA
@@ -504,7 +555,7 @@ $stmt_procedimentos = $pdo->prepare("
         p.data_pagamento,
 
         proc.titulo AS procedimento_titulo,
-        proc.paciente_id,
+        proc.paciente_id AS paciente_id,
 
         COALESCE(pr.paciente, 'Paciente não encontrado') AS paciente,
 
@@ -684,7 +735,16 @@ usort(
 |--------------------------------------------------------------------------
 */
 
-$lancamentos_recentes = array_slice($lancamentos, 0, 20);
+$lancamentos_realizados = array_values(array_filter(
+    $lancamentos,
+    function ($lancamento) {
+        return ($lancamento['status'] ?? '') === 'pago'
+            && in_array(($lancamento['tipo'] ?? ''), ['receita', 'despesa'], true);
+    }
+));
+
+$lancamentos_recentes = array_slice($lancamentos_realizados, 0, 20);
+$lancamentos_recentes_total = count($lancamentos_realizados);
 
 /*
 |--------------------------------------------------------------------------
@@ -842,6 +902,22 @@ $tipos_nomes = [
     'despesa' => 'Despesas'
 ];
 
+
+$status_nomes = [
+    'todos' => 'Todos os status',
+    'pago' => 'Pagos',
+    'pendente' => 'Pendentes',
+    'atrasada' => 'Atrasados'
+];
+
+$stmt_pacientes = $pdo->query("
+    SELECT id, paciente
+    FROM prontuarios
+    ORDER BY paciente ASC
+");
+
+$pacientes = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
+
 ?>
 <!DOCTYPE html>
 
@@ -942,101 +1018,86 @@ $tipos_nomes = [
 
             <section class="filtros-card">
 
-                <form
-                    method="GET"
-                    class="filtros-form">
+                <form method="GET" class="filtros-form">
 
                     <div class="filtro-grupo">
-
-                        <label for="periodo">
-                            Período
-                        </label>
-
+                        <label for="periodo">Período</label>
                         <div class="select-wrapper">
-
                             <i class="fa-regular fa-calendar"></i>
-
-                            <select
-                                id="periodo"
-                                name="periodo">
-
+                            <select id="periodo" name="periodo">
                                 <?php foreach ($periodos_nomes as $valor => $nome): ?>
-
-                                    <option
-                                        value="<?= htmlspecialchars($valor) ?>"
-                                        <?= $periodo === $valor ? 'selected' : '' ?>>
-
+                                    <option value="<?= htmlspecialchars($valor) ?>" <?= $periodo === $valor ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($nome) ?>
-
                                     </option>
-
                                 <?php endforeach; ?>
-
                             </select>
-
                         </div>
-
                     </div>
-
 
                     <div class="filtro-grupo">
-
-                        <label for="tipo">
-                            Tipo
-                        </label>
-
+                        <label for="mes">Mês específico</label>
                         <div class="select-wrapper">
-
-                            <i class="fa-solid fa-filter"></i>
-
-                            <select
-                                id="tipo"
-                                name="tipo">
-
-                                <?php foreach ($tipos_nomes as $valor => $nome): ?>
-
-                                    <option
-                                        value="<?= htmlspecialchars($valor) ?>"
-                                        <?= $tipo_filtro === $valor ? 'selected' : '' ?>>
-
-                                        <?= htmlspecialchars($nome) ?>
-
-                                    </option>
-
-                                <?php endforeach; ?>
-
-                            </select>
-
+                            <i class="fa-regular fa-calendar-days"></i>
+                            <input type="month" id="mes" name="mes" value="<?= htmlspecialchars($mes_filtro) ?>">
                         </div>
-
                     </div>
 
+                    <div class="filtro-grupo">
+                        <label for="paciente_id">Paciente</label>
+                        <div class="select-wrapper">
+                            <i class="fa-solid fa-user"></i>
+                            <select id="paciente_id" name="paciente_id">
+                                <option value="0">Todos os pacientes</option>
+                                <?php foreach ($pacientes as $paciente): ?>
+                                    <option value="<?= (int)$paciente['id'] ?>" <?= $paciente_filtro === (int)$paciente['id'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($paciente['paciente']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
 
-                    <button
-                        type="submit"
-                        class="btn-filtrar">
+                    <div class="filtro-grupo">
+                        <label for="status">Status</label>
+                        <div class="select-wrapper">
+                            <i class="fa-solid fa-circle-half-stroke"></i>
+                            <select id="status" name="status">
+                                <?php foreach ($status_nomes as $valor => $nome): ?>
+                                    <option value="<?= htmlspecialchars($valor) ?>" <?= $status_filtro === $valor ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($nome) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
 
+                    <div class="filtro-grupo">
+                        <label for="tipo">Tipo</label>
+                        <div class="select-wrapper">
+                            <i class="fa-solid fa-filter"></i>
+                            <select id="tipo" name="tipo">
+                                <?php foreach ($tipos_nomes as $valor => $nome): ?>
+                                    <option value="<?= htmlspecialchars($valor) ?>" <?= $tipo_filtro === $valor ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($nome) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-filtrar">
                         <i class="fa-solid fa-filter"></i>
-
                         Filtrar
-
                     </button>
 
+                    <a href="financeiro.php?periodo=todos&status=atrasada" class="btn-limpar">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        Ver atrasados
+                    </a>
 
-                    <?php if (
-                        $periodo !== 'mes' ||
-                        $tipo_filtro !== 'todos'
-                    ): ?>
-
-                        <a
-                            href="financeiro.php"
-                            class="btn-limpar">
-
-                            Limpar
-
-                        </a>
-
-                    <?php endif; ?>
+                    <a href="financeiro.php" class="btn-limpar">
+                        Limpar
+                    </a>
 
                 </form>
 
@@ -1329,9 +1390,9 @@ $tipos_nomes = [
 
                         <div class="lista-lancamentos">
 
-                            <?php foreach ($lancamentos_recentes as $lancamento): ?>
+                            <?php foreach ($lancamentos_recentes as $indice_recente => $lancamento): ?>
 
-                                <div class="lancamento-item">
+                                <div class="lancamento-item recente-item" data-recente-index="<?= (int)$indice_recente ?>">
 
                                     <div class="lancamento-data">
 
@@ -1393,6 +1454,13 @@ $tipos_nomes = [
                             <?php endforeach; ?>
 
                         </div>
+
+                        <?php if ($lancamentos_recentes_total > 20): ?>
+                            <div class="recentes-acoes">
+                                <button type="button" class="btn-limpar" id="btnMostrarMaisRecentes">Mostrar mais</button>
+                                <button type="button" class="btn-limpar" id="btnMostrarTudoRecentes">Mostrar tudo</button>
+                            </div>
+                        <?php endif; ?>
 
                     <?php else: ?>
 
@@ -1852,6 +1920,40 @@ $tipos_nomes = [
         </main>
 
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const items = Array.from(document.querySelectorAll('.recente-item'));
+            const btnMais = document.getElementById('btnMostrarMaisRecentes');
+            const btnTudo = document.getElementById('btnMostrarTudoRecentes');
+
+            if (!items.length) return;
+
+            let visible = Math.min(20, items.length);
+
+            function atualizarLista() {
+                items.forEach(function(item, index) {
+                    item.style.display = index < visible ? '' : 'none';
+                });
+
+                const terminou = visible >= items.length;
+                if (btnMais) btnMais.style.display = terminou ? 'none' : '';
+                if (btnTudo) btnTudo.style.display = terminou ? 'none' : '';
+            }
+
+            if (btnMais) btnMais.addEventListener('click', function() {
+                visible = Math.min(visible + 20, items.length);
+                atualizarLista();
+            });
+
+            if (btnTudo) btnTudo.addEventListener('click', function() {
+                visible = items.length;
+                atualizarLista();
+            });
+
+            atualizarLista();
+        });
+    </script>
 
 </body>
 
