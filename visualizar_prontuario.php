@@ -861,12 +861,11 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
 
                                             <td class="procedure-actions">
 
-                                                <button
-                                                    type="button"
-                                                    class="table-action btn-gerar-cobranca"
-                                                    onclick="alert('A geração de cobrança será implementada na próxima etapa.');">
+                                                <a
+                                                    href="gerar_cobranca_procedimento.php?procedimento_id=<?= (int)$proc['id'] ?>"
+                                                    class="table-action btn-gerar-cobranca">
                                                     Gerar cobrança
-                                                </button>
+                                                </a>
 
                                                 <a
                                                     class="table-action btn-editar-procedimento"
