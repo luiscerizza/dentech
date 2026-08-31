@@ -249,6 +249,76 @@ try {
             ),
             $vencimento->format('Y-m-d')
         ]);
+
+        $parcela_id = (int)$pdo->lastInsertId();
+
+        /*
+|--------------------------------------------------------------------------
+| Criar lançamento financeiro vinculado à parcela
+|--------------------------------------------------------------------------
+*/
+
+        $descricao = sprintf(
+            'Procedimento #%d - %s - Parcela %d/%d',
+            $procedimento_id,
+            $procedimento['titulo'],
+            $i,
+            $quantidade_parcelas
+        );
+
+        $observacoes = sprintf(
+            'Cobrança do procedimento #%d. Parcela %d/%d.',
+            $procedimento_id,
+            $i,
+            $quantidade_parcelas
+        );
+
+        $stmtLancamento = $pdo->prepare("
+    INSERT INTO lancamentos_financeiros (
+        tipo,
+        categoria,
+        descricao,
+        data,
+        forma_pagamento,
+        valor,
+        parcelas,
+        status,
+        observacoes,
+        orcamento_id,
+        parcela_id,
+        procedimento_id
+    )
+    VALUES (
+        'receita',
+        'Procedimento',
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        'pendente',
+        ?,
+        NULL,
+        ?,
+        ?
+    )
+");
+
+        $stmtLancamento->execute([
+            $descricao,
+            $vencimento->format('Y-m-d'),
+            $forma_pagamento,
+            number_format(
+                $valor_parcela,
+                2,
+                '.',
+                ''
+            ),
+            $quantidade_parcelas,
+            $observacoes,
+            $parcela_id,
+            $procedimento_id
+        ]);
     }
 
     /*

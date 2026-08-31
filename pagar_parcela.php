@@ -2,132 +2,203 @@
 
 require_once 'config/auth.php';
 require_once 'config/csrf.php';
-
-exigirLogin();
-
 require_once 'conexao/conexao.php';
 
-
-// ============================================================
-// VALIDAR POST
-// ============================================================
+exigirLogin();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: financeiro.php');
     exit;
 }
 
-
-// ============================================================
-// CSRF
-// ============================================================
-
-validar_csrf();
-
-
-// ============================================================
-// ID DA PARCELA
-// ============================================================
-
-$parcela_id = (int)($_POST['parcela_id'] ?? 0);
-
-if ($parcela_id <= 0) {
-    die("Parcela inválida.");
-}
-
-
 try {
 
-    // ========================================================
-    // BUSCAR PARCELA
-    // ========================================================
+    validar_csrf();
+
+    $parcela_id =
+        filter_input(
+            INPUT_POST,
+            'parcela_id',
+            FILTER_VALIDATE_INT
+        );
+
+    if (!$parcela_id || $parcela_id <= 0) {
+        throw new Exception('Parcela inválida.');
+    }
+
+    $pdo->beginTransaction();
+
+    /*
+    |--------------------------------------------------------------------------
+    | Buscar parcela
+    |--------------------------------------------------------------------------
+    */
 
     $stmt = $pdo->prepare("
         SELECT
             p.id,
-            p.orcamento_id,
             p.status,
-            p.valor,
-            p.vencimento,
-            o.status AS status_orcamento
+            p.orcamento_id,
+            p.procedimento_id,
+
+            o.status AS status_orcamento,
+
+            proc.id AS procedimento_existente
+
         FROM parcelas p
-        INNER JOIN orcamentos o
+
+        LEFT JOIN orcamentos o
             ON o.id = p.orcamento_id
+
+        LEFT JOIN procedimentos proc
+            ON proc.id = p.procedimento_id
+
         WHERE p.id = ?
+
         LIMIT 1
-    ");
 
-    $stmt->execute([$parcela_id]);
-
-    $parcela = $stmt->fetch(PDO::FETCH_ASSOC);
-
-
-    if (!$parcela) {
-        die("Parcela não encontrada.");
-    }
-
-
-    // ========================================================
-    // SOMENTE ORÇAMENTO ACEITO
-    // ========================================================
-
-    if ($parcela['status_orcamento'] !== 'aceito') {
-        die("O orçamento ainda não foi aceito.");
-    }
-
-
-    // ========================================================
-    // NÃO PERMITIR PAGAMENTO DUPLICADO
-    // ========================================================
-
-    if ($parcela['status'] === 'paga') {
-
-        header(
-            "Location: financeiro.php"
-        );
-
-        exit;
-    }
-
-
-    // ========================================================
-    // TRANSAÇÃO
-    // ========================================================
-
-    $pdo->beginTransaction();
-
-
-    // ========================================================
-    // MARCAR PARCELA COMO PAGA
-    // ========================================================
-
-    $stmt = $pdo->prepare("
-        UPDATE parcelas
-        SET
-            status = 'paga',
-            data_pagamento = CURDATE()
-        WHERE id = ?
-          AND status IN ('pendente', 'atrasada')
+        FOR UPDATE
     ");
 
     $stmt->execute([
         $parcela_id
     ]);
 
+    $parcela =
+        $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // ========================================================
-    // CONFIRMAR
-    // ========================================================
+    if (!$parcela) {
+        throw new Exception(
+            'Parcela não encontrada.'
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validar origem
+    |--------------------------------------------------------------------------
+    */
+
+    $ehOrcamento =
+        !empty($parcela['orcamento_id']);
+
+    $ehProcedimento =
+        !empty($parcela['procedimento_id']);
+
+    if (!$ehOrcamento && !$ehProcedimento) {
+
+        throw new Exception(
+            'A parcela não possui uma origem válida.'
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Orçamento
+    |--------------------------------------------------------------------------
+    */
+
+    if ($ehOrcamento) {
+
+        if (
+            $parcela['status_orcamento']
+            !== 'aceito'
+        ) {
+
+            throw new Exception(
+                'Somente parcelas de orçamentos aceitos podem ser pagas.'
+            );
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Status
+    |--------------------------------------------------------------------------
+    */
+
+    if ($parcela['status'] === 'paga') {
+
+        throw new Exception(
+            'Esta parcela já está paga.'
+        );
+    }
+
+    if (
+        !in_array(
+            $parcela['status'],
+            ['pendente', 'atrasada'],
+            true
+        )
+    ) {
+
+        throw new Exception(
+            'Status da parcela não permite pagamento.'
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Marcar parcela como paga
+    |--------------------------------------------------------------------------
+    */
+
+    $stmt = $pdo->prepare("
+        UPDATE parcelas
+
+        SET
+            status = 'paga',
+            data_pagamento = CURDATE()
+
+        WHERE id = ?
+
+          AND status IN (
+              'pendente',
+              'atrasada'
+          )
+    ");
+
+    $stmt->execute([
+        $parcela_id
+    ]);
+
+    if ($stmt->rowCount() !== 1) {
+
+        throw new Exception(
+            'Não foi possível registrar o pagamento.'
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Atualizar lançamento financeiro
+    |--------------------------------------------------------------------------
+    */
+
+    $stmt = $pdo->prepare("
+        UPDATE lancamentos_financeiros
+
+        SET
+            status = 'pago',
+            data = CURDATE()
+
+        WHERE parcela_id = ?
+    ");
+
+    $stmt->execute([
+        $parcela_id
+    ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Confirmar
+    |--------------------------------------------------------------------------
+    */
 
     $pdo->commit();
 
-
-    // ========================================================
-    // VOLTAR AO FINANCEIRO
-    // ========================================================
-
     header(
-        "Location: financeiro.php?sucesso=1"
+        'Location: financeiro.php?sucesso=pagamento'
     );
 
     exit;
@@ -138,9 +209,14 @@ try {
     }
 
     error_log(
-        "ERRO AO PAGAR PARCELA #{$parcela_id}: " .
+        'Erro ao pagar parcela: ' .
             $e->getMessage()
     );
 
-    die("Não foi possível registrar o pagamento da parcela.");
+    header(
+        'Location: financeiro.php?erro=' .
+            urlencode($e->getMessage())
+    );
+
+    exit;
 }
