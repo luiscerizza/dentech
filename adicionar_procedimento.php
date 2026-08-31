@@ -48,16 +48,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception('Prontuário não encontrado.');
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Orçamento é opcional
+        |--------------------------------------------------------------------------
+        |
+        | O procedimento pode nascer diretamente do prontuário, sem orçamento.
+        | Se vier de um agendamento, apenas validamos o agendamento; não exigimos
+        | que exista um orçamento aceito.
+        |
+        | Quando houver um orçamento aceito para o agendamento, ele pode ser
+        | associado ao procedimento como referência, mas isso não é obrigatório.
+        |
+        |--------------------------------------------------------------------------
+        */
         $orcamento_id = null;
 
         if ($agendamento_id_post) {
             $stmt = $pdo->prepare('SELECT paciente_id, status FROM agendamentos WHERE id = ? LIMIT 1');
             $stmt->execute([$agendamento_id_post]);
             $ag = $stmt->fetch(PDO::FETCH_ASSOC);
+
             if (!$ag || (int)$ag['paciente_id'] !== $prontuario_id || $ag['status'] !== 'confirmado') {
                 throw new Exception('O agendamento precisa estar confirmado e pertencer ao paciente.');
             }
 
+            // Se existir orçamento aceito, usamos apenas como referência.
             $stmt = $pdo->prepare("
                 SELECT id
                 FROM orcamentos
@@ -70,11 +86,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$agendamento_id_post, $prontuario_id]);
             $orcamento_id = $stmt->fetchColumn();
 
-            if (!$orcamento_id) {
-                throw new Exception('Este agendamento ainda não possui um orçamento aceito. O procedimento só pode ser registrado após a aprovação do orçamento.');
-            }
-
-            $orcamento_id = (int)$orcamento_id;
+            $orcamento_id = $orcamento_id
+                ? (int)$orcamento_id
+                : null;
         }
 
         $pdo->beginTransaction();
@@ -114,28 +128,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('Procedimento não encontrado para edição.');
             }
 
-            // Na edição, o orçamento vem obrigatoriamente do próprio procedimento.
-            $orcamento_id = !empty($procedimento_antigo['orcamento_id'])
-                ? (int)$procedimento_antigo['orcamento_id']
-                : null;
-
-            if (!$orcamento_id) {
-                throw new Exception('O procedimento não possui um orçamento vinculado.');
+            if (!$orcamento_id && !empty($procedimento_antigo['orcamento_id'])) {
+                $orcamento_id = (int)$procedimento_antigo['orcamento_id'];
             }
 
-            $stmtOrcamento = $pdo->prepare("
-                SELECT id
-                FROM orcamentos
-                WHERE id = ?
-                  AND paciente_id = ?
-                  AND status = 'aceito'
-                LIMIT 1
-            ");
-            $stmtOrcamento->execute([$orcamento_id, $prontuario_id]);
-
-            if (!$stmtOrcamento->fetchColumn()) {
-                throw new Exception('O orçamento vinculado ao procedimento não está aceito.');
-            }
+            /*
+            | O orçamento é opcional. Se o procedimento antigo tiver um
+            | orçamento associado, preservamos a referência sem exigir que
+            | ele continue com status "aceito".
+            */
 
             $stmt = $pdo->prepare('SELECT estoque_id, quantidade FROM procedimento_materiais WHERE procedimento_id = ?');
             $stmt->execute([$procedimento_id]);
@@ -189,7 +190,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($procedimento_id) {
-            $stmt = $pdo->prepare('UPDATE procedimentos SET titulo = ?, descricao = ?, medicamentos = ?, valor_materiais = ?, valor_mao_obra = ?, valor_final = ?, data_procedimento = ?, orcamento_id = ? WHERE id = ?');
+            $stmt = $pdo->prepare('UPDATE procedimentos SET titulo = ?, descricao = ?, medicamentos = ?, valor_materiais = ?, valor_mao_obra = ?, valor_final = ?, data_procedimento = ?, orcamento_id = ?, agendamento_id = ? WHERE id = ?');
             $stmt->execute([
                 $titulo,
                 $descricao ?: null,
@@ -199,14 +200,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $valor_final,
                 $data_procedimento,
                 $orcamento_id,
+                $agendamento_id_post,
                 $procedimento_id
             ]);
         } else {
-            if (!$orcamento_id) {
-                throw new Exception('O procedimento precisa estar vinculado a um orçamento aceito.');
-            }
-
-            $stmt = $pdo->prepare('INSERT INTO procedimentos (paciente_id, orcamento_id, titulo, descricao, medicamentos, valor_materiais, valor_mao_obra, valor_final, data_procedimento) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $stmt = $pdo->prepare('INSERT INTO procedimentos (paciente_id, orcamento_id, titulo, descricao, medicamentos, valor_materiais, valor_mao_obra, valor_final, data_procedimento, agendamento_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
             $stmt->execute([
                 $prontuario_id,
                 $orcamento_id,
@@ -216,7 +214,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $valor_materiais,
                 $valor_mao_obra,
                 $valor_final,
-                $data_procedimento
+                $data_procedimento,
+                $agendamento_id_post
             ]);
             $procedimento_id = (int)$pdo->lastInsertId();
         }
@@ -310,6 +309,8 @@ if ($procedimento_id === null && $agendamento_id !== null) {
         die("Este agendamento ainda não está confirmado.");
     }
 
+    // Orçamento é opcional. Se existir um orçamento aceito para este
+    // agendamento, ele é apenas uma referência visual/administrativa.
     $stmt = $pdo->prepare("
         SELECT id
         FROM orcamentos
@@ -322,9 +323,9 @@ if ($procedimento_id === null && $agendamento_id !== null) {
     $stmt->execute([$agendamento_id, $prontuario_id]);
     $orcamento_id = $stmt->fetchColumn();
 
-    if (!$orcamento_id) {
-        die("Este agendamento não possui um orçamento aceito.");
-    }
+    $orcamento_id = $orcamento_id
+        ? (int)$orcamento_id
+        : null;
 }
 
 /*
