@@ -220,11 +220,7 @@ $totalParcelas = max(1, (int)$cobranca['total_parcelas']);
                     <?php if (!empty($cobranca['data_pagamento'])): ?><div class="info"><label>Data do pagamento</label><strong><?= dataBR($cobranca['data_pagamento']) ?></strong></div><?php endif; ?>
                 </div>
             </section>
-            <?php if ($status !== 'paga'): ?><section class="card-cobranca">
-                    <div class="acoes"><a class="btn btn-primary" href="editar_cobranca.php?parcela_id=<?= (int)$cobranca['parcela_id'] ?>"><i class="fa-solid fa-calendar-pen"></i> Alterar vencimento</a>
-                        <form method="POST" action="pagar_parcela.php" onsubmit="return confirm('Confirmar pagamento desta parcela?');"><input type="hidden" name="parcela_id" value="<?= (int)$cobranca['parcela_id'] ?>"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8') ?>"><button class="btn btn-success" type="submit"><i class="fa-solid fa-check"></i> Marcar como paga</button></form>
-                    </div>
-                </section><?php endif; ?>
+            
         </div>
     </main>
 </body>
