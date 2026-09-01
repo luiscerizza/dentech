@@ -27,8 +27,7 @@ function buscarParcela(PDO $pdo, int $id): ?array
                 'Paciente não encontrado'
             ) AS paciente,
 
-            lf.forma_pagamento,
-            lf.observacoes AS observacoes_financeiras
+            lf.forma_pagamento
 
         FROM parcelas p
 
@@ -80,9 +79,6 @@ $erro = '';
 $forma_pagamento_atual =
     trim((string)($cobranca['forma_pagamento'] ?? ''));
 
-$observacoes_atual =
-    (string)($cobranca['observacoes_financeiras'] ?? '');
-
 if ($forma_pagamento_atual === '') {
     $forma_pagamento_atual = 'Não informado';
 }
@@ -111,10 +107,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             (string)($_POST['forma_pagamento'] ?? '')
         );
 
-        $observacoes = trim(
-            (string)($_POST['observacoes'] ?? '')
-        );
-
         $dt = DateTime::createFromFormat(
             'Y-m-d',
             $vencimento
@@ -139,11 +131,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
         }
 
-        if (mb_strlen($observacoes) > 2000) {
-            throw new Exception(
-                'As observações podem ter no máximo 2000 caracteres.'
-            );
-        }
 
         /*
         |--------------------------------------------------------------------------
@@ -248,7 +235,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     valor = ?,
                     parcelas = 1,
                     status = 'pendente',
-                    observacoes = ?,
                     orcamento_id = ?,
                     procedimento_id = ?,
                     data = ?
@@ -261,7 +247,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $descricao,
                 $forma_pagamento,
                 $cobranca['valor'],
-                $observacoes !== '' ? $observacoes : null,
                 !empty($cobranca['orcamento_id'])
                     ? (int)$cobranca['orcamento_id']
                     : null,
@@ -311,7 +296,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $vencimento,
                 $forma_pagamento,
                 $cobranca['valor'],
-                $observacoes !== '' ? $observacoes : null,
                 !empty($cobranca['orcamento_id'])
                     ? (int)$cobranca['orcamento_id']
                     : null,
@@ -757,26 +741,6 @@ $status_texto = match ($status_atual) {
                             <?php endforeach; ?>
 
                         </select>
-
-                    </div>
-
-                    <div class="field">
-
-                        <label for="observacoes">
-                            Observações
-                        </label>
-
-                        <textarea
-                            id="observacoes"
-                            name="observacoes"
-                            maxlength="2000"
-                            placeholder="Adicione uma observação sobre esta cobrança..."><?= htmlspecialchars(
-                                                                                                $observacoes_atual
-                                                                                            ) ?></textarea>
-
-                        <small>
-                            Máximo de 2000 caracteres.
-                        </small>
 
                     </div>
 
