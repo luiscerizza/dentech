@@ -1,6 +1,5 @@
 <?php
 require_once 'config/auth.php';
-require_once 'config/csrf.php';
 require_once 'conexao/conexao.php';
 
 exigirLogin();
@@ -11,13 +10,6 @@ if (!$parcela_id || $parcela_id <= 0) {
     exit;
 }
 
-$pdo->prepare("
-    UPDATE parcelas
-    SET status = 'atrasada'
-    WHERE id = ?
-      AND status = 'pendente'
-      AND vencimento < CURDATE()
-")->execute([$parcela_id]);
 
 $stmt = $pdo->prepare("
     SELECT
