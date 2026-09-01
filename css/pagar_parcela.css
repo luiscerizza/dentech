@@ -1,0 +1,157 @@
+.pagamento-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding-bottom: 40px;
+}
+
+.breadcrumb {
+  color: #2563eb;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.pagamento-page h1 {
+  margin-bottom: 6px;
+}
+
+.pagamento-page > p {
+  color: #64748b;
+}
+
+.card-pagamento {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 26px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+  margin-top: 22px;
+}
+
+.resumo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 26px;
+}
+
+.info {
+  background: #f8fafc;
+  padding: 14px;
+  border-radius: 9px;
+}
+
+.info label {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+
+.info strong {
+  color: #172033;
+}
+
+.valor {
+  font-size: 24px !important;
+}
+
+.status {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.status-pendente {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-atrasada {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-paga {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.campo {
+  margin-top: 22px;
+}
+
+.campo label {
+  display: block;
+  font-weight: 600;
+  color: #172033;
+  margin-bottom: 8px;
+}
+
+.campo select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+}
+
+.campo select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.alert {
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin-bottom: 18px;
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 26px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 15px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  text-decoration: none;
+  background: #fff;
+  color: #172033;
+  cursor: pointer;
+  font: inherit;
+}
+
+.btn-success {
+  background: #16a34a;
+  color: #fff;
+  border-color: #16a34a;
+}
+
+@media (max-width: 700px) {
+  .resumo {
+    grid-template-columns: 1fr;
+  }
+
+  .acoes {
+    flex-direction: column;
+  }
+
+  .acoes .btn {
+    width: 100%;
+  }
+}
