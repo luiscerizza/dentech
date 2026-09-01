@@ -18,140 +18,6 @@ if ($id <= 0) {
     die("ID do orçamento não informado.");
 }
 
-
-// ============================================================
-// PROCESSAMENTO DOS POSTS
-// ============================================================
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-    validar_csrf();
-
-    $acao = $_POST['acao'] ?? '';
-
-    try {
-
-        // ====================================================
-        // CONFIRMAR ORÇAMENTO
-        // ====================================================
-
-        if ($acao === 'confirmar_orcamento') {
-
-            $stmt = $pdo->prepare("
-                UPDATE orcamentos
-                SET status = 'aceito'
-                WHERE id = ?
-                  AND status = 'pendente'
-            ");
-
-            $stmt->execute([$id]);
-
-            header("Location: visualizar_orcamento.php?id=" . $id);
-            exit;
-        }
-
-
-        // ====================================================
-        // RECUSAR ORÇAMENTO
-        // ====================================================
-
-        if ($acao === 'recusar_orcamento') {
-
-            $stmt = $pdo->prepare("
-                UPDATE orcamentos
-                SET status = 'recusado'
-                WHERE id = ?
-                  AND status = 'pendente'
-            ");
-
-            $stmt->execute([$id]);
-
-            header("Location: visualizar_orcamento.php?id=" . $id);
-            exit;
-        }
-
-
-        // ====================================================
-        // PAGAMENTO DE PARCELA
-        // ====================================================
-
-        if ($acao === 'marcar_paga') {
-
-            $parcela_id = (int)($_POST['parcela_id'] ?? 0);
-
-            if ($parcela_id <= 0) {
-                die("Parcela inválida.");
-            }
-
-            /*
-             * Primeiro verifica se a parcela realmente pertence
-             * ao orçamento visualizado.
-             */
-            $stmt = $pdo->prepare("
-                SELECT id, status
-                FROM parcelas
-                WHERE id = ?
-                  AND orcamento_id = ?
-                LIMIT 1
-            ");
-
-            $stmt->execute([
-                $parcela_id,
-                $id
-            ]);
-
-            $parcela = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$parcela) {
-                die("Parcela não encontrada.");
-            }
-
-            /*
-             * Só permite pagar parcelas pendentes ou atrasadas.
-             */
-            if (
-                $parcela['status'] !== 'pendente' &&
-                $parcela['status'] !== 'atrasada'
-            ) {
-                header("Location: visualizar_orcamento.php?id=" . $id);
-                exit;
-            }
-
-            /*
-             * Marca como paga.
-             *
-             * O financeiro utiliza as parcelas pagas como
-             * receitas do orçamento.
-             */
-            $stmt = $pdo->prepare("
-                UPDATE parcelas
-                SET
-                    status = 'paga',
-                    data_pagamento = CURDATE()
-                WHERE id = ?
-                  AND orcamento_id = ?
-            ");
-
-            $stmt->execute([
-                $parcela_id,
-                $id
-            ]);
-
-            header("Location: visualizar_orcamento.php?id=" . $id);
-            exit;
-        }
-    } catch (PDOException $e) {
-
-        error_log(
-            "ERRO VISUALIZAR ORCAMENTO #{$id}: " .
-                $e->getMessage()
-        );
-
-        die("Ocorreu um erro ao processar a solicitação.");
-    }
-}
-
-
 // ============================================================
 // BUSCAR ORÇAMENTO + PACIENTE
 // ============================================================
@@ -224,6 +90,9 @@ $stmt_par->execute([$id]);
 
 $parcelas = $stmt_par->fetchAll(PDO::FETCH_ASSOC);
 
+// Quantidade total de parcelas da proposta.
+$qtd_total = count($parcelas);
+
 
 // ============================================================
 // CÁLCULO DO TOTAL
@@ -238,26 +107,6 @@ foreach ($itens as $item) {
 
     $total_itens += $quantidade * $valor;
 }
-
-
-// ============================================================
-// CONTROLE DAS PARCELAS
-// ============================================================
-
-$qtd_total = count($parcelas);
-
-$qtd_pagas = 0;
-
-foreach ($parcelas as $p) {
-
-    if ($p['status'] === 'paga') {
-        $qtd_pagas++;
-    }
-}
-
-$progresso = $qtd_total > 0
-    ? round(($qtd_pagas / $qtd_total) * 100)
-    : 0;
 
 
 // ============================================================
@@ -584,20 +433,21 @@ $mensagem_whatsapp .=
 
                         <form
                             method="POST"
+                            action="aceitar_orcamento.php"
                             class="form-acao"
-                            onsubmit="return confirm('Confirmar este orçamento?');">
+                            onsubmit="return confirm('Aceitar este orçamento?');">
 
                             <?= csrf_field() ?>
 
                             <input
                                 type="hidden"
-                                name="acao"
-                                value="confirmar_orcamento">
+                                name="id"
+                                value="<?= (int)$id ?>">
 
                             <button
                                 type="submit"
                                 class="btn btn-confirmar">
-                                ✓ Confirmar
+                                ✓ Aceitar
                             </button>
 
                         </form>
@@ -607,6 +457,7 @@ $mensagem_whatsapp .=
 
                         <form
                             method="POST"
+                            action="recusar_orcamento.php"
                             class="form-acao"
                             onsubmit="return confirm('Recusar este orçamento?');">
 
@@ -614,8 +465,8 @@ $mensagem_whatsapp .=
 
                             <input
                                 type="hidden"
-                                name="acao"
-                                value="recusar_orcamento">
+                                name="id"
+                                value="<?= (int)$id ?>">
 
                             <button
                                 type="submit"
@@ -904,15 +755,25 @@ $mensagem_whatsapp .=
                     <div class="parcelas-header">
 
                         <h3>
-                            💰 Controle de Parcelas
+                            💳 Condições de Pagamento
                         </h3>
+
+                        <div class="orcamento-aviso-financeiro">
+                            <strong>ℹ️ Importante sobre este orçamento</strong>
+                            <p>
+                                Os valores e condições apresentados neste documento são uma
+                                proposta comercial e não representam uma receita financeira
+                                registrada.
+                            </p>
+                            <p>
+                                O valor final poderá ser alterado após a avaliação e definição
+                                dos procedimentos realizados.
+                            </p>
+                        </div>
 
                         <span>
 
-                            <?= $qtd_pagas ?>
-                            /
-                            <?= $qtd_total ?>
-                            pagas
+                            <?= (int)$qtd_total ?> parcela<?= $qtd_total != 1 ? 's' : '' ?> proposta<?= $qtd_total != 1 ? 's' : '' ?>
 
                         </span>
 
@@ -941,10 +802,6 @@ $mensagem_whatsapp .=
 
                                     <th class="text-center">
                                         Status
-                                    </th>
-
-                                    <th class="text-center">
-                                        Ação
                                     </th>
 
                                 </tr>
@@ -1042,75 +899,6 @@ $mensagem_whatsapp .=
 
                                         </td>
 
-
-                                        <td class="text-center">
-
-                                            <?php if (
-                                                $p['status'] === 'pendente' ||
-                                                $p['status'] === 'atrasada'
-                                            ): ?>
-
-
-                                                <form
-                                                    method="POST"
-                                                    class="form-pagamento"
-                                                    onsubmit="return confirm('Confirmar pagamento desta parcela?');">
-
-                                                    <?= csrf_field() ?>
-
-                                                    <input
-                                                        type="hidden"
-                                                        name="acao"
-                                                        value="marcar_paga">
-
-                                                    <input
-                                                        type="hidden"
-                                                        name="parcela_id"
-                                                        value="<?= (int)$p['id'] ?>">
-
-                                                    <button
-                                                        type="submit"
-                                                        class="btn-pagar">
-                                                        💳 Pagar
-                                                    </button>
-
-                                                </form>
-
-
-                                            <?php elseif (
-                                                $p['status'] === 'paga'
-                                            ): ?>
-
-
-                                                <span class="pagamento-confirmado">
-
-                                                    ✓ Pago
-
-                                                    <?php if (
-                                                        !empty($p['data_pagamento'])
-                                                    ): ?>
-
-                                                        <small>
-
-                                                            em
-                                                            <?= date(
-                                                                'd/m/Y',
-                                                                strtotime(
-                                                                    $p['data_pagamento']
-                                                                )
-                                                            ) ?>
-
-                                                        </small>
-
-                                                    <?php endif; ?>
-
-                                                </span>
-
-
-                                            <?php endif; ?>
-
-                                        </td>
-
                                     </tr>
 
 
@@ -1122,69 +910,9 @@ $mensagem_whatsapp .=
 
                     </div>
 
-
-                    <!-- ==================================================
-                     PROGRESSO
-                =================================================== -->
-
-                    <div class="progress-bar">
-
-                        <div
-                            class="progress-fill"
-                            style="width: <?= $progresso ?>%;"></div>
-
-                    </div>
-
-
-                    <div class="progress-text">
-
-                        Progresso:
-                        <strong>
-                            <?= $progresso ?>%
-                        </strong>
-                        concluído
-
-                    </div>
-
-
                 </div>
-
             <?php endif; ?>
 
-
-            <!-- ==================================================
-             INFORMAÇÃO FINANCEIRA
-        =================================================== -->
-
-            <?php if ($orcamento_confirmado): ?>
-
-                <div class="financeiro-info">
-
-                    <div class="financeiro-info-icon">
-                        💰
-                    </div>
-
-                    <div>
-
-                        <strong>
-                            Orçamento integrado ao financeiro
-                        </strong>
-
-                        <p>
-                            As parcelas deste orçamento são
-                            consideradas automaticamente no
-                            controle financeiro.
-                        </p>
-
-                        <a href="financeiro.php">
-                            Ver financeiro →
-                        </a>
-
-                    </div>
-
-                </div>
-
-            <?php endif; ?>
 
 
             <!-- ==================================================
