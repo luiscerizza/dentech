@@ -582,7 +582,7 @@ unset($material);
 
                                             —
                                             Estoque:
-                                            <?= htmlspecialchars($material['quantidade_disponivel']) ?>
+                                            <?= htmlspecialchars($material['quantidade']) ?>
                                             <?= htmlspecialchars($material['unidade']) ?>
 
                                         </option>
