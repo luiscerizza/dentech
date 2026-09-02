@@ -323,7 +323,7 @@ $horaInicioGrade = !empty($horarios)
     ? (int)substr($horarios[0], 0, 2)
     : 8;
 
-$alturaHora = 59;
+$alturaHora = 70;
 $alturaEvento = 54;
 $eventosVisuais = [];
 
