@@ -735,18 +735,29 @@ foreach ($componentes as $grupo) {
                                     ($margemLateral * 2) .
                                     "px)";
 
+                                $percentualColuna =
+                                    ($coluna * 100) / $totalColunas;
+
+                                $pixelColuna =
+                                    $margemLateral +
+                                    (($coluna * $gap) / $totalColunas);
+
                                 $left =
                                     "calc(" .
-                                    $margemLateral .
-                                    "px + (" .
-                                    $coluna .
-                                    " * ((100% - " .
-                                    (($totalColunas - 1) * $gap) .
-                                    "px) / " .
-                                    $totalColunas .
-                                    " + " .
-                                    $gap .
-                                    "px))";
+                                    number_format(
+                                        $percentualColuna,
+                                        4,
+                                        '.',
+                                        ''
+                                    ) .
+                                    "% + " .
+                                    number_format(
+                                        $pixelColuna,
+                                        4,
+                                        '.',
+                                        ''
+                                    ) .
+                                    "px)";
 
                                 $top =
                                     number_format(

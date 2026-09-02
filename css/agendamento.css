@@ -336,7 +336,7 @@ body {
 .appointments-column {
   position: relative;
   min-height: 0;
-  
+
   background: #fff;
 }
 
@@ -356,14 +356,13 @@ body {
   position: absolute;
 
   left: 18px;
-  right: 18px;
+  right: auto;
 
   min-height: 54px;
 
   top: 4px;
 
   border-radius: 6px;
-
   border: 1px solid;
 
   padding: 8px 12px;
@@ -1033,12 +1032,6 @@ body {
   .time-slot {
     padding-right: 8px;
     font-size: 12px;
-  }
-
-  .appointment-event {
-    left: 7px;
-    right: 7px;
-    padding: 6px 8px;
   }
 
   .event-actions {
