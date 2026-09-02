@@ -821,15 +821,6 @@ function statusParcelaClasse($status): string
                     </div>
 
 
-                    <div class="progress-bar">
-
-                        <div
-                            class="progress-fill"
-                            style="width: <?= $progresso ?>%;"></div>
-
-                    </div>
-
-
                     <div class="progress-text">
 
                         Progresso:
