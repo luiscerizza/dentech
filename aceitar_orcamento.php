@@ -30,7 +30,9 @@ try {
     */
 
     $stmt = $pdo->prepare("
-        SELECT id, status
+        SELECT
+            id,
+            status
         FROM orcamentos
         WHERE id = ?
         LIMIT 1
@@ -45,52 +47,46 @@ try {
         throw new Exception('Orçamento não encontrado.');
     }
 
-    if ($orcamento['status'] === 'recusado') {
-        throw new Exception('Um orçamento recusado não pode ser aceito.');
-    }
-
-    if (!in_array($orcamento['status'], ['pendente', 'aceito'], true)) {
-        throw new Exception('Status do orçamento inválido.');
-    }
-
-
     /*
     |--------------------------------------------------------------------------
-    | 2. Buscar parcelas
+    | 2. Validar status
     |--------------------------------------------------------------------------
     */
 
-    $stmt = $pdo->prepare("
-        SELECT
-            id,
-            numero_parcela,
-            valor,
-            vencimento,
-            status
-        FROM parcelas
-        WHERE orcamento_id = ?
-        ORDER BY numero_parcela ASC
-        FOR UPDATE
-    ");
-
-    $stmt->execute([$orcamento_id]);
-
-    $parcelas = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    if (empty($parcelas)) {
+    if ($orcamento['status'] === 'recusado') {
         throw new Exception(
-            'Este orçamento não possui parcelas cadastradas.'
+            'Um orçamento recusado não pode ser aceito.'
         );
     }
 
+    if (!in_array(
+        $orcamento['status'],
+        ['pendente', 'aceito'],
+        true
+    )) {
+        throw new Exception(
+            'Status do orçamento inválido.'
+        );
+    }
 
     /*
     |--------------------------------------------------------------------------
-    | 3. Alterar orçamento para ACEITO
+    | 3. Confirmar orçamento
     |--------------------------------------------------------------------------
+    |
+    | IMPORTANTE:
+    |
+    | Confirmar um orçamento NÃO cria receita.
+    |
+    | O orçamento continua sendo uma proposta comercial.
+    |
+    | A geração de cobrança financeira acontecerá separadamente,
+    | quando realmente houver uma cobrança.
+    |
     */
 
     if ($orcamento['status'] === 'pendente') {
+
         $stmt = $pdo->prepare("
             UPDATE orcamentos
             SET status = 'aceito'
@@ -102,135 +98,31 @@ try {
 
         if ($stmt->rowCount() !== 1) {
             throw new Exception(
-                'Não foi possível aceitar o orçamento.'
+                'Não foi possível confirmar o orçamento.'
             );
         }
     }
 
-
     /*
     |--------------------------------------------------------------------------
-    | 4. Criar lançamentos financeiros
+    | 4. Registrar log
     |--------------------------------------------------------------------------
     */
 
-    $stmtLancamento = $pdo->prepare("
-        INSERT INTO lancamentos_financeiros (
-            tipo,
-            categoria,
-            descricao,
-            data,
-            forma_pagamento,
-            valor,
-            parcelas,
-            status,
-            observacoes,
-            orcamento_id,
-            parcela_id
-        )
-        VALUES (
-            'receita',
-            'Orçamento',
-            ?,
-            ?,
-            'A definir',
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            ?
-        )
-    ");
+    if (function_exists('registrarLog')) {
 
-
-    $totalParcelas = count($parcelas);
-
-    foreach ($parcelas as $parcela) {
-
-        /*
-        |--------------------------------------------------------------------------
-        | Evita duplicação
-        |--------------------------------------------------------------------------
-        */
-
-        $stmtExiste = $pdo->prepare("
-            SELECT id
-            FROM lancamentos_financeiros
-            WHERE parcela_id = ?
-            LIMIT 1
-        ");
-
-        $stmtExiste->execute([
-            $parcela['id']
-        ]);
-
-        if ($stmtExiste->fetch()) {
-            continue;
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Status financeiro
-        |--------------------------------------------------------------------------
-        */
-
-        $statusFinanceiro = $parcela['status'] === 'paga'
-            ? 'pago'
-            : 'pendente';
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Descrição
-        |--------------------------------------------------------------------------
-        */
-
-        $descricao = sprintf(
-            'Orçamento #%d - Parcela %d/%d',
+        registrarLog(
+            $pdo,
+            'Confirmou orçamento',
+            'orcamentos',
             $orcamento_id,
-            $parcela['numero_parcela'],
-            $totalParcelas
+            'Orçamento confirmado. Nenhum lançamento financeiro foi criado.'
         );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Observação
-        |--------------------------------------------------------------------------
-        */
-
-        $observacao = sprintf(
-            'Receita gerada pelo orçamento #%d. Parcela %d/%d.',
-            $orcamento_id,
-            $parcela['numero_parcela'],
-            $totalParcelas
-        );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Inserção
-        |--------------------------------------------------------------------------
-        */
-
-        $stmtLancamento->execute([
-            $descricao,
-            $parcela['vencimento'],
-            $parcela['valor'],
-            $totalParcelas,
-            $statusFinanceiro,
-            $observacao,
-            $orcamento_id,
-            $parcela['id']
-        ]);
     }
-
 
     /*
     |--------------------------------------------------------------------------
-    | 5. Confirmar tudo
+    | 5. Confirmar transação
     |--------------------------------------------------------------------------
     */
 
@@ -249,12 +141,16 @@ try {
     }
 
     error_log(
-        'ERRO AO ACEITAR ORÇAMENTO #' .
+        'ERRO AO CONFIRMAR ORÇAMENTO #' .
             $orcamento_id .
             ': ' .
             $e->getMessage()
     );
 
-    die('Não foi possível aceitar o orçamento. ' .
-        htmlspecialchars($e->getMessage()));
+    die('Não foi possível confirmar o orçamento. ' .
+        htmlspecialchars(
+            $e->getMessage(),
+            ENT_QUOTES,
+            'UTF-8'
+        ));
 }

@@ -1011,3 +1011,80 @@
     width: 100%;
   }
 }
+
+/* =========================================================
+   AJUSTES DA VISUALIZAÇÃO DO ORÇAMENTO
+   ========================================================= */
+
+/* Status confirmado */
+.status-badge.status-confirmado {
+  background: #d1fae5;
+  color: #166534;
+  border: 1px solid #a7f3d0;
+}
+
+/* Cabeçalho da seção de parcelas */
+.parcelas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 16px;
+}
+
+.parcelas-titulo {
+  margin: 0;
+  color: #17213a;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.parcelas-resumo {
+  color: #718096;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Aviso: condição comercial, não lançamento financeiro */
+.orcamento-aviso-financeiro {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  box-sizing: border-box;
+  border: 1px solid #dbe3ec;
+  border-radius: 9px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.orcamento-aviso-financeiro strong {
+  color: #334155;
+}
+
+.orcamento-aviso-financeiro .aviso-icone {
+  flex-shrink: 0;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+/* Ajuste para telas menores */
+@media (max-width: 600px) {
+  .parcelas-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .parcelas-resumo {
+    white-space: normal;
+  }
+
+  .orcamento-aviso-financeiro {
+    padding: 13px 14px;
+  }
+}

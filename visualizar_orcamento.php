@@ -8,19 +8,24 @@ exigirLogin();
 require_once 'conexao/conexao.php';
 
 
-// ============================================================
-// ID DO ORÇAMENTO
-// ============================================================
+/*
+|--------------------------------------------------------------------------
+| ID DO ORÇAMENTO
+|--------------------------------------------------------------------------
+*/
 
 $id = (int)($_GET['id'] ?? 0);
 
 if ($id <= 0) {
-    die("ID do orçamento não informado.");
+    die('ID do orçamento não informado.');
 }
 
-// ============================================================
-// BUSCAR ORÇAMENTO + PACIENTE
-// ============================================================
+
+/*
+|--------------------------------------------------------------------------
+| BUSCAR ORÇAMENTO + PACIENTE
+|--------------------------------------------------------------------------
+*/
 
 $stmt = $pdo->prepare("
     SELECT
@@ -41,13 +46,15 @@ $stmt->execute([$id]);
 $orc = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$orc) {
-    die("Orçamento não encontrado.");
+    die('Orçamento não encontrado.');
 }
 
 
-// ============================================================
-// ATUALIZAR PARCELAS ATRASADAS
-// ============================================================
+/*
+|--------------------------------------------------------------------------
+| ATUALIZAR PARCELAS ATRASADAS
+|--------------------------------------------------------------------------
+*/
 
 $pdo->prepare("
     UPDATE parcelas
@@ -59,12 +66,19 @@ $pdo->prepare("
     ->execute([$id]);
 
 
-// ============================================================
-// BUSCAR ITENS
-// ============================================================
+/*
+|--------------------------------------------------------------------------
+| BUSCAR ITENS
+|--------------------------------------------------------------------------
+*/
 
 $stmt_itens = $pdo->prepare("
-    SELECT *
+    SELECT
+        id,
+        orcamento_id,
+        descricao,
+        quantidade,
+        valor_unitario
     FROM orcamentos_itens
     WHERE orcamento_id = ?
     ORDER BY id ASC
@@ -75,12 +89,20 @@ $stmt_itens->execute([$id]);
 $itens = $stmt_itens->fetchAll(PDO::FETCH_ASSOC);
 
 
-// ============================================================
-// BUSCAR PARCELAS
-// ============================================================
+/*
+|--------------------------------------------------------------------------
+| BUSCAR PARCELAS
+|--------------------------------------------------------------------------
+*/
 
 $stmt_par = $pdo->prepare("
-    SELECT *
+    SELECT
+        id,
+        numero_parcela,
+        valor,
+        vencimento,
+        status,
+        data_pagamento
     FROM parcelas
     WHERE orcamento_id = ?
     ORDER BY numero_parcela ASC
@@ -90,15 +112,14 @@ $stmt_par->execute([$id]);
 
 $parcelas = $stmt_par->fetchAll(PDO::FETCH_ASSOC);
 
-// Quantidade total de parcelas da proposta.
-$qtd_total = count($parcelas);
 
+/*
+|--------------------------------------------------------------------------
+| TOTAL DO ORÇAMENTO
+|--------------------------------------------------------------------------
+*/
 
-// ============================================================
-// CÁLCULO DO TOTAL
-// ============================================================
-
-$total_itens = 0;
+$total_itens = 0.0;
 
 foreach ($itens as $item) {
 
@@ -109,15 +130,35 @@ foreach ($itens as $item) {
 }
 
 
-// ============================================================
-// STATUS DO ORÇAMENTO
-// ============================================================
+/*
+|--------------------------------------------------------------------------
+| CONTROLE DAS PARCELAS
+|--------------------------------------------------------------------------
+*/
+
+$qtd_total = count($parcelas);
+
+$qtd_pagas = 0;
+
+foreach ($parcelas as $parcela) {
+
+    if ($parcela['status'] === 'paga') {
+        $qtd_pagas++;
+    }
+}
+
+$progresso = $qtd_total > 0
+    ? round(($qtd_pagas / $qtd_total) * 100)
+    : 0;
+
+
+/*
+|--------------------------------------------------------------------------
+| STATUS DO ORÇAMENTO
+|--------------------------------------------------------------------------
+*/
 
 $status_orcamento = $orc['status'] ?? 'pendente';
-
-
-// Alguns projetos usam "confirmado" e outros "aceito".
-// Consideramos ambos como orçamento confirmado.
 
 $orcamento_confirmado = in_array(
     $status_orcamento,
@@ -125,14 +166,18 @@ $orcamento_confirmado = in_array(
     true
 );
 
-$orcamento_recusado = $status_orcamento === 'recusado';
+$orcamento_recusado =
+    $status_orcamento === 'recusado';
 
-$orcamento_pendente = $status_orcamento === 'pendente';
+$orcamento_pendente =
+    $status_orcamento === 'pendente';
 
 
-// ============================================================
-// TEXTO DO STATUS
-// ============================================================
+/*
+|--------------------------------------------------------------------------
+| TEXTO DO STATUS
+|--------------------------------------------------------------------------
+*/
 
 $status_texto = match ($status_orcamento) {
 
@@ -148,9 +193,11 @@ $status_texto = match ($status_orcamento) {
 };
 
 
-// ============================================================
-// COR DO STATUS
-// ============================================================
+/*
+|--------------------------------------------------------------------------
+| CLASSE DO STATUS
+|--------------------------------------------------------------------------
+*/
 
 $status_classe = match ($status_orcamento) {
 
@@ -165,135 +212,69 @@ $status_classe = match ($status_orcamento) {
     => 'status-pendente'
 };
 
-?>
 
+/*
+|--------------------------------------------------------------------------
+| FUNÇÕES
+|--------------------------------------------------------------------------
+*/
 
-<?php
-// ============================================================
-// COMPARTILHAMENTO DO ORÇAMENTO
-// ============================================================
-
-$telefone_cliente = preg_replace(
-    '/\D+/',
-    '',
-    (string)($orc['telefone'] ?? '')
-);
-
-$mensagem_whatsapp =
-    '🦷 *Dentech | Orçamento Odontológico*' .
-    "\n\n";
-
-$mensagem_whatsapp .=
-    'Olá, *' .
-    ($orc['paciente'] ?? '') .
-    '*! Tudo bem?' .
-    "\n\n";
-
-$mensagem_whatsapp .=
-    'Preparamos seu orçamento com os procedimentos/serviços abaixo:' .
-    "\n\n";
-
-foreach ($itens as $item) {
-
-    $descricaoItem = trim(
-        (string)($item['descricao'] ?? '')
-    );
-
-    $quantidadeItem = (float)(
-        $item['quantidade'] ?? 1
-    );
-
-    $valorUnitarioItem = (float)(
-        $item['valor_unitario'] ?? 0
-    );
-
-    $subtotalItem =
-        $quantidadeItem *
-        $valorUnitarioItem;
-
-    $mensagem_whatsapp .=
-        '• *' .
-        $descricaoItem .
-        '*' .
-        "\n";
-
-    $mensagem_whatsapp .=
-        '  Quantidade: ' .
-        rtrim(
-            rtrim(
-                number_format(
-                    $quantidadeItem,
-                    2,
-                    ',',
-                    '.'
-                ),
-                '0'
-            ),
-            ','
-        ) .
-        "\n";
-
-    $mensagem_whatsapp .=
-        '  Valor: R$ ' .
-        number_format(
-            $valorUnitarioItem,
-            2,
-            ',',
-            '.'
-        ) .
-        "\n";
-
-    $mensagem_whatsapp .=
-        '  Subtotal: *R$ ' .
-        number_format(
-            $subtotalItem,
-            2,
-            ',',
-            '.'
-        ) .
-        '*' .
-        "\n\n";
-}
-
-$mensagem_whatsapp .=
-    '💰 *Total do orçamento: R$ ' .
-    number_format(
-        $total_itens,
+function moedaBR($valor): string
+{
+    return 'R$ ' . number_format(
+        (float)$valor,
         2,
         ',',
         '.'
-    ) .
-    '*' .
-    "\n";
-
-$mensagem_whatsapp .=
-    '📅 *Validade:* ' .
-    date(
-        'd/m/Y',
-        strtotime($orc['validade'])
-    ) .
-    "\n";
-
-if (!empty(trim((string)($orc['observacoes'] ?? '')))) {
-
-    $mensagem_whatsapp .=
-        "\n📝 *Observações:*" .
-        "\n" .
-        trim(
-            (string)$orc['observacoes']
-        ) .
-        "\n";
+    );
 }
 
-$mensagem_whatsapp .=
-    "\nCaso tenha alguma dúvida sobre os valores ou procedimentos, estamos à disposição para conversar." .
-    "\n\n" .
-    "Atenciosamente,\n" .
-    "*Dentech*";
+function dataBR($data): string
+{
+    if (empty($data)) {
+        return '—';
+    }
+
+    $timestamp = strtotime($data);
+
+    return $timestamp
+        ? date('d/m/Y', $timestamp)
+        : '—';
+}
+
+function statusParcelaTexto($status): string
+{
+    return match ($status) {
+
+        'paga'
+        => 'Paga',
+
+        'atrasada'
+        => 'Atrasada',
+
+        default
+        => 'Pendente'
+    };
+}
+
+function statusParcelaClasse($status): string
+{
+    return match ($status) {
+
+        'paga'
+        => 'parcela-paga',
+
+        'atrasada'
+        => 'parcela-atrasada',
+
+        default
+        => 'parcela-pendente'
+    };
+}
 
 ?>
-
 <!DOCTYPE html>
+
 <html lang="pt-BR">
 
 <head>
@@ -308,35 +289,37 @@ $mensagem_whatsapp .=
         Orçamento #<?= $id ?> - Dentech
     </title>
 
-    <link rel="stylesheet" href="css/global.css">
-    <link rel="stylesheet" href="css/variables.css">
-    <link rel="stylesheet" href="css/layout.css">
-    <link rel="stylesheet" href="css/navbar.css">
-    <link rel="stylesheet" href="css/vis_orcamento.css">
+    <link
+        rel="stylesheet"
+        href="css/global.css">
+
+    <link
+        rel="stylesheet"
+        href="css/variables.css">
+
+    <link
+        rel="stylesheet"
+        href="css/layout.css">
+
+    <link
+        rel="stylesheet"
+        href="css/navbar.css">
+
+    <link
+        rel="stylesheet"
+        href="css/vis_orcamento.css">
 
     <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
-    <link rel="icon" type="image/png" href="img/icon.PNG">
-
-
-    <style>
-        .btn-whatsapp {
-            border: 1px solid #86efac;
-            background: #fff;
-            color: #15803d;
-            text-decoration: none;
-        }
-
-        .btn-whatsapp:hover {
-            border-color: #4ade80;
-            background: #f0fdf4;
-            color: #166534;
-        }
-    </style>
+    <link
+        rel="icon"
+        type="image/png"
+        href="img/icon.PNG">
 
 </head>
+
 
 <body>
 
@@ -348,19 +331,20 @@ $mensagem_whatsapp .=
         <div class="orc-container">
 
 
-            <!-- ==================================================
+            <!-- =====================================================
              CABEÇALHO
-        =================================================== -->
+        ====================================================== -->
 
             <div class="header-actions">
 
                 <div>
 
                     <h1>
+
                         Orçamento #<?= $id ?>
 
                         <span
-                            class="status-badge <?= $status_classe ?>">
+                            class="status-badge <?= htmlspecialchars($status_classe) ?>">
                             <?= htmlspecialchars($status_texto) ?>
                         </span>
 
@@ -369,14 +353,7 @@ $mensagem_whatsapp .=
                 </div>
 
 
-                <!-- ==================================================
-                 BOTÕES
-            =================================================== -->
-
                 <div class="btn-group">
-
-
-                    <!-- VOLTAR -->
 
                     <a
                         href="orcamento.php"
@@ -384,8 +361,6 @@ $mensagem_whatsapp .=
                         ← Voltar
                     </a>
 
-
-                    <!-- PDF -->
 
                     <a
                         href="gerar_orcamento_pdf.php?id=<?= $id ?>"
@@ -395,32 +370,7 @@ $mensagem_whatsapp .=
                     </a>
 
 
-
-                    <button
-                        type="button"
-                        class="btn btn-outline"
-                        onclick="window.print()">
-                        🖨️ Imprimir
-                    </button>
-
-                    <?php if (!empty($telefone_cliente)): ?>
-
-                        <a
-                            href="#"
-                            class="btn btn-whatsapp"
-                            id="btnEnviarWhatsApp"
-                            data-telefone="<?= htmlspecialchars($telefone_cliente, ENT_QUOTES) ?>"
-                            data-mensagem="<?= htmlspecialchars($mensagem_whatsapp, ENT_QUOTES) ?>">
-                            <i class="fa-brands fa-whatsapp"></i>
-                            Enviar WhatsApp
-                        </a>
-
-                    <?php endif; ?>
-
                     <?php if ($orcamento_pendente): ?>
-
-
-                        <!-- EDITAR -->
 
                         <a
                             href="editar_orcamento.php?id=<?= $id ?>"
@@ -429,13 +379,11 @@ $mensagem_whatsapp .=
                         </a>
 
 
-                        <!-- CONFIRMAR -->
-
                         <form
                             method="POST"
                             action="aceitar_orcamento.php"
                             class="form-acao"
-                            onsubmit="return confirm('Aceitar este orçamento?');">
+                            onsubmit="return confirm('Confirmar este orçamento? A confirmação não gera receita financeira.');">
 
                             <?= csrf_field() ?>
 
@@ -447,13 +395,11 @@ $mensagem_whatsapp .=
                             <button
                                 type="submit"
                                 class="btn btn-confirmar">
-                                ✓ Aceitar
+                                ✓ Confirmar
                             </button>
 
                         </form>
 
-
-                        <!-- RECUSAR -->
 
                         <form
                             method="POST"
@@ -478,27 +424,25 @@ $mensagem_whatsapp .=
 
                     <?php endif; ?>
 
-
                 </div>
 
             </div>
 
 
-            <!-- ==================================================
-             INFORMAÇÕES DO PACIENTE
-        =================================================== -->
+            <!-- =====================================================
+             DADOS DO PACIENTE
+        ====================================================== -->
 
             <h2>
                 👤 Dados do Paciente
             </h2>
 
+
             <div class="info-grid">
 
                 <div class="info-item">
 
-                    <label>
-                        Nome
-                    </label>
+                    <label>Nome</label>
 
                     <span>
                         <?= htmlspecialchars($orc['paciente']) ?>
@@ -509,17 +453,13 @@ $mensagem_whatsapp .=
 
                 <div class="info-item">
 
-                    <label>
-                        CPF
-                    </label>
+                    <label>CPF</label>
 
                     <span>
-
                         <?= !empty($orc['cpf'])
                             ? htmlspecialchars($orc['cpf'])
                             : '—'
                         ?>
-
                     </span>
 
                 </div>
@@ -527,17 +467,13 @@ $mensagem_whatsapp .=
 
                 <div class="info-item">
 
-                    <label>
-                        Telefone
-                    </label>
+                    <label>Telefone</label>
 
                     <span>
-
                         <?= !empty($orc['telefone'])
                             ? htmlspecialchars($orc['telefone'])
                             : '—'
                         ?>
-
                     </span>
 
                 </div>
@@ -545,17 +481,13 @@ $mensagem_whatsapp .=
 
                 <div class="info-item">
 
-                    <label>
-                        E-mail
-                    </label>
+                    <label>E-mail</label>
 
                     <span>
-
                         <?= !empty($orc['email'])
                             ? htmlspecialchars($orc['email'])
                             : '—'
                         ?>
-
                     </span>
 
                 </div>
@@ -563,17 +495,21 @@ $mensagem_whatsapp .=
 
                 <div class="info-item">
 
-                    <label>
-                        Validade
-                    </label>
+                    <label>Data de criação</label>
 
                     <span>
+                        <?= dataBR($orc['data_criacao']) ?>
+                    </span>
 
-                        <?= date(
-                            'd/m/Y',
-                            strtotime($orc['validade'])
-                        ) ?>
+                </div>
 
+
+                <div class="info-item">
+
+                    <label>Validade</label>
+
+                    <span>
+                        <?= dataBR($orc['validade']) ?>
                     </span>
 
                 </div>
@@ -581,9 +517,9 @@ $mensagem_whatsapp .=
             </div>
 
 
-            <!-- ==================================================
-             PROCEDIMENTOS
-        =================================================== -->
+            <!-- =====================================================
+             PROCEDIMENTOS / ITENS
+        ====================================================== -->
 
             <h2>
                 🦷 Procedimentos
@@ -649,35 +585,19 @@ $mensagem_whatsapp .=
                                     </td>
 
                                     <td class="text-center">
-
                                         <?= (int)$item['quantidade'] ?>
-
                                     </td>
 
                                     <td class="text-right">
-
-                                        R$
-                                        <?= number_format(
-                                            $item['valor_unitario'],
-                                            2,
-                                            ',',
-                                            '.'
+                                        <?= moedaBR(
+                                            $item['valor_unitario']
                                         ) ?>
-
                                     </td>
 
                                     <td class="text-right">
 
                                         <strong>
-
-                                            R$
-                                            <?= number_format(
-                                                $subtotal,
-                                                2,
-                                                ',',
-                                                '.'
-                                            ) ?>
-
+                                            <?= moedaBR($subtotal) ?>
                                         </strong>
 
                                     </td>
@@ -695,9 +615,9 @@ $mensagem_whatsapp .=
             <?php endif; ?>
 
 
-            <!-- ==================================================
+            <!-- =====================================================
              TOTAL
-        =================================================== -->
+        ====================================================== -->
 
             <div class="total-box">
 
@@ -706,23 +626,15 @@ $mensagem_whatsapp .=
                 </div>
 
                 <div class="total-value">
-
-                    R$
-                    <?= number_format(
-                        $total_itens,
-                        2,
-                        ',',
-                        '.'
-                    ) ?>
-
+                    <?= moedaBR($total_itens) ?>
                 </div>
 
             </div>
 
 
-            <!-- ==================================================
+            <!-- =====================================================
              OBSERVAÇÕES
-        =================================================== -->
+        ====================================================== -->
 
             <?php if (!empty($orc['observacoes'])): ?>
 
@@ -743,46 +655,87 @@ $mensagem_whatsapp .=
             <?php endif; ?>
 
 
-            <!-- ==================================================
-             PARCELAS
-        =================================================== -->
+            <!-- =====================================================
+             CONDIÇÕES DE PAGAMENTO
+        ====================================================== -->
 
-            <?php if (!empty($parcelas)): ?>
+            <section class="parcelas-section">
 
-                <div class="parcelas-section">
+                <div class="parcelas-header">
 
+                    <div class="parcelas-titulo">
 
-                    <div class="parcelas-header">
+                        <div>
 
-                        <h3>
-                            💳 Condições de Pagamento
-                        </h3>
+                            <h3>
+                                💳 Condições de Pagamento
+                            </h3>
 
-                        <div class="orcamento-aviso-financeiro">
-                            <strong>ℹ️ Importante sobre este orçamento</strong>
-                            <p>
-                                Os valores e condições apresentados neste documento são uma
-                                proposta comercial e não representam uma receita financeira
-                                registrada.
-                            </p>
-                            <p>
-                                O valor final poderá ser alterado após a avaliação e definição
-                                dos procedimentos realizados.
-                            </p>
+                            <span class="parcelas-resumo">
+
+                                <?php if ($qtd_total > 0): ?>
+
+                                    <?= $qtd_total ?>
+                                    <?= $qtd_total === 1 ? 'parcela' : 'parcelas' ?>
+
+                                    ·
+
+                                    <?= moedaBR(
+                                        array_sum(
+                                            array_column(
+                                                $parcelas,
+                                                'valor'
+                                            )
+                                        )
+                                    ) ?>
+
+                                <?php else: ?>
+
+                                    Nenhuma condição definida
+
+                                <?php endif; ?>
+
+                            </span>
+
                         </div>
-
-                        <span>
-
-                            <?= (int)$qtd_total ?> parcela<?= $qtd_total != 1 ? 's' : '' ?> proposta<?= $qtd_total != 1 ? 's' : '' ?>
-
-                        </span>
 
                     </div>
 
 
+                    <div class="orcamento-aviso-financeiro">
+
+                        <strong>
+                            <i class="fa-solid fa-circle-info"></i>
+                            Importante sobre este orçamento
+                        </strong>
+
+                        <p>
+                            Os valores e condições apresentados neste documento
+                            são uma proposta comercial e não representam uma
+                            receita financeira registrada.
+                        </p>
+
+                        <p>
+                            O valor final poderá ser alterado após a avaliação
+                            e a definição dos procedimentos efetivamente
+                            realizados.
+                        </p>
+
+                        <p>
+                            A confirmação do orçamento não gera automaticamente
+                            uma receita nem coloca este valor em "A receber".
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <?php if (!empty($parcelas)): ?>
+
                     <div class="table-wrapper">
 
-                        <table>
+                        <table class="tabela-parcelas">
 
                             <thead>
 
@@ -811,80 +764,30 @@ $mensagem_whatsapp .=
 
                             <tbody>
 
-                                <?php foreach ($parcelas as $p): ?>
-
-
-                                    <?php
-
-                                    switch ($p['status']) {
-
-                                        case 'paga':
-
-                                            $badge_class =
-                                                'parcela-paga';
-
-                                            $status_parcela =
-                                                'Paga';
-
-                                            break;
-
-
-                                        case 'atrasada':
-
-                                            $badge_class =
-                                                'parcela-atrasada';
-
-                                            $status_parcela =
-                                                'Atrasada';
-
-                                            break;
-
-
-                                        default:
-
-                                            $badge_class =
-                                                'parcela-pendente';
-
-                                            $status_parcela =
-                                                'Pendente';
-
-                                            break;
-                                    }
-
-                                    ?>
-
+                                <?php foreach ($parcelas as $parcela): ?>
 
                                     <tr>
 
                                         <td>
 
                                             <strong>
-                                                <?= (int)$p['numero_parcela'] ?>ª
+                                                <?= (int)$parcela['numero_parcela'] ?>ª
                                             </strong>
 
                                         </td>
 
 
                                         <td>
-
-                                            <?= date(
-                                                'd/m/Y',
-                                                strtotime(
-                                                    $p['vencimento']
-                                                )
+                                            <?= dataBR(
+                                                $parcela['vencimento']
                                             ) ?>
-
                                         </td>
 
 
                                         <td class="text-right">
 
-                                            R$
-                                            <?= number_format(
-                                                $p['valor'],
-                                                2,
-                                                ',',
-                                                '.'
+                                            <?= moedaBR(
+                                                $parcela['valor']
                                             ) ?>
 
                                         </td>
@@ -893,14 +796,21 @@ $mensagem_whatsapp .=
                                         <td class="text-center">
 
                                             <span
-                                                class="parcela-status <?= $badge_class ?>">
-                                                <?= $status_parcela ?>
+                                                class="parcela-status <?= htmlspecialchars(
+                                                                            statusParcelaClasse(
+                                                                                $parcela['status']
+                                                                            )
+                                                                        ) ?>">
+                                                <?= htmlspecialchars(
+                                                    statusParcelaTexto(
+                                                        $parcela['status']
+                                                    )
+                                                ) ?>
                                             </span>
 
                                         </td>
 
                                     </tr>
-
 
                                 <?php endforeach; ?>
 
@@ -910,14 +820,81 @@ $mensagem_whatsapp .=
 
                     </div>
 
+
+                    <div class="progress-bar">
+
+                        <div
+                            class="progress-fill"
+                            style="width: <?= $progresso ?>%;"></div>
+
+                    </div>
+
+
+                    <div class="progress-text">
+
+                        Progresso:
+
+                        <strong>
+                            <?= $progresso ?>%
+                        </strong>
+
+                        concluído
+
+                    </div>
+
+                <?php else: ?>
+
+                    <div class="sem-itens">
+
+                        Nenhuma condição de pagamento foi cadastrada
+                        para este orçamento.
+
+                    </div>
+
+                <?php endif; ?>
+
+            </section>
+
+
+            <!-- =====================================================
+             AVISO DE STATUS FINANCEIRO
+        ====================================================== -->
+
+            <?php if ($orcamento_confirmado): ?>
+
+                <div class="financeiro-integracao">
+
+                    <div class="financeiro-integracao-icon">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </div>
+
+                    <div class="financeiro-integracao-conteudo">
+
+                        <strong>
+                            Orçamento confirmado
+                        </strong>
+
+                        <p>
+                            A confirmação registra apenas a aprovação da
+                            proposta comercial. Nenhuma receita financeira
+                            é criada automaticamente.
+                        </p>
+
+                        <p>
+                            Quando houver uma cobrança efetiva, ela poderá
+                            ser registrada separadamente no financeiro.
+                        </p>
+
+                    </div>
+
                 </div>
+
             <?php endif; ?>
 
 
-
-            <!-- ==================================================
+            <!-- =====================================================
              RODAPÉ
-        =================================================== -->
+        ====================================================== -->
 
             <div class="footer-note">
 
@@ -935,52 +912,6 @@ $mensagem_whatsapp .=
         </div>
 
     </main>
-
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-
-            const btnWhatsApp =
-                document.getElementById('btnEnviarWhatsApp');
-
-            if (!btnWhatsApp) {
-                return;
-            }
-
-            btnWhatsApp.addEventListener('click', function(event) {
-
-                event.preventDefault();
-
-                const telefone =
-                    (this.dataset.telefone || '').replace(/\D/g, '');
-
-                const mensagem =
-                    this.dataset.mensagem || '';
-
-                if (!telefone) {
-                    alert('O paciente não possui telefone cadastrado.');
-                    return;
-                }
-
-                const numero = telefone.startsWith('55') ?
-                    telefone :
-                    '55' + telefone;
-
-                const url =
-                    'https://wa.me/' +
-                    numero +
-                    '?text=' +
-                    encodeURIComponent(mensagem);
-
-                window.open(
-                    url,
-                    '_blank',
-                    'noopener,noreferrer'
-                );
-            });
-
-        });
-    </script>
 
 </body>
 

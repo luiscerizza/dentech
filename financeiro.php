@@ -257,220 +257,21 @@ $lancamentos_manuais = $stmt_manual->fetchAll(PDO::FETCH_ASSOC);
 
 /*
 |--------------------------------------------------------------------------
-| BUSCAR PARCELAS DE ORÇAMENTOS ACEITOS
+| ORÇAMENTOS NÃO SÃO MOVIMENTAÇÕES FINANCEIRAS
 |--------------------------------------------------------------------------
 |
-| Aqui acontece a integração entre:
+| Um orçamento é uma proposta comercial. Mesmo depois de confirmado,
+| seu valor não entra em Receitas, A receber ou Fluxo de caixa.
 |
-| orcamentos
-|       ↓
-| parcelas
-|       ↓
-| financeiro
-|
-| Somente orçamentos com status "aceito" entram.
+| A cobrança financeira somente é criada quando existe um procedimento
+| realizado e sua cobrança/parcelamento é gerado.
 |
 |--------------------------------------------------------------------------
 */
 
-$where_orcamento = [
-    "LOWER(TRIM(o.status)) = 'aceito'"
-];
-
-$params_orcamento = [];
-
-if ($paciente_filtro > 0) {
-    $where_orcamento[] = 'o.paciente_id = :orc_paciente_id';
-    $params_orcamento[':orc_paciente_id'] = $paciente_filtro;
-}
-
-if ($status_filtro === 'pago') {
-    $where_orcamento[] = "LOWER(TRIM(p.status)) = 'paga'";
-} elseif ($status_filtro === 'pendente') {
-    $where_orcamento[] = "LOWER(TRIM(p.status)) = 'pendente'";
-} elseif ($status_filtro === 'atrasada') {
-    $where_orcamento[] = "(LOWER(TRIM(p.status)) = 'atrasada' OR (LOWER(TRIM(p.status)) = 'pendente' AND p.vencimento < CURDATE()))";
-}
-
 /*
 |--------------------------------------------------------------------------
-| DATA DA MOVIMENTAÇÃO DO ORÇAMENTO
-|--------------------------------------------------------------------------
-|
-| Se a parcela já foi paga:
-|   usa data_pagamento
-|
-| Se ainda não foi paga:
-|   usa vencimento
-|
-|--------------------------------------------------------------------------
-*/
-
-$data_movimentacao_sql = "
-    CASE
-        WHEN LOWER(TRIM(p.status)) = 'paga' AND p.data_pagamento IS NOT NULL
-            THEN p.data_pagamento
-        ELSE p.vencimento
-    END
-";
-
-/*
-|--------------------------------------------------------------------------
-| FILTRO DE DATA DO ORÇAMENTO
-|--------------------------------------------------------------------------
-*/
-
-if ($data_inicio !== null && $data_fim !== null) {
-
-    $where_orcamento[] = "
-        DATE($data_movimentacao_sql) BETWEEN :orc_data_inicio AND :orc_data_fim
-    ";
-
-    $params_orcamento[':orc_data_inicio'] = $data_inicio;
-    $params_orcamento[':orc_data_fim'] = $data_fim;
-}
-
-/*
-|--------------------------------------------------------------------------
-| TIPO
-|--------------------------------------------------------------------------
-|
-| Parcelas de orçamento sempre são RECEITAS.
-|
-|--------------------------------------------------------------------------
-*/
-
-if ($tipo_filtro === 'despesa') {
-
-    /*
-     * Se o usuário filtrou somente despesas,
-     * não precisamos buscar orçamento.
-     */
-    $where_orcamento[] = "1 = 0";
-}
-
-/*
-|--------------------------------------------------------------------------
-| SQL DOS ORÇAMENTOS
-|--------------------------------------------------------------------------
-*/
-
-$where_orcamento_sql = 'WHERE ' . implode(' AND ', $where_orcamento);
-
-$stmt_orcamentos = $pdo->prepare("
-    SELECT
-        p.id AS parcela_id,
-        p.orcamento_id,
-        p.numero_parcela,
-        p.valor,
-        (
-            SELECT COUNT(*)
-            FROM parcelas p2
-            WHERE p2.orcamento_id = p.orcamento_id
-        ) AS total_parcelas,
-        p.vencimento,
-        LOWER(TRIM(p.status)) AS status_parcela,
-        p.data_pagamento,
-
-        o.id AS numero_orcamento,
-        LOWER(TRIM(o.status)) AS status_orcamento,
-
-        COALESCE(pr.paciente, 'Paciente não encontrado') AS paciente
-
-    FROM parcelas p
-
-    INNER JOIN orcamentos o
-        ON o.id = p.orcamento_id
-
-    LEFT JOIN prontuarios pr
-        ON pr.id = o.paciente_id
-
-    $where_orcamento_sql
-
-    ORDER BY
-        $data_movimentacao_sql DESC,
-        p.id DESC
-");
-
-$stmt_orcamentos->execute($params_orcamento);
-
-$parcelas_orcamentos = $stmt_orcamentos->fetchAll(PDO::FETCH_ASSOC);
-
-/*
-|--------------------------------------------------------------------------
-| TRANSFORMAR PARCELAS EM MOVIMENTAÇÕES FINANCEIRAS
-|--------------------------------------------------------------------------
-*/
-
-$lancamentos_orcamentos = [];
-
-foreach ($parcelas_orcamentos as $parcela) {
-
-    $status_parcela = strtolower(
-        trim((string)($parcela['status_parcela'] ?? ''))
-    );
-
-    if ($status_parcela === 'paga') {
-
-        $data_movimentacao = $parcela['data_pagamento'];
-        $status_financeiro = 'pago';
-    } elseif ($status_parcela === 'atrasada') {
-
-        $data_movimentacao = $parcela['vencimento'];
-        $status_financeiro = 'atrasada';
-    } else {
-
-        $data_movimentacao = $parcela['vencimento'];
-        $status_financeiro = 'pendente';
-    }
-
-    $numero_parcela = (int)$parcela['numero_parcela'];
-    $total_parcelas = max(1, (int)$parcela['total_parcelas']);
-
-    $descricao = sprintf(
-        'Orçamento #%d - %s - Parcela %d/%d',
-        (int)$parcela['numero_orcamento'],
-        $parcela['paciente'],
-        $numero_parcela,
-        $total_parcelas
-    );
-
-    $lancamentos_orcamentos[] = [
-        'id' => null,
-
-        'tipo' => 'receita',
-
-        'categoria' => 'Orçamento odontológico',
-
-        'descricao' => $descricao,
-
-        'data' => $data_movimentacao,
-
-        'forma_pagamento' => 'Orçamento',
-
-        'valor' => (float)$parcela['valor'],
-
-        'parcelas' => $total_parcelas,
-
-        'status' => $status_financeiro,
-
-        'observacoes' => null,
-
-        'orcamento_id' => (int)$parcela['orcamento_id'],
-
-        'origem' => 'orcamento',
-
-        'parcela_id' => (int)$parcela['parcela_id'],
-
-        'numero_orcamento' => (int)$parcela['numero_orcamento'],
-
-        'paciente' => $parcela['paciente']
-    ];
-}
-
-/*
-|--------------------------------------------------------------------------
-| BUSCAR PARCELAS DE PROCEDIMENTOS
+| BUSCAR COBRANÇAS DE PROCEDIMENTOS
 |--------------------------------------------------------------------------
 |
 | Procedimentos são cobrados diretamente por `parcelas`, sem depender
@@ -592,7 +393,7 @@ $parcelas_procedimentos =
 
 /*
 |--------------------------------------------------------------------------
-| TRANSFORMAR PARCELAS DE PROCEDIMENTOS
+| TRANSFORMAR COBRANÇAS DE PROCEDIMENTOS
 |--------------------------------------------------------------------------
 */
 
@@ -682,17 +483,6 @@ foreach ($lancamentos_manuais as $lancamento) {
     $lancamento['procedimento_id'] = null;
 
     $lancamentos[] = $lancamento;
-}
-
-/*
-|--------------------------------------------------------------------------
-| ADICIONAR ORÇAMENTOS AO FINANCEIRO
-|--------------------------------------------------------------------------
-*/
-
-foreach ($lancamentos_orcamentos as $lancamento_orcamento) {
-
-    $lancamentos[] = $lancamento_orcamento;
 }
 
 /*
@@ -1513,7 +1303,7 @@ $pacientes = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
                         </h2>
 
                         <p>
-                            Lançamentos, parcelas de orçamentos e cobranças de procedimentos.
+                            Lançamentos financeiros e cobranças de procedimentos.
                         </p>
 
                     </div>
