@@ -467,21 +467,15 @@ $pacientes = $pdo->query("
         Editar Orçamento #<?= $id_orc ?> - Dentech
     </title>
 
-    <link
-        rel="stylesheet"
-        href="css/navbar.css"
-    >
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/new_orcamento.css">
 
     <link
         rel="stylesheet"
-        href="css/new_orcamento.css"
-    >
-
-    <link
-        rel="icon"
-        type="image/png"
-        href="img/icon.PNG"
-    >
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
 
 </head>
