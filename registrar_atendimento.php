@@ -1,13 +1,27 @@
 <?php
+
 require_once 'config/auth.php';
 require_once 'config/csrf.php';
+
 exigirLogin();
+
 require_once 'conexao/conexao.php';
 
 $metodo = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-// A página é aberta por GET a partir da agenda.
-// O formulário desta própria página é enviado por POST para confirmar o atendimento.
+/*
+|--------------------------------------------------------------------------
+| Identificar agendamento
+|--------------------------------------------------------------------------
+|
+| GET:
+|   A página é aberta pela agenda.
+|
+| POST:
+|   O formulário desta página é enviado para confirmar o atendimento.
+|
+*/
+
 $agendamento_id = filter_input(
     $metodo === 'POST' ? INPUT_POST : INPUT_GET,
     'id',
@@ -22,9 +36,14 @@ if ($metodo === 'POST') {
     validar_csrf();
 }
 
-// Buscar agendamento com dados do paciente
+/*
+|--------------------------------------------------------------------------
+| Buscar agendamento
+|--------------------------------------------------------------------------
+*/
+
 $stmt = $pdo->prepare("
-    SELECT 
+    SELECT
         a.id,
         a.paciente_id,
         a.procedimento,
@@ -33,10 +52,13 @@ $stmt = $pdo->prepare("
         a.plano_item_id,
         COALESCE(p.paciente, a.paciente_nome) AS nome_paciente
     FROM agendamentos a
-    LEFT JOIN prontuarios p ON a.paciente_id = p.id
+    LEFT JOIN prontuarios p
+        ON a.paciente_id = p.id
     WHERE a.id = ?
 ");
+
 $stmt->execute([$agendamento_id]);
+
 $agendamento = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$agendamento) {
@@ -47,36 +69,78 @@ if (!$agendamento['paciente_id']) {
     die("Não é possível registrar atendimento sem paciente vinculado.");
 }
 
+/*
+|--------------------------------------------------------------------------
+| Evitar duplicação
+|--------------------------------------------------------------------------
+|
+| Um agendamento concluído já possui atendimento registrado.
+|
+*/
+
 if (($agendamento['status'] ?? '') === 'concluido') {
-    header("Location: agendamentos.php?data=" . urlencode($agendamento['data']) . "&msg=atendimento_ja_confirmado");
+    header(
+        "Location: agendamentos.php?data=" .
+            urlencode($agendamento['data']) .
+            "&msg=atendimento_ja_confirmado"
+    );
     exit;
 }
 
-// Buscar todos os materiais (para o select)
-$stmt = $pdo->query("SELECT id, nome, unidade FROM estoque ORDER BY nome");
-$materiais = $stmt->fetchAll();
+/*
+|--------------------------------------------------------------------------
+| Buscar materiais disponíveis
+|--------------------------------------------------------------------------
+|
+| O valor_item será utilizado para registrar o custo do material no
+| procedimento_materiais e calcular procedimentos.valor_materiais.
+|
+*/
+
+$stmt = $pdo->query("
+    SELECT
+        id,
+        nome,
+        unidade,
+        valor_item
+    FROM estoque
+    ORDER BY nome
+");
+
+$materiais = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $message = '';
 
+/*
+|--------------------------------------------------------------------------
+| Confirmar atendimento
+|--------------------------------------------------------------------------
+*/
+
 if ($metodo === 'POST') {
+
     try {
+
         $pdo->beginTransaction();
 
-        // 1. Criar procedimento
+        /*
+        |--------------------------------------------------------------------------
+        | 1. Dados enviados pelo formulário
+        |--------------------------------------------------------------------------
+        */
+
         $descricao = trim($_POST['descricao'] ?? '');
         $medicamentos = trim($_POST['medicamentos'] ?? '');
 
         /*
         |--------------------------------------------------------------------------
-        | 1. Criar procedimento
+        | 2. Criar procedimento
         |--------------------------------------------------------------------------
         |
-        | Mantém o paciente e a data do atendimento e registra a origem:
-        | - agendamento_id para o atendimento que gerou o procedimento;
-        | - plano_item_id quando o agendamento veio de uma etapa do plano.
-        |
-        | Os dois campos são opcionais no banco, então atendimentos antigos
-        | continuam compatíveis.
+        | O procedimento fica vinculado:
+        | - ao paciente;
+        | - ao agendamento;
+        | - à etapa do plano, quando existir.
         |
         */
 
@@ -107,41 +171,189 @@ if ($metodo === 'POST') {
 
         $procedimento_id = (int)$pdo->lastInsertId();
 
-        // 2. Atualizar estoque (se houver itens selecionados)
-        if (!empty($_POST['materiais'])) {
+        if ($procedimento_id <= 0) {
+            throw new Exception(
+                "Não foi possível criar o procedimento."
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 3. Registrar materiais utilizados
+        |--------------------------------------------------------------------------
+        |
+        | Para cada material:
+        |
+        | 1. trava o registro do estoque;
+        | 2. verifica a quantidade disponível;
+        | 3. obtém o valor unitário;
+        | 4. desconta do estoque;
+        | 5. cria o vínculo em procedimento_materiais;
+        | 6. soma o custo dos materiais.
+        |
+        */
+
+        $valor_materiais = 0.0;
+
+        if (!empty($_POST['materiais']) && is_array($_POST['materiais'])) {
+
+            $stmtEstoque = $pdo->prepare("
+                SELECT
+                    id,
+                    nome,
+                    quantidade,
+                    unidade,
+                    valor_item
+                FROM estoque
+                WHERE id = ?
+                LIMIT 1
+                FOR UPDATE
+            ");
+
+            $stmtAtualizarEstoque = $pdo->prepare("
+                UPDATE estoque
+                SET quantidade = quantidade - ?
+                WHERE id = ?
+            ");
+
+            $stmtMaterial = $pdo->prepare("
+                INSERT INTO procedimento_materiais (
+                    procedimento_id,
+                    estoque_id,
+                    quantidade,
+                    valor_unitario,
+                    valor_total
+                )
+                VALUES (?, ?, ?, ?, ?)
+            ");
+
             foreach ($_POST['materiais'] as $material_id => $qtd) {
-                $qtd = floatval($qtd);
-                if ($qtd > 0) {
-                    $stmt = $pdo->prepare("SELECT quantidade FROM estoque WHERE id = ?");
-                    $stmt->execute([$material_id]);
-                    $estoque_atual = $stmt->fetchColumn();
 
-                    if ($estoque_atual === false) {
-                        throw new Exception("Material não encontrado.");
-                    }
+                /*
+                |--------------------------------------------------------------------------
+                | Validar ID do material
+                |--------------------------------------------------------------------------
+                */
 
-                    if ($estoque_atual < $qtd) {
-                        $stmtMaterial = $pdo->prepare("SELECT nome FROM estoque WHERE id = ?");
-                        $stmtMaterial->execute([$material_id]);
-                        $nomeMaterial = $stmtMaterial->fetchColumn() ?: ('ID ' . $material_id);
-                        throw new Exception("Estoque insuficiente para o material: " . $nomeMaterial);
-                    }
+                $material_id = filter_var(
+                    $material_id,
+                    FILTER_VALIDATE_INT
+                );
 
-                    $stmt = $pdo->prepare("UPDATE estoque SET quantidade = quantidade - ? WHERE id = ?");
-                    $stmt->execute([$qtd, $material_id]);
+                if (!$material_id || $material_id < 1) {
+                    throw new Exception(
+                        "Material inválido."
+                    );
                 }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Validar quantidade
+                |--------------------------------------------------------------------------
+                */
+
+                $qtd = (float)$qtd;
+
+                if ($qtd <= 0) {
+                    continue;
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Buscar estoque com bloqueio
+                |--------------------------------------------------------------------------
+                */
+
+                $stmtEstoque->execute([$material_id]);
+
+                $estoque = $stmtEstoque->fetch(PDO::FETCH_ASSOC);
+
+                if (!$estoque) {
+                    throw new Exception(
+                        "Material não encontrado no estoque."
+                    );
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Verificar estoque disponível
+                |--------------------------------------------------------------------------
+                */
+
+                $quantidade_disponivel = (float)$estoque['quantidade'];
+
+                if ($quantidade_disponivel < $qtd) {
+                    throw new Exception(
+                        "Estoque insuficiente para o material: " .
+                            $estoque['nome'] .
+                            ". Disponível: " .
+                            $quantidade_disponivel .
+                            " " .
+                            $estoque['unidade'] .
+                            "."
+                    );
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Calcular custo
+                |--------------------------------------------------------------------------
+                */
+
+                $valor_unitario = (float)($estoque['valor_item'] ?? 0);
+
+                $valor_total = $valor_unitario * $qtd;
+
+                $valor_materiais += $valor_total;
+
+                /*
+                |--------------------------------------------------------------------------
+                | Descontar estoque
+                |--------------------------------------------------------------------------
+                */
+
+                $stmtAtualizarEstoque->execute([
+                    $qtd,
+                    $material_id
+                ]);
+
+                /*
+                |--------------------------------------------------------------------------
+                | Registrar material utilizado no procedimento
+                |--------------------------------------------------------------------------
+                */
+
+                $stmtMaterial->execute([
+                    $procedimento_id,
+                    $material_id,
+                    $qtd,
+                    $valor_unitario,
+                    $valor_total
+                ]);
             }
         }
 
         /*
         |--------------------------------------------------------------------------
-        | 3. Atualizar a etapa do plano, quando houver
+        | 4. Atualizar custo dos materiais no procedimento
         |--------------------------------------------------------------------------
-        |
-        | O atendimento concluído encerra a etapa clínica. Não criamos um
-        | procedimento "do nada": ele já foi criado acima e está ligado
-        | à etapa e ao agendamento.
-        |
+        */
+
+        $stmt = $pdo->prepare("
+            UPDATE procedimentos
+            SET valor_materiais = ?
+            WHERE id = ?
+        ");
+
+        $stmt->execute([
+            $valor_materiais,
+            $procedimento_id
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | 5. Atualizar etapa do plano, quando houver
+        |--------------------------------------------------------------------------
         */
 
         if (!empty($agendamento['plano_item_id'])) {
@@ -157,10 +369,11 @@ if ($metodo === 'POST') {
             ]);
 
             /*
-            | Atualizar o plano somente com base nas etapas existentes:
-            | - concluído se todas as etapas estão concluídas/canceladas;
-            | - em andamento se ainda houver etapas não finalizadas.
+            |--------------------------------------------------------------------------
+            | Verificar situação geral do plano
+            |--------------------------------------------------------------------------
             */
+
             $stmt = $pdo->prepare("
                 SELECT
                     pti.plano_id,
@@ -217,12 +430,13 @@ if ($metodo === 'POST') {
 
         /*
         |--------------------------------------------------------------------------
-        | 4. Preservar o agendamento como histórico
+        | 6. Preservar o agendamento como histórico
         |--------------------------------------------------------------------------
         |
-        | Não apagamos mais o registro. Como procedimentos.agendamento_id
-        | aponta para este registro, excluí-lo perderia a referência histórica.
-        | O agendamento passa a representar um atendimento realizado.
+        | Não apagamos o agendamento.
+        |
+        | O procedimento possui agendamento_id e, portanto, precisamos
+        | manter o registro para preservar o histórico do atendimento.
         |
         */
 
@@ -236,11 +450,29 @@ if ($metodo === 'POST') {
             $agendamento_id
         ]);
 
+        /*
+        |--------------------------------------------------------------------------
+        | 7. Confirmar transação
+        |--------------------------------------------------------------------------
+        */
+
         $pdo->commit();
 
-        header("Location: agendamentos.php?data=" . urlencode($agendamento['data']) . "&msg=atendimento_confirmado");
+        /*
+        |--------------------------------------------------------------------------
+        | 8. Redirecionar
+        |--------------------------------------------------------------------------
+        */
+
+        header(
+            "Location: agendamentos.php?data=" .
+                urlencode($agendamento['data']) .
+                "&msg=atendimento_confirmado"
+        );
+
         exit;
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
+
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
@@ -248,106 +480,203 @@ if ($metodo === 'POST') {
         $message = "Erro: " . $e->getMessage();
     }
 }
+
 ?>
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
     <title>Registrar Atendimento - Dentech</title>
-    <<link
+
+    <link
         rel="stylesheet"
         href="css/global.css">
 
-        <link
-            rel="stylesheet"
-            href="css/variables.css">
+    <link
+        rel="stylesheet"
+        href="css/variables.css">
 
-        <link
-            rel="stylesheet"
-            href="css/layout.css">
+    <link
+        rel="stylesheet"
+        href="css/layout.css">
 
-        <link
-            rel="stylesheet"
-            href="css/registrar_atendimento.css">
+    <link
+        rel="stylesheet"
+        href="css/registrar_atendimento.css">
 
-        <link
-            rel="stylesheet"
-            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
-        <link
-            rel="icon"
-            type="image/png"
-            href="img/icon.PNG">
+    <link
+        rel="icon"
+        type="image/png"
+        href="img/icon.PNG">
+
 </head>
 
 <body>
+
     <?php include 'navbar.php'; ?>
 
     <div class="container">
-        <a href="agendamentos.php?data=<?= urlencode($agendamento['data']) ?>" class="btn-back">← Voltar</a>
+
+        <a
+            href="agendamentos.php?data=<?= urlencode($agendamento['data']) ?>"
+            class="btn-back">
+            ← Voltar
+        </a>
 
         <h1>Registrar Atendimento</h1>
 
         <?php if ($message): ?>
-            <div class="erro"><?= htmlspecialchars($message) ?></div>
+
+            <div class="erro">
+                <?= htmlspecialchars($message) ?>
+            </div>
+
         <?php endif; ?>
 
         <div class="card">
+
             <div class="info-paciente">
-                <p><strong>Paciente:</strong> <?= htmlspecialchars($agendamento['nome_paciente']) ?></p>
-                <p><strong>Procedimento:</strong> <?= htmlspecialchars($agendamento['procedimento']) ?></p>
-                <p><strong>Data:</strong> <?= date('d/m/Y', strtotime($agendamento['data'])) ?></p>
+
+                <p>
+                    <strong>Paciente:</strong>
+                    <?= htmlspecialchars($agendamento['nome_paciente']) ?>
+                </p>
+
+                <p>
+                    <strong>Procedimento:</strong>
+                    <?= htmlspecialchars($agendamento['procedimento']) ?>
+                </p>
+
+                <p>
+                    <strong>Data:</strong>
+                    <?= date(
+                        'd/m/Y',
+                        strtotime($agendamento['data'])
+                    ) ?>
+                </p>
+
             </div>
 
-            <form method="POST" action="registrar_atendimento.php?id=<?= (int)$agendamento['id'] ?>" id="formAtendimento">
+            <form
+                method="POST"
+                action="registrar_atendimento.php?id=<?= (int)$agendamento['id'] ?>"
+                id="formAtendimento">
 
                 <?= csrf_field() ?>
-                <input type="hidden" name="id" value="<?= (int)$agendamento['id'] ?>">
 
-                <!-- Descrição do procedimento -->
+                <input
+                    type="hidden"
+                    name="id"
+                    value="<?= (int)$agendamento['id'] ?>">
+
+                <!-- =====================================================
+                     DESCRIÇÃO
+                ====================================================== -->
+
                 <div class="form-group">
-                    <label for="descricao">Descrição do procedimento (opcional)</label>
-                    <textarea name="descricao" id="descricao"
+
+                    <label for="descricao">
+                        Descrição do procedimento (opcional)
+                    </label>
+
+                    <textarea
+                        name="descricao"
+                        id="descricao"
                         placeholder="Ex: Procedimento realizado com sucesso. Paciente orientado quanto aos cuidados pós-operatórios."></textarea>
+
                 </div>
 
-                <!-- Medicamentos receitados -->
+                <!-- =====================================================
+                     MEDICAMENTOS
+                ====================================================== -->
+
                 <div class="form-group">
-                    <label for="medicamentos">Medicamentos receitados (opcional)</label>
-                    <textarea name="medicamentos" id="medicamentos"
+
+                    <label for="medicamentos">
+                        Medicamentos receitados (opcional)
+                    </label>
+
+                    <textarea
+                        name="medicamentos"
+                        id="medicamentos"
                         placeholder="Ex: Amoxicilina 500mg – 1 comprimido de 8/8h por 7 dias&#10;Paracetamol 750mg – 1 comprimido se dor"></textarea>
+
                 </div>
 
-                <!-- Materiais do estoque -->
+                <!-- =====================================================
+                     MATERIAIS
+                ====================================================== -->
+
                 <div class="secao-estoque">
+
                     <div class="aviso">
-                        Selecione os materiais utilizados durante o atendimento. Deixe em branco se nenhum foi usado.
+                        Selecione os materiais utilizados durante o atendimento.
+                        Deixe em branco se nenhum foi usado.
                     </div>
 
                     <div class="form-group">
-                        <label>Materiais utilizados</label>
+
+                        <label>
+                            Materiais utilizados
+                        </label>
+
                         <?php foreach ($materiais as $mat): ?>
+
                             <div class="material-item">
+
                                 <select disabled>
-                                    <option><?= htmlspecialchars($mat['nome']) ?> (<?= htmlspecialchars($mat['unidade']) ?>)</option>
+
+                                    <option>
+                                        <?= htmlspecialchars($mat['nome']) ?>
+                                        (<?= htmlspecialchars($mat['unidade']) ?>)
+                                    </option>
+
                                 </select>
-                                <input type="number"
-                                    name="materiais[<?= $mat['id'] ?>]"
+
+                                <input
+                                    type="number"
+                                    name="materiais[<?= (int)$mat['id'] ?>]"
                                     step="0.01"
                                     min="0"
                                     placeholder="0"
                                     style="width: 100px;">
+
                             </div>
+
                         <?php endforeach; ?>
+
                     </div>
+
                 </div>
 
-                <button type="submit" class="btn btn-save">Confirmar Atendimento</button>
+                <!-- =====================================================
+                     CONFIRMAR
+                ====================================================== -->
+
+                <button
+                    type="submit"
+                    class="btn btn-save">
+                    Confirmar Atendimento
+                </button>
+
             </form>
+
         </div>
+
     </div>
+
 </body>
 
 </html>
