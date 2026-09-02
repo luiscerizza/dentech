@@ -230,46 +230,94 @@ $nomeMes = $nomesMeses[$mesMes];
 
 $horarios = [];
 
-for ($hora = 8; $hora <= 18; $hora++) {
-    $horarios[] = sprintf('%02d:00', $hora);
-}
-
 /*
-    | Descobrir horas fora da grade padrão.
-    */
+|--------------------------------------------------------------------------
+| DEFINIR LIMITE DA GRADE
+|--------------------------------------------------------------------------
+|
+| A agenda começa às 08:00 e, por padrão, vai até 18:00.
+|
+| Caso exista um agendamento depois das 18:00, a grade é expandida
+| continuamente até a hora desse agendamento.
+|
+| Se o agendamento possuir minutos, incluímos também a próxima hora
+| para que o card tenha espaço visual dentro da grade.
+|
+*/
+
+$horaInicioGrade = 8;
+$horaFimGrade = 18;
+
 foreach ($agendamentos as $agendamento) {
-    $horaEvento = substr(
+
+    $horarioEvento = substr(
         (string)$agendamento['horario'],
         0,
         5
     );
 
-    if (preg_match('/^(\d{2}):(\d{2})$/', $horaEvento, $match)) {
-        $horaInteira = (int)$match[1];
-        $minutoInteiro = (int)$match[2];
+    if (
+        !preg_match(
+            '/^(\d{2}):(\d{2})$/',
+            $horarioEvento,
+            $match
+        )
+    ) {
+        continue;
+    }
 
-        $horarioGrade = sprintf('%02d:00', $horaInteira);
+    $horaEvento = (int)$match[1];
+    $minutoEvento = (int)$match[2];
 
-        if (!in_array($horarioGrade, $horarios, true)) {
-            $horarios[] = $horarioGrade;
-        }
+    /*
+        Define até onde a grade precisa ir para este agendamento.
 
-        if ($minutoInteiro > 0) {
-            $proximaHora = sprintf('%02d:00', $horaInteira + 1);
+        Exemplo:
+        18:00 -> mantém 18
+        18:30 -> vai até 19
+        23:00 -> vai até 23
+        23:30 -> vai até 24
+    */
+    $horaNecessaria = $horaEvento;
 
-            if (!in_array($proximaHora, $horarios, true)) {
-                $horarios[] = $proximaHora;
-            }
-        }
+    if ($minutoEvento > 0) {
+        $horaNecessaria++;
+    }
+
+    if ($horaNecessaria > $horaFimGrade) {
+        $horaFimGrade = $horaNecessaria;
     }
 }
 
-usort(
-    $horarios,
-    function ($a, $b) {
-        return strcmp($a, $b);
-    }
-);
+/*
+|--------------------------------------------------------------------------
+| CRIAR A GRADE CONTINUAMENTE
+|--------------------------------------------------------------------------
+|
+| Nunca existem saltos entre horários.
+|
+| Exemplo:
+|
+| 18:00
+| 19:00
+| 20:00
+| 21:00
+| 22:00
+| 23:00
+| 24:00
+|
+*/
+
+for (
+    $hora = $horaInicioGrade;
+    $hora <= $horaFimGrade;
+    $hora++
+) {
+    $horarios[] = sprintf(
+        '%02d:00',
+        $hora
+    );
+}
 
 $horaInicioGrade = !empty($horarios)
     ? (int)substr($horarios[0], 0, 2)
