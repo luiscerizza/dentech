@@ -170,31 +170,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /*
         |--------------------------------------------------------------------------
-        | Validar origem
+        | Validar origem financeira
         |--------------------------------------------------------------------------
         |
-        | Procedimentos podem possuir cobrança própria e não dependem
-        | de orçamento aceito.
+        | O orçamento é apenas uma proposta comercial.
+        | O pagamento financeiro somente pode ocorrer para uma parcela
+        | gerada a partir de uma cobrança real de procedimento.
         |
-        | Cobranças originadas de orçamento continuam dependendo de
-        | orçamento aceito.
+        | Fluxo:
+        | ORÇAMENTO → ACEITO → PROCEDIMENTO → COBRANÇA → PARCELAS
+        | → A RECEBER → PAGAMENTO → RECEITA
         |--------------------------------------------------------------------------
         */
-        if (
-            !empty($parcela_locked['orcamento_id']) &&
-            $parcela_locked['status_orcamento'] !== 'aceito'
-        ) {
+        if (empty($parcela_locked['procedimento_id'])) {
             throw new Exception(
-                'Somente parcelas de orçamentos aceitos podem ser pagas.'
-            );
-        }
-
-        if (
-            empty($parcela_locked['orcamento_id']) &&
-            empty($parcela_locked['procedimento_id'])
-        ) {
-            throw new Exception(
-                'Parcela sem origem financeira válida.'
+                'Somente parcelas de cobranças de procedimentos podem ser pagas.'
             );
         }
 
@@ -268,26 +258,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         |--------------------------------------------------------------------------
         | Montar categoria e descrição
         |--------------------------------------------------------------------------
+        |
+        | Como o pagamento financeiro somente é permitido para cobranças
+        | de procedimentos, o lançamento sempre será classificado como
+        | receita de procedimento.
+        |--------------------------------------------------------------------------
         */
-        if (!empty($parcela_locked['procedimento_id'])) {
+        $categoria = 'Procedimento';
 
-            $categoria = 'Procedimento';
-
-            $descricao = sprintf(
-                'Procedimento #%d - Parcela %d',
-                (int)$parcela_locked['procedimento_id'],
-                (int)$parcela_locked['numero_parcela']
-            );
-        } else {
-
-            $categoria = 'Orçamento odontológico';
-
-            $descricao = sprintf(
-                'Orçamento #%d - Parcela %d',
-                (int)$parcela_locked['orcamento_id'],
-                (int)$parcela_locked['numero_parcela']
-            );
-        }
+        $descricao = sprintf(
+            'Procedimento #%d - Parcela %d',
+            (int)$parcela_locked['procedimento_id'],
+            (int)$parcela_locked['numero_parcela']
+        );
 
         /*
         |--------------------------------------------------------------------------
