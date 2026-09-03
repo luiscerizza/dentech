@@ -68,6 +68,17 @@ function textoStatus($status): string
             return ucfirst((string)$status);
     }
 }
+function csvSeguro($valor): string
+{
+    $valor = (string)$valor;
+
+    if ($valor !== '' && in_array($valor[0], ['=', '+', '-', '@'], true)) {
+        return "'" . $valor;
+    }
+
+    return $valor;
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -121,7 +132,7 @@ if ($mes_filtro !== '' && !preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $mes_filtro))
 |
 | Usamos PHP para montar as datas.
 | Isso facilita usar exatamente o mesmo período
-| nos lançamentos manuais e nas parcelas dos orçamentos.
+| nos lançamentos manuais e nas parcelas de procedimentos.
 |
 |--------------------------------------------------------------------------
 */
@@ -361,7 +372,9 @@ $stmt_procedimentos = $pdo->prepare("
 
         COALESCE(pr.paciente, 'Paciente não encontrado') AS paciente,
 
-        COALESCE(lf.forma_pagamento, 'Não informado') AS forma_pagamento
+        COALESCE(lf.forma_pagamento, 'Não informado') AS forma_pagamento,
+
+        COALESCE(pt.total_parcelas, 1) AS total_parcelas
 
     FROM parcelas p
 
@@ -373,6 +386,14 @@ $stmt_procedimentos = $pdo->prepare("
 
     LEFT JOIN lancamentos_financeiros lf
         ON lf.parcela_id = p.id
+
+    LEFT JOIN (
+        SELECT procedimento_id, COUNT(*) AS total_parcelas
+        FROM parcelas
+        WHERE procedimento_id IS NOT NULL
+        GROUP BY procedimento_id
+    ) pt
+        ON pt.procedimento_id = p.procedimento_id
 
     $where_procedimento_sql
 
@@ -418,19 +439,9 @@ foreach ($parcelas_procedimentos as $parcela) {
 
     $numero_parcela = (int)$parcela['numero_parcela'];
 
-    $stmt_total = $pdo->prepare("
-        SELECT COUNT(*)
-        FROM parcelas
-        WHERE procedimento_id = ?
-    ");
-
-    $stmt_total->execute([
-        (int)$parcela['procedimento_id']
-    ]);
-
     $total_parcelas = max(
         1,
-        (int)$stmt_total->fetchColumn()
+        (int)($parcela['total_parcelas'] ?? 1)
     );
 
     $descricao = sprintf(
@@ -519,6 +530,64 @@ usort(
         return $dataB <=> $dataA;
     }
 );
+
+/*
+|--------------------------------------------------------------------------
+| EXPORTAÇÃO CSV
+|--------------------------------------------------------------------------
+*/
+
+if (($_GET['export'] ?? '') === 'csv') {
+    $nomeArquivo = 'financeiro_' . date('Y-m-d_H-i-s') . '.csv';
+
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="' . $nomeArquivo . '"');
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+
+    echo "\xEF\xBB\xBF";
+
+    $saida = fopen('php://output', 'w');
+
+    fputcsv($saida, [
+        'Data',
+        'Tipo',
+        'Categoria',
+        'Descrição',
+        'Origem',
+        'Paciente',
+        'Forma de pagamento',
+        'Status',
+        'Valor',
+        'Parcelas'
+    ], ';');
+
+    foreach ($lancamentos as $lancamento) {
+        $origem = $lancamento['origem'] === 'procedimento'
+            ? 'Procedimento'
+            : 'Lançamento';
+
+        $tipo = $lancamento['tipo'] === 'receita'
+            ? 'Receita'
+            : 'Despesa';
+
+        fputcsv($saida, [
+            csvSeguro(dataBR($lancamento['data'] ?? null)),
+            csvSeguro($tipo),
+            csvSeguro($lancamento['categoria'] ?? ''),
+            csvSeguro($lancamento['descricao'] ?? ''),
+            csvSeguro($origem),
+            csvSeguro($lancamento['paciente'] ?? ''),
+            csvSeguro($lancamento['forma_pagamento'] ?? 'Não informado'),
+            csvSeguro(textoStatus($lancamento['status'] ?? '')),
+            number_format((float)($lancamento['valor'] ?? 0), 2, ',', '.'),
+            csvSeguro((string)($lancamento['parcelas'] ?? ''))
+        ], ';');
+    }
+
+    fclose($saida);
+    exit;
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -763,15 +832,25 @@ $pacientes = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
 
                 </div>
 
-                <a
-                    href="novo_lancamento.php"
-                    class="btn-novo">
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <a
+                        href="<?= htmlspecialchars('financeiro.php?' . http_build_query(array_merge($_GET, ['export' => 'csv'])), ENT_QUOTES, 'UTF-8') ?>"
+                        class="btn-limpar"
+                        title="Exportar as movimentações filtradas para CSV">
+                        <i class="fa-solid fa-file-csv"></i>
+                        Exportar CSV
+                    </a>
 
-                    <i class="fa-solid fa-plus"></i>
+                    <a
+                        href="novo_lancamento.php"
+                        class="btn-novo">
 
-                    Novo lançamento
+                        <i class="fa-solid fa-plus"></i>
 
-                </a>
+                        Novo lançamento
+
+                    </a>
+                </div>
 
             </div>
 
@@ -883,7 +962,7 @@ $pacientes = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
 
                     <?php if (
                         $periodo !== 'mes' ||
-                        $mes_filtro !== '' ||
+                        $mes_ativo ||
                         $paciente_filtro > 0 ||
                         $status_filtro !== 'todos' ||
                         $tipo_filtro !== 'todos'
@@ -1417,25 +1496,6 @@ $pacientes = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
                                         <td>
 
                                             <?php if (
-                                                $lancamento['origem'] ===
-                                                'orcamento'
-                                            ): ?>
-
-                                                <span
-                                                    class="origem-orcamento">
-
-                                                    <i
-                                                        class="
-                                                fa-solid
-                                                fa-file-invoice-dollar
-                                            ">
-                                                    </i>
-
-                                                    Orçamento
-
-                                                </span>
-
-                                            <?php elseif (
                                                 $lancamento['origem'] ===
                                                 'procedimento'
                                             ): ?>
