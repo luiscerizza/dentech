@@ -34,8 +34,8 @@ $categoria = trim($_POST['categoria'] ?? '');
 $descricao = trim($_POST['descricao'] ?? '');
 $data = $_POST['data'] ?? date('Y-m-d');
 $forma_pagamento = $_POST['forma_pagamento'] ?? '';
+$status = $_POST['status'] ?? 'pendente';
 $valor = $_POST['valor'] ?? '';
-$parcelas = $_POST['parcelas'] ?? '1';
 $observacoes = trim($_POST['observacoes'] ?? '');
 
 /*
@@ -137,6 +137,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $erros[] = 'Selecione uma forma de pagamento válida.';
     }
 
+    if (!in_array($status, ['pago', 'pendente'], true)) {
+        $erros[] = 'Selecione um status válido.';
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Valor
@@ -155,8 +159,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         | 1500,50
         */
 
-        $valor_limpo = str_replace('.', '', $valor);
-        $valor_limpo = str_replace(',', '.', $valor_limpo);
+        if (str_contains((string) $valor, ',') && str_contains((string) $valor, '.')) {
+            $valor_limpo = str_replace('.', '', (string) $valor);
+            $valor_limpo = str_replace(',', '.', $valor_limpo);
+        } elseif (str_contains((string) $valor, ',')) {
+            $valor_limpo = str_replace(',', '.', (string) $valor);
+        } else {
+            $valor_limpo = (string) $valor;
+        }
 
         if (!is_numeric($valor_limpo)) {
 
@@ -169,31 +179,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $erros[] = 'O valor deve ser maior que zero.';
             }
         }
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Parcelas
-    |--------------------------------------------------------------------------
-    */
-
-    $parcelas_validacao = filter_var(
-        $parcelas,
-        FILTER_VALIDATE_INT,
-        [
-            'options' => [
-                'min_range' => 1,
-                'max_range' => 60
-            ]
-        ]
-    );
-
-    if ($parcelas_validacao === false) {
-
-        $erros[] = 'Informe uma quantidade válida de parcelas.';
-    } else {
-
-        $parcelas = $parcelas_validacao;
     }
 
     /*
@@ -214,7 +199,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     data,
                     forma_pagamento,
                     valor,
-                    parcelas,
                     status,
                     observacoes
                 ) VALUES (
@@ -224,7 +208,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     :data,
                     :forma_pagamento,
                     :valor,
-                    :parcelas,
                     :status,
                     :observacoes
                 )
@@ -239,8 +222,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':data' => $data,
                 ':forma_pagamento' => $forma_pagamento,
                 ':valor' => $valor_numero,
-                ':parcelas' => $parcelas,
-                ':status' => 'pendente',
+                ':status' => $status,
                 ':observacoes' => $observacoes !== ''
                     ? $observacoes
                     : null
@@ -640,29 +622,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
 
-                    <!-- PARCELAS -->
+                    <!-- STATUS -->
 
                     <div class="form-group">
 
-                        <label for="parcelas">
-                            Parcelas
+                        <label for="status">
+                            Status
                         </label>
 
                         <select
-                            id="parcelas"
-                            name="parcelas">
+                            id="status"
+                            name="status"
+                            required>
 
-                            <?php for ($i = 1; $i <= 60; $i++): ?>
+                            <option value="pendente" <?= $status === 'pendente' ? 'selected' : '' ?>>
+                                Pendente
+                            </option>
 
-                                <option
-                                    value="<?= $i ?>"
-                                    <?= (string) $parcelas === (string) $i ? 'selected' : '' ?>>
-
-                                    <?= $i === 1 ? 'À vista' : $i . 'x' ?>
-
-                                </option>
-
-                            <?php endfor; ?>
+                            <option value="pago" <?= $status === 'pago' ? 'selected' : '' ?>>
+                                Pago
+                            </option>
 
                         </select>
 
