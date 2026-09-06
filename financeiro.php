@@ -1732,6 +1732,28 @@ $pacientes = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
 
                                                     </a>
 
+                                                    <?php if (
+                                                        in_array(
+                                                            strtolower(trim((string)$lancamento['status'])),
+                                                            ['pendente', 'atrasada'],
+                                                            true
+                                                        )
+                                                    ): ?>
+
+                                                        <a
+                                                            href="pagar_lancamento.php?id=<?= (int)$lancamento['id'] ?>"
+                                                            class="btn-acao"
+                                                            title="<?= $lancamento['tipo'] === 'despesa'
+                                                                        ? 'Pagar despesa'
+                                                                        : 'Receber receita' ?>">
+
+                                                            <i class="fa-solid fa-check"></i>
+
+                                                        </a>
+
+                                                    <?php endif; ?>
+
+
                                                 <?php endif; ?>
 
                                             <?php endif; ?>
