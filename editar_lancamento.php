@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 require_once 'config/auth.php';
@@ -109,9 +110,7 @@ try {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        if (!validar_csrf($_POST['csrf_token'] ?? '')) {
-            throw new RuntimeException('Token de segurança inválido. Recarregue a página e tente novamente.');
-        }
+        validar_csrf();
 
         $tipo = trim((string)($_POST['tipo'] ?? ''));
         $categoria = trim((string)($_POST['categoria'] ?? ''));
@@ -243,10 +242,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $lancamento['observacoes'] = $observacoes ?? $lancamento['observacoes'];
 }
 
-$csrfToken = gerar_csrf_token();
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+$csrfToken = $_SESSION['csrf_token'];
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -255,183 +259,179 @@ $csrfToken = gerar_csrf_token();
     <link rel="stylesheet" href="css/navbar.css">
     <link rel="stylesheet" href="css/editar_lancamento.css">
     <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
+
 <body>
 
-<?php include 'navbar.php'; ?>
+    <?php include 'navbar.php'; ?>
 
-<main class="page-container">
-    <div class="page-header">
-        <div>
-            <span class="eyebrow">FINANCEIRO</span>
-            <h1><i class="fa-solid fa-pen-to-square"></i> Editar lançamento</h1>
-            <p>Atualize os dados deste lançamento manual.</p>
-        </div>
-
-        <a href="visualizar_lancamento.php?id=<?= (int)$lancamento['id'] ?>" class="btn btn-secondary">
-            <i class="fa-solid fa-arrow-left"></i>
-            Voltar
-        </a>
-    </div>
-
-    <?php if ($erros): ?>
-        <div class="alert alert-error">
-            <i class="fa-solid fa-circle-exclamation"></i>
+    <main class="page-container">
+        <div class="page-header">
             <div>
-                <?php foreach ($erros as $erro): ?>
-                    <div><?= escapar($erro) ?></div>
-                <?php endforeach; ?>
+                <span class="eyebrow">FINANCEIRO</span>
+                <h1><i class="fa-solid fa-pen-to-square"></i> Editar lançamento</h1>
+                <p>Atualize os dados deste lançamento manual.</p>
             </div>
-        </div>
-    <?php endif; ?>
 
-    <section class="form-card">
-        <div class="card-title">
-            <div class="title-icon">
-                <i class="fa-solid fa-file-invoice-dollar"></i>
-            </div>
-            <div>
-                <h2>Dados do lançamento</h2>
-                <p>Altere as informações necessárias e salve as modificações.</p>
-            </div>
+            <a href="visualizar_lancamento.php?id=<?= (int)$lancamento['id'] ?>" class="btn btn-secondary">
+                <i class="fa-solid fa-arrow-left"></i>
+                Voltar
+            </a>
         </div>
 
-        <form method="POST" action="editar_lancamento.php?id=<?= (int)$lancamento['id'] ?>" autocomplete="off">
-            <input type="hidden" name="csrf_token" value="<?= escapar($csrfToken) ?>">
-
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="tipo">Tipo <span>*</span></label>
-                    <select name="tipo" id="tipo" required>
-                        <option value="receita" <?= $lancamento['tipo'] === 'receita' ? 'selected' : '' ?>>
-                            Receita
-                        </option>
-                        <option value="despesa" <?= $lancamento['tipo'] === 'despesa' ? 'selected' : '' ?>>
-                            Despesa
-                        </option>
-                    </select>
+        <?php if ($erros): ?>
+            <div class="alert alert-error">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <div>
+                    <?php foreach ($erros as $erro): ?>
+                        <div><?= escapar($erro) ?></div>
+                    <?php endforeach; ?>
                 </div>
+            </div>
+        <?php endif; ?>
 
-                <div class="form-group">
-                    <label for="categoria">Categoria <span>*</span></label>
-                    <input
-                        type="text"
-                        name="categoria"
-                        id="categoria"
-                        maxlength="100"
-                        value="<?= escapar($lancamento['categoria']) ?>"
-                        required
-                    >
+        <section class="form-card">
+            <div class="card-title">
+                <div class="title-icon">
+                    <i class="fa-solid fa-file-invoice-dollar"></i>
                 </div>
-
-                <div class="form-group form-group-wide">
-                    <label for="descricao">Descrição <span>*</span></label>
-                    <input
-                        type="text"
-                        name="descricao"
-                        id="descricao"
-                        maxlength="255"
-                        value="<?= escapar($lancamento['descricao']) ?>"
-                        required
-                    >
+                <div>
+                    <h2>Dados do lançamento</h2>
+                    <p>Altere as informações necessárias e salve as modificações.</p>
                 </div>
+            </div>
 
-                <div class="form-group">
-                    <label for="data">Data <span>*</span></label>
-                    <input
-                        type="date"
-                        name="data"
-                        id="data"
-                        value="<?= escapar($lancamento['data']) ?>"
-                        required
-                    >
-                </div>
+            <form method="POST" action="editar_lancamento.php?id=<?= (int)$lancamento['id'] ?>" autocomplete="off">
+                <input type="hidden" name="csrf_token" value="<?= escapar($csrfToken) ?>">
 
-                <div class="form-group">
-                    <label for="forma_pagamento">Forma de pagamento <span>*</span></label>
-                    <input
-                        type="text"
-                        name="forma_pagamento"
-                        id="forma_pagamento"
-                        maxlength="50"
-                        value="<?= escapar($lancamento['forma_pagamento']) ?>"
-                        placeholder="Ex.: Pix, Dinheiro, Cartão..."
-                        required
-                    >
-                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="tipo">Tipo <span>*</span></label>
+                        <select name="tipo" id="tipo" required>
+                            <option value="receita" <?= $lancamento['tipo'] === 'receita' ? 'selected' : '' ?>>
+                                Receita
+                            </option>
+                            <option value="despesa" <?= $lancamento['tipo'] === 'despesa' ? 'selected' : '' ?>>
+                                Despesa
+                            </option>
+                        </select>
+                    </div>
 
-                <div class="form-group">
-                    <label for="valor">Valor <span>*</span></label>
-                    <div class="money-input">
-                        <span>R$</span>
+                    <div class="form-group">
+                        <label for="categoria">Categoria <span>*</span></label>
                         <input
                             type="text"
-                            name="valor"
-                            id="valor"
-                            inputmode="decimal"
-                            value="<?= escapar(valorParaFormulario((string)$lancamento['valor'])) ?>"
-                            required
-                        >
+                            name="categoria"
+                            id="categoria"
+                            maxlength="100"
+                            value="<?= escapar($lancamento['categoria']) ?>"
+                            required>
                     </div>
-                    <small>Use o formato brasileiro, por exemplo: 1.500,50</small>
-                </div>
 
-                <div class="form-group">
-                    <label>Status</label>
-                    <div class="status-readonly <?= $lancamento['status'] === 'pago' ? 'status-paid' : 'status-pending' ?>">
-                        <i class="fa-solid <?= $lancamento['status'] === 'pago' ? 'fa-circle-check' : 'fa-clock' ?>"></i>
-                        <?= $lancamento['status'] === 'pago' ? 'Pago' : 'Pendente' ?>
+                    <div class="form-group form-group-wide">
+                        <label for="descricao">Descrição <span>*</span></label>
+                        <input
+                            type="text"
+                            name="descricao"
+                            id="descricao"
+                            maxlength="255"
+                            value="<?= escapar($lancamento['descricao']) ?>"
+                            required>
                     </div>
-                    <small>O status é alterado pelo fluxo de pagamento.</small>
+
+                    <div class="form-group">
+                        <label for="data">Data <span>*</span></label>
+                        <input
+                            type="date"
+                            name="data"
+                            id="data"
+                            value="<?= escapar($lancamento['data']) ?>"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="forma_pagamento">Forma de pagamento <span>*</span></label>
+                        <input
+                            type="text"
+                            name="forma_pagamento"
+                            id="forma_pagamento"
+                            maxlength="50"
+                            value="<?= escapar($lancamento['forma_pagamento']) ?>"
+                            placeholder="Ex.: Pix, Dinheiro, Cartão..."
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="valor">Valor <span>*</span></label>
+                        <div class="money-input">
+                            <span>R$</span>
+                            <input
+                                type="text"
+                                name="valor"
+                                id="valor"
+                                inputmode="decimal"
+                                value="<?= escapar(valorParaFormulario((string)$lancamento['valor'])) ?>"
+                                required>
+                        </div>
+                        <small>Use o formato brasileiro, por exemplo: 1.500,50</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Status</label>
+                        <div class="status-readonly <?= $lancamento['status'] === 'pago' ? 'status-paid' : 'status-pending' ?>">
+                            <i class="fa-solid <?= $lancamento['status'] === 'pago' ? 'fa-circle-check' : 'fa-clock' ?>"></i>
+                            <?= $lancamento['status'] === 'pago' ? 'Pago' : 'Pendente' ?>
+                        </div>
+                        <small>O status é alterado pelo fluxo de pagamento.</small>
+                    </div>
+
+                    <div class="form-group form-group-wide">
+                        <label for="observacoes">Observações</label>
+                        <textarea
+                            name="observacoes"
+                            id="observacoes"
+                            rows="5"
+                            placeholder="Observações adicionais..."><?= escapar((string)$lancamento['observacoes']) ?></textarea>
+                    </div>
                 </div>
 
-                <div class="form-group form-group-wide">
-                    <label for="observacoes">Observações</label>
-                    <textarea
-                        name="observacoes"
-                        id="observacoes"
-                        rows="5"
-                        placeholder="Observações adicionais..."
-                    ><?= escapar((string)$lancamento['observacoes']) ?></textarea>
+                <div class="form-footer">
+                    <a href="visualizar_lancamento.php?id=<?= (int)$lancamento['id'] ?>" class="btn btn-secondary">
+                        Cancelar
+                    </a>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        Salvar alterações
+                    </button>
                 </div>
-            </div>
+            </form>
+        </section>
+    </main>
 
-            <div class="form-footer">
-                <a href="visualizar_lancamento.php?id=<?= (int)$lancamento['id'] ?>" class="btn btn-secondary">
-                    Cancelar
-                </a>
+    <script>
+        (function() {
+            const campoValor = document.getElementById('valor');
 
-                <button type="submit" class="btn btn-primary">
-                    <i class="fa-solid fa-floppy-disk"></i>
-                    Salvar alterações
-                </button>
-            </div>
-        </form>
-    </section>
-</main>
+            if (!campoValor) {
+                return;
+            }
 
-<script>
-(function () {
-    const campoValor = document.getElementById('valor');
+            campoValor.addEventListener('input', function() {
+                let valor = this.value.replace(/[^\d,.-]/g, '');
 
-    if (!campoValor) {
-        return;
-    }
+                // Mantém apenas uma vírgula decimal.
+                const partesVirgula = valor.split(',');
+                if (partesVirgula.length > 2) {
+                    valor = partesVirgula.shift() + ',' + partesVirgula.join('');
+                }
 
-    campoValor.addEventListener('input', function () {
-        let valor = this.value.replace(/[^\d,.-]/g, '');
-
-        // Mantém apenas uma vírgula decimal.
-        const partesVirgula = valor.split(',');
-        if (partesVirgula.length > 2) {
-            valor = partesVirgula.shift() + ',' + partesVirgula.join('');
-        }
-
-        this.value = valor;
-    });
-})();
-</script>
+                this.value = valor;
+            });
+        })();
+    </script>
 
 </body>
+
 </html>
