@@ -196,7 +196,16 @@ $params_manual = [];
 
 if ($data_inicio !== null && $data_fim !== null) {
 
-    $where_manual[] = "data BETWEEN :data_inicio AND :data_fim";
+    $where_manual[] = "
+        DATE(
+            CASE
+                WHEN LOWER(TRIM(COALESCE(status, ''))) = 'pago'
+                     AND data_pagamento IS NOT NULL
+                    THEN data_pagamento
+                ELSE data
+            END
+        ) BETWEEN :data_inicio AND :data_fim
+    ";
 
     $params_manual[':data_inicio'] = $data_inicio;
     $params_manual[':data_fim'] = $data_fim;
@@ -251,6 +260,7 @@ $stmt_manual = $pdo->prepare("
         categoria,
         descricao,
         data,
+        data_pagamento,
         forma_pagamento,
         valor,
         parcelas,
@@ -259,7 +269,14 @@ $stmt_manual = $pdo->prepare("
         orcamento_id
     FROM lancamentos_financeiros
     $where_manual_sql
-    ORDER BY data DESC, id DESC
+    ORDER BY
+        CASE
+            WHEN LOWER(TRIM(COALESCE(status, ''))) = 'pago'
+                 AND data_pagamento IS NOT NULL
+                THEN data_pagamento
+            ELSE data
+        END DESC,
+        id DESC
 ");
 
 $stmt_manual->execute($params_manual);
@@ -697,9 +714,18 @@ foreach ($lancamentos as $lancamento) {
         continue;
     }
 
+    $dataFluxo = $lancamento['data'];
+
+    if (
+        $lancamento['status'] === 'pago'
+        && !empty($lancamento['data_pagamento'])
+    ) {
+        $dataFluxo = $lancamento['data_pagamento'];
+    }
+
     $dia = date(
         'Y-m-d',
-        strtotime($lancamento['data'])
+        strtotime($dataFluxo)
     );
 
     if (!isset($dados_grafico_array[$dia])) {
@@ -1731,28 +1757,6 @@ $pacientes = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
                                                         <i class="fa-solid fa-pen"></i>
 
                                                     </a>
-
-                                                    <?php if (
-                                                        in_array(
-                                                            strtolower(trim((string)$lancamento['status'])),
-                                                            ['pendente', 'atrasada'],
-                                                            true
-                                                        )
-                                                    ): ?>
-
-                                                        <a
-                                                            href="pagar_lancamento.php?id=<?= (int)$lancamento['id'] ?>"
-                                                            class="btn-acao"
-                                                            title="<?= $lancamento['tipo'] === 'despesa'
-                                                                        ? 'Pagar despesa'
-                                                                        : 'Receber receita' ?>">
-
-                                                            <i class="fa-solid fa-check"></i>
-
-                                                        </a>
-
-                                                    <?php endif; ?>
-
 
                                                 <?php endif; ?>
 

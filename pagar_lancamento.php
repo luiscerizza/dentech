@@ -115,6 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 categoria,
                 descricao,
                 data,
+                data_pagamento,
                 forma_pagamento,
                 valor,
                 parcelas,
@@ -151,7 +152,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $stmtUpdate = $pdo->prepare("
             UPDATE lancamentos_financeiros
-            SET status = 'pago'
+            SET
+                status = 'pago',
+                data_pagamento = CURDATE()
             WHERE id = ?
               AND status = 'pendente'
               AND orcamento_id IS NULL

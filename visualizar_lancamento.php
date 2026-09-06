@@ -87,6 +87,7 @@ $stmt = $pdo->prepare("
         l.valor,
         l.parcelas,
         l.status,
+        l.data_pagamento,
         l.observacoes,
         l.orcamento_id,
         l.parcela_id,
@@ -308,6 +309,16 @@ $csrf_token = $_SESSION['csrf_token'] ?? '';
 
                         <div class="dado-valor">
                             <?= dataBR($lancamento['data']) ?>
+                        </div>
+                    </div>
+
+                    <div class="dado">
+                        <span class="dado-label">Data do pagamento</span>
+
+                        <div class="dado-valor">
+                            <?= !empty($lancamento['data_pagamento'])
+                                ? dataBR($lancamento['data_pagamento'])
+                                : 'Ainda não pago' ?>
                         </div>
                     </div>
 
