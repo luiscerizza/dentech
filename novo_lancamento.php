@@ -190,7 +190,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($erros)) {
 
         try {
-
+                throw new Exception('Erro de teste'); // Teste de erro
             $sql = "
                 INSERT INTO lancamentos_financeiros (
                     tipo,
