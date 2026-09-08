@@ -49,7 +49,7 @@ try {
         UPDATE lancamentos_financeiros
         SET
             status = 'pago',
-            data_pagamento = CURDATE()
+            data = CURDATE()
         WHERE id = ?
           AND categoria = 'Ajuste de procedimento'
           AND LOWER(TRIM(status)) = 'pendente'
