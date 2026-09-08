@@ -158,7 +158,7 @@ $csrf_token = $_SESSION['csrf_token'] ?? '';
     <link rel="stylesheet" href="css/global.css">
     <link rel="stylesheet" href="css/variables.css">
     <link rel="stylesheet" href="css/layout.css">
-    <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/navbar.css">]
     <link rel="stylesheet" href="css/visualizar_lancamento.css">
 
     <link
@@ -209,7 +209,7 @@ $csrf_token = $_SESSION['csrf_token'] ?? '';
 
                     <form
                         method="POST"
-                        action="pagar_lancamento.php"
+                        action="pagar_lancamento.php?id=<?= (int)$lancamento['id'] ?>"
                         style="margin:0;"
                         onsubmit="return confirm('Confirmar pagamento deste lançamento?');">
 
