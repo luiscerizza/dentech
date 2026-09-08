@@ -285,101 +285,6 @@ $lancamentos_manuais = $stmt_manual->fetchAll(PDO::FETCH_ASSOC);
 
 /*
 |--------------------------------------------------------------------------
-| BUSCAR AJUSTES DE PROCEDIMENTOS
-|--------------------------------------------------------------------------
-|
-| Ajustes são lançamentos financeiros vinculados a um procedimento, mas
-| não são parcelas da cobrança. Por isso são buscados separadamente.
-| A data usada no filtro é a data efetiva de pagamento quando o ajuste
-| já foi pago; enquanto pendente, usamos a data de criação.
-|
-|--------------------------------------------------------------------------
-*/
-
-$where_ajuste = [
-    "lf.categoria = 'Ajuste de procedimento'",
-    "lf.tipo = 'receita'"
-];
-
-$params_ajuste = [];
-
-if ($paciente_filtro > 0) {
-    $where_ajuste[] = 'proc.paciente_id = :ajuste_paciente_id';
-    $params_ajuste[':ajuste_paciente_id'] = $paciente_filtro;
-}
-
-if ($status_filtro !== 'todos') {
-    $where_ajuste[] = 'LOWER(TRIM(lf.status)) = :ajuste_status';
-    $params_ajuste[':ajuste_status'] = $status_filtro;
-}
-
-if ($tipo_filtro === 'despesa') {
-    $where_ajuste[] = '1 = 0';
-}
-
-if ($data_inicio !== null && $data_fim !== null) {
-    $where_ajuste[] = "
-        DATE(
-            CASE
-                WHEN LOWER(TRIM(lf.status)) = 'pago'
-                     AND lf.data_pagamento IS NOT NULL
-                    THEN lf.data_pagamento
-                ELSE lf.data
-            END
-        ) BETWEEN :ajuste_data_inicio AND :ajuste_data_fim
-    ";
-
-    $params_ajuste[':ajuste_data_inicio'] = $data_inicio;
-    $params_ajuste[':ajuste_data_fim'] = $data_fim;
-}
-
-$where_ajuste_sql = 'WHERE ' . implode(' AND ', $where_ajuste);
-
-$stmt_ajustes = $pdo->prepare("
-    SELECT
-        lf.id,
-        lf.tipo,
-        lf.categoria,
-        lf.descricao,
-        lf.data,
-        lf.data_pagamento,
-        lf.forma_pagamento,
-        lf.valor,
-        lf.parcelas,
-        lf.status,
-        lf.observacoes,
-        lf.orcamento_id,
-        lf.procedimento_id,
-
-        COALESCE(pr.paciente, 'Paciente não encontrado') AS paciente,
-        proc.paciente_id
-
-    FROM lancamentos_financeiros lf
-
-    INNER JOIN procedimentos proc
-        ON proc.id = lf.procedimento_id
-
-    LEFT JOIN prontuarios pr
-        ON pr.id = proc.paciente_id
-
-    $where_ajuste_sql
-
-    ORDER BY
-        CASE
-            WHEN LOWER(TRIM(lf.status)) = 'pago'
-                 AND lf.data_pagamento IS NOT NULL
-                THEN lf.data_pagamento
-            ELSE lf.data
-        END DESC,
-        lf.id DESC
-");
-
-$stmt_ajustes->execute($params_ajuste);
-
-$ajustes_procedimentos = $stmt_ajustes->fetchAll(PDO::FETCH_ASSOC);
-
-/*
-|--------------------------------------------------------------------------
 | ORÇAMENTOS NÃO SÃO MOVIMENTAÇÕES FINANCEIRAS
 |--------------------------------------------------------------------------
 |
@@ -587,47 +492,6 @@ foreach ($parcelas_procedimentos as $parcela) {
 
 /*
 |--------------------------------------------------------------------------
-| TRANSFORMAR AJUSTES DE PROCEDIMENTOS
-|--------------------------------------------------------------------------
-*/
-
-$lancamentos_ajustes = [];
-
-foreach ($ajustes_procedimentos as $ajuste) {
-
-    $status_ajuste = strtolower(
-        trim((string)($ajuste['status'] ?? ''))
-    );
-
-    $data_movimentacao = $status_ajuste === 'pago'
-        && !empty($ajuste['data_pagamento'])
-        ? $ajuste['data_pagamento']
-        : $ajuste['data'];
-
-    $lancamentos_ajustes[] = [
-        'id' => (int)$ajuste['id'],
-        'tipo' => 'receita',
-        'categoria' => 'Ajuste de procedimento',
-        'descricao' => $ajuste['descricao'],
-        'data' => $data_movimentacao,
-        'data_pagamento' => $ajuste['data_pagamento'],
-        'forma_pagamento' => $ajuste['forma_pagamento'],
-        'valor' => (float)$ajuste['valor'],
-        'parcelas' => 1,
-        'status' => $status_ajuste,
-        'observacoes' => $ajuste['observacoes'],
-        'orcamento_id' => $ajuste['orcamento_id'],
-        'procedimento_id' => (int)$ajuste['procedimento_id'],
-        'origem' => 'ajuste',
-        'parcela_id' => null,
-        'numero_orcamento' => null,
-        'paciente' => $ajuste['paciente'],
-        'paciente_id' => (int)$ajuste['paciente_id']
-    ];
-}
-
-/*
-|--------------------------------------------------------------------------
 | TRANSFORMAR LANÇAMENTOS MANUAIS
 |--------------------------------------------------------------------------
 */
@@ -657,16 +521,6 @@ foreach ($lancamentos_manuais as $lancamento) {
 
 foreach ($lancamentos_procedimentos as $lancamento_procedimento) {
     $lancamentos[] = $lancamento_procedimento;
-}
-
-/*
-|--------------------------------------------------------------------------
-| ADICIONAR AJUSTES AO FINANCEIRO
-|--------------------------------------------------------------------------
-*/
-
-foreach ($lancamentos_ajustes as $lancamento_ajuste) {
-    $lancamentos[] = $lancamento_ajuste;
 }
 
 /*
@@ -726,13 +580,9 @@ if (($_GET['export'] ?? '') === 'csv') {
     ], ';');
 
     foreach ($lancamentos as $lancamento) {
-        if ($lancamento['origem'] === 'procedimento') {
-            $origem = 'Procedimento';
-        } elseif ($lancamento['origem'] === 'ajuste') {
-            $origem = 'Ajuste de procedimento';
-        } else {
-            $origem = 'Lançamento';
-        }
+        $origem = $lancamento['origem'] === 'procedimento'
+            ? 'Procedimento'
+            : 'Lançamento';
 
         $tipo = $lancamento['tipo'] === 'receita'
             ? 'Receita'
@@ -1042,7 +892,7 @@ $pacientes = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
                     <i class="fa-solid fa-circle-check"></i>
 
                     <?php if ($sucesso === 'pagamento'): ?>
-                        Pagamento da parcela registrado com sucesso.
+                        Pagamento registrado com sucesso.
                     <?php else: ?>
                         Lançamento salvo com sucesso.
                     <?php endif; ?>
@@ -1690,20 +1540,6 @@ $pacientes = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
 
                                                 </span>
 
-                                            <?php elseif (
-                                                $lancamento['origem'] ===
-                                                'ajuste'
-                                            ): ?>
-
-                                                <span
-                                                    class="origem-lancamento">
-
-                                                    <i class="fa-solid fa-sliders"></i>
-
-                                                    Ajuste
-
-                                                </span>
-
                                             <?php else: ?>
 
                                                 <span
@@ -1889,49 +1725,6 @@ $pacientes = $stmt_pacientes->fetchAll(PDO::FETCH_ASSOC);
                                                             type="submit"
                                                             class="btn-acao btn-pagar-financeiro"
                                                             title="Marcar como paga">
-
-                                                            <i class="fa-solid fa-check"></i>
-
-                                                        </button>
-
-                                                    </form>
-
-                                                <?php endif; ?>
-
-                                            <?php elseif (
-                                                $lancamento['origem'] ===
-                                                'ajuste'
-                                            ): ?>
-
-                                                <?php if (
-                                                    !empty($lancamento['id'])
-                                                    && in_array(
-                                                        strtolower(trim((string)$lancamento['status'])),
-                                                        ['pendente', 'atrasada'],
-                                                        true
-                                                    )
-                                                ): ?>
-
-                                                    <form
-                                                        method="POST"
-                                                        action="pagar_ajuste_financeiro.php"
-                                                        class="form-pagar-parcela"
-                                                        onsubmit="return confirm('Confirmar processamento deste ajuste financeiro?');">
-
-                                                        <input
-                                                            type="hidden"
-                                                            name="lancamento_id"
-                                                            value="<?= (int)$lancamento['id'] ?>">
-
-                                                        <input
-                                                            type="hidden"
-                                                            name="csrf_token"
-                                                            value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
-
-                                                        <button
-                                                            type="submit"
-                                                            class="btn-acao btn-pagar-financeiro"
-                                                            title="Processar ajuste">
 
                                                             <i class="fa-solid fa-check"></i>
 
