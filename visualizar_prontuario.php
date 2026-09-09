@@ -49,9 +49,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'excluir
         header('Location: visualizar_prontuario.php?id=' . $prontuarioExcluir);
         exit;
     } catch (Throwable $e) {
-        if ($pdo->inTransaction()) $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Não expor erros internos do banco ao usuário.
+        |
+        | Quando o procedimento possui cobranças/parcelas vinculadas,
+        | a FK do banco impede a exclusão. Nesse caso, redirecionamos
+        | para o prontuário e mostramos uma mensagem amigável.
+        |--------------------------------------------------------------------------
+        */
+        $codigoErro = 'generico';
+
+        if (
+            $e instanceof PDOException
+            && $e->getCode() === '23000'
+            && (int)$e->errorInfo[1] === 1451
+        ) {
+            $codigoErro = 'procedimento_vinculado';
+        }
+
+        if ($prontuarioExcluir > 0) {
+            header(
+                'Location: visualizar_prontuario.php?id='
+                    . $prontuarioExcluir
+                    . '&erro='
+                    . $codigoErro
+            );
+            exit;
+        }
+
         http_response_code(400);
-        die('Não foi possível excluir o procedimento: ' . htmlspecialchars($e->getMessage()));
+        die('Não foi possível concluir a operação.');
     }
 }
 
@@ -60,6 +92,24 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 }
 
 $id = (int) $_GET['id'];
+
+$mensagemErro = null;
+$tipoMensagemErro = null;
+
+if (isset($_GET['erro'])) {
+    $erro = (string)$_GET['erro'];
+
+    if ($erro === 'procedimento_vinculado') {
+        $mensagemErro =
+            'Não é possível excluir este procedimento porque existem '
+            . 'cobranças ou parcelas financeiras vinculadas a ele.';
+        $tipoMensagemErro = 'error';
+    } elseif ($erro === 'generico') {
+        $mensagemErro =
+            'Não foi possível excluir o procedimento. Tente novamente.';
+        $tipoMensagemErro = 'error';
+    }
+}
 
 $isPrint = isset($_GET['print']) && $_GET['print'] == '1';
 
@@ -215,6 +265,29 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
 
 
     <main class="prontuario-page">
+
+        <?php if (!$isPrint && $mensagemErro): ?>
+            <div class="page-alert page-alert-error" role="alert">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <div>
+                    <strong>Não foi possível concluir a exclusão</strong>
+                    <span>
+                        <?= htmlspecialchars(
+                            $mensagemErro,
+                            ENT_QUOTES,
+                            'UTF-8'
+                        ) ?>
+                    </span>
+                </div>
+                <button
+                    type="button"
+                    class="page-alert-close"
+                    aria-label="Fechar mensagem"
+                    onclick="this.closest('.page-alert').remove();">
+                    &times;
+                </button>
+            </div>
+        <?php endif; ?>
 
         <!-- =====================================================
          CABEÇALHO
@@ -1408,23 +1481,6 @@ $dataAceite = $prontuario['termo_consentimento_aceito_em']
         </script>
     <?php endif; ?>
 
-
-    <style>
-        .ajuste-gerado {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 32px;
-            padding: 0 10px;
-            border: 1px solid #86efac;
-            border-radius: 7px;
-            background: #f0fdf4;
-            color: #15803d;
-            font-size: 10px;
-            font-weight: 700;
-            white-space: nowrap;
-        }
-    </style>
 
 </body>
 
