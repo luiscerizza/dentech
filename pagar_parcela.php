@@ -174,31 +174,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /*
         |--------------------------------------------------------------------------
-        | Validar origem
+        | Validar origem financeira
         |--------------------------------------------------------------------------
         |
-        | Procedimentos podem possuir cobrança própria e não dependem
-        | de orçamento aceito.
+        | Orçamento é apenas uma proposta comercial. Suas parcelas são
+        | condições comerciais e não podem ser recebidas pelo Financeiro.
         |
-        | Cobranças originadas de orçamento continuam dependendo de
-        | orçamento aceito.
+        | Somente parcelas vinculadas a um procedimento possuem cobrança
+        | financeira efetiva e podem ser pagas por este fluxo.
         |--------------------------------------------------------------------------
         */
-        if (
-            !empty($parcela_locked['orcamento_id']) &&
-            $parcela_locked['status_orcamento'] !== 'aceito'
-        ) {
+        if (empty($parcela_locked['procedimento_id'])) {
             throw new Exception(
-                'Somente parcelas de orçamentos aceitos podem ser pagas.'
+                'Somente parcelas de cobranças de procedimentos podem ser pagas.'
             );
         }
 
-        if (
-            empty($parcela_locked['orcamento_id']) &&
-            empty($parcela_locked['procedimento_id'])
-        ) {
+        if (!empty($parcela_locked['orcamento_id'])) {
             throw new Exception(
-                'Parcela sem origem financeira válida.'
+                'Esta parcela pertence a um orçamento e não possui cobrança financeira.'
             );
         }
 
@@ -267,25 +261,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         | Montar categoria e descrição
         |--------------------------------------------------------------------------
         */
-        if (!empty($parcela_locked['procedimento_id'])) {
+        $categoria = 'Procedimento';
 
-            $categoria = 'Procedimento';
-
-            $descricao = sprintf(
-                'Procedimento #%d - Parcela %d',
-                (int)$parcela_locked['procedimento_id'],
-                (int)$parcela_locked['numero_parcela']
-            );
-        } else {
-
-            $categoria = 'Orçamento odontológico';
-
-            $descricao = sprintf(
-                'Orçamento #%d - Parcela %d',
-                (int)$parcela_locked['orcamento_id'],
-                (int)$parcela_locked['numero_parcela']
-            );
-        }
+        $descricao = sprintf(
+            'Procedimento #%d - Parcela %d',
+            (int)$parcela_locked['procedimento_id'],
+            (int)$parcela_locked['numero_parcela']
+        );
 
         /*
         |--------------------------------------------------------------------------
@@ -391,15 +373,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $forma_pagamento,
                 $parcela_locked['valor'],
 
-                !empty($parcela_locked['orcamento_id'])
-                    ? (int)$parcela_locked['orcamento_id']
-                    : null,
+                null,
 
                 $parcela_id,
 
-                !empty($parcela_locked['procedimento_id'])
-                    ? (int)$parcela_locked['procedimento_id']
-                    : null
+                (int)$parcela_locked['procedimento_id']
             ]);
         }
 
