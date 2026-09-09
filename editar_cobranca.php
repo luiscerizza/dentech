@@ -172,9 +172,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ");
         $stmt->execute([$vencimento, $status, $parcela_id]);
 
-        if ($stmt->rowCount() !== 1) {
-            throw new Exception('Não foi possível atualizar a cobrança.');
-        }
 
         /* O lançamento vinculado representa a mesma cobrança. */
         $stmt = $pdo->prepare("
