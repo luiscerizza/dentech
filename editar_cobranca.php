@@ -18,36 +18,18 @@ function buscarParcela(PDO $pdo, int $id): ?array
     $stmt = $pdo->prepare("
         SELECT
             p.*,
-            o.status AS status_orcamento,
             proc.titulo AS procedimento_titulo,
-
-            COALESCE(
-                pr_proc.paciente,
-                pr_orc.paciente,
-                'Paciente não encontrado'
-            ) AS paciente,
-
+            pr_proc.paciente AS paciente,
             lf.forma_pagamento
-
         FROM parcelas p
-
-        LEFT JOIN orcamentos o
-            ON o.id = p.orcamento_id
-
-        LEFT JOIN procedimentos proc
+        INNER JOIN procedimentos proc
             ON proc.id = p.procedimento_id
-
-        LEFT JOIN prontuarios pr_orc
-            ON pr_orc.id = o.paciente_id
-
         LEFT JOIN prontuarios pr_proc
             ON pr_proc.id = proc.paciente_id
-
         LEFT JOIN lancamentos_financeiros lf
             ON lf.parcela_id = p.id
-
         WHERE p.id = ?
-
+          AND p.procedimento_id IS NOT NULL
         LIMIT 1
     ");
 
@@ -56,9 +38,35 @@ function buscarParcela(PDO $pdo, int $id): ?array
     return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 }
 
+/*
+|--------------------------------------------------------------------------
+| Cobranças editáveis são exclusivamente de procedimentos.
+| Parcelas antigas originadas de orçamento não fazem parte do fluxo
+| financeiro atual e não podem ser editadas por esta página.
+|--------------------------------------------------------------------------
+*/
 $cobranca = buscarParcela($pdo, $parcela_id);
 
 if (!$cobranca) {
+    $stmt = $pdo->prepare("
+        SELECT id, procedimento_id, orcamento_id
+        FROM parcelas
+        WHERE id = ?
+        LIMIT 1
+    ");
+    $stmt->execute([$parcela_id]);
+    $parcela_origem = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$parcela_origem) {
+        http_response_code(404);
+        exit('Cobrança não encontrada.');
+    }
+
+    if (empty($parcela_origem['procedimento_id'])) {
+        http_response_code(403);
+        exit('Esta parcela não pertence a uma cobrança de procedimento.');
+    }
+
     http_response_code(404);
     exit('Cobrança não encontrada.');
 }
@@ -76,22 +84,23 @@ $formas_pagamento = [
 
 $erro = '';
 
-$forma_pagamento_atual =
-    trim((string)($cobranca['forma_pagamento'] ?? ''));
+$forma_pagamento_atual = trim((string)($cobranca['forma_pagamento'] ?? ''));
 
 if ($forma_pagamento_atual === '') {
     $forma_pagamento_atual = 'Não informado';
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
     try {
-
         validar_csrf();
 
-        $status_atual = strtolower(
-            trim((string)$cobranca['status'])
-        );
+        if (empty($cobranca['procedimento_id'])) {
+            throw new Exception(
+                'Somente cobranças de procedimentos podem ser editadas.'
+            );
+        }
+
+        $status_atual = strtolower(trim((string)$cobranca['status']));
 
         if ($status_atual === 'paga') {
             throw new Exception(
@@ -99,87 +108,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
         }
 
-        $vencimento = trim(
-            (string)($_POST['vencimento'] ?? '')
-        );
+        $vencimento = trim((string)($_POST['vencimento'] ?? ''));
+        $forma_pagamento = trim((string)($_POST['forma_pagamento'] ?? ''));
 
-        $forma_pagamento = trim(
-            (string)($_POST['forma_pagamento'] ?? '')
-        );
+        $dt = DateTime::createFromFormat('Y-m-d', $vencimento);
 
-        $dt = DateTime::createFromFormat(
-            'Y-m-d',
-            $vencimento
-        );
-
-        if (
-            !$dt ||
-            $dt->format('Y-m-d') !== $vencimento
-        ) {
-            throw new Exception(
-                'Data de vencimento inválida.'
-            );
+        if (!$dt || $dt->format('Y-m-d') !== $vencimento) {
+            throw new Exception('Data de vencimento inválida.');
         }
 
-        if (!in_array(
-            $forma_pagamento,
-            $formas_pagamento,
-            true
-        )) {
-            throw new Exception(
-                'Selecione uma forma de pagamento válida.'
-            );
+        if (!in_array($forma_pagamento, $formas_pagamento, true)) {
+            throw new Exception('Selecione uma forma de pagamento válida.');
         }
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | Status é automático.
-        |--------------------------------------------------------------------------
-        */
         $status = $vencimento < date('Y-m-d')
             ? 'atrasada'
             : 'pendente';
 
         $pdo->beginTransaction();
 
-        /*
-        |--------------------------------------------------------------------------
-        | Atualizar parcela
-        |--------------------------------------------------------------------------
-        */
+        /* Bloqueia a parcela e confirma novamente a origem. */
         $stmt = $pdo->prepare("
-            UPDATE parcelas
-
-            SET
-                vencimento = ?,
-                status = ?
-
-            WHERE
-                id = ?
-                AND status IN ('pendente', 'atrasada')
+            SELECT id, valor, vencimento, status, data_pagamento,
+                   procedimento_id, orcamento_id, numero_parcela
+            FROM parcelas
+            WHERE id = ?
+            LIMIT 1
+            FOR UPDATE
         ");
+        $stmt->execute([$parcela_id]);
+        $parcela_locked = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        $stmt->execute([
-            $vencimento,
-            $status,
-            $parcela_id
-        ]);
+        if (!$parcela_locked) {
+            throw new Exception('Cobrança não encontrada.');
+        }
 
-        if ($stmt->rowCount() !== 1) {
+        if (empty($parcela_locked['procedimento_id'])) {
             throw new Exception(
-                'Não foi possível atualizar a cobrança.'
+                'Somente cobranças de procedimentos podem ser editadas.'
             );
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Forma de pagamento e observações ficam no lançamento financeiro
-        | vinculado à parcela.
-        |
-        | Para evitar duplicidade, usamos parcela_id, que é UNIQUE.
-        |--------------------------------------------------------------------------
-        */
+        if ($parcela_locked['status'] === 'paga') {
+            throw new Exception(
+                'Não é permitido editar uma cobrança já paga.'
+            );
+        }
+
+        if (!empty($parcela_locked['data_pagamento'])) {
+            throw new Exception(
+                'Uma cobrança com data de pagamento registrada não pode ser editada.'
+            );
+        }
+
+        $stmt = $pdo->prepare("
+            UPDATE parcelas
+            SET
+                vencimento = ?,
+                status = ?,
+                data_pagamento = NULL
+            WHERE id = ?
+              AND status IN ('pendente', 'atrasada')
+        ");
+        $stmt->execute([$vencimento, $status, $parcela_id]);
+
+        if ($stmt->rowCount() !== 1) {
+            throw new Exception('Não foi possível atualizar a cobrança.');
+        }
+
+        /* O lançamento vinculado representa a mesma cobrança. */
         $stmt = $pdo->prepare("
             SELECT id
             FROM lancamentos_financeiros
@@ -187,77 +184,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             LIMIT 1
             FOR UPDATE
         ");
-
         $stmt->execute([$parcela_id]);
-
         $lancamento_id = $stmt->fetchColumn();
 
-        $eh_procedimento = !empty($cobranca['procedimento_id']);
+        $descricao = sprintf(
+            'Procedimento #%d - %s - Parcela %d',
+            (int)$parcela_locked['procedimento_id'],
+            $cobranca['paciente'],
+            (int)$parcela_locked['numero_parcela']
+        );
 
-        if ($eh_procedimento) {
-
-            $categoria = 'Procedimento';
-
-            $descricao = sprintf(
-                'Procedimento #%d - %s - Parcela %d',
-                (int)$cobranca['procedimento_id'],
-                $cobranca['paciente'],
-                (int)$cobranca['numero_parcela']
-            );
-        } else {
-
-            $categoria = 'Orçamento odontológico';
-
-            $descricao = sprintf(
-                'Orçamento #%d - %s - Parcela %d',
-                (int)$cobranca['orcamento_id'],
-                $cobranca['paciente'],
-                (int)$cobranca['numero_parcela']
-            );
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Uma cobrança ainda não paga é mantida como receita pendente.
-        | O pagamento real continua sendo feito por pagar_parcela.php.
-        |--------------------------------------------------------------------------
-        */
         if ($lancamento_id) {
-
             $stmt = $pdo->prepare("
                 UPDATE lancamentos_financeiros
-
                 SET
                     tipo = 'receita',
-                    categoria = ?,
+                    categoria = 'Procedimento',
                     descricao = ?,
                     forma_pagamento = ?,
                     valor = ?,
                     parcelas = 1,
                     status = 'pendente',
-                    orcamento_id = ?,
-                    procedimento_id = ?,
-                    data = ?
-
+                    data = ?,
+                    data_pagamento = NULL,
+                    orcamento_id = NULL,
+                    procedimento_id = ?
                 WHERE id = ?
             ");
-
             $stmt->execute([
-                $categoria,
                 $descricao,
                 $forma_pagamento,
-                $cobranca['valor'],
-                !empty($cobranca['orcamento_id'])
-                    ? (int)$cobranca['orcamento_id']
-                    : null,
-                !empty($cobranca['procedimento_id'])
-                    ? (int)$cobranca['procedimento_id']
-                    : null,
+                $parcela_locked['valor'],
                 $vencimento,
+                (int)$parcela_locked['procedimento_id'],
                 $lancamento_id
             ]);
         } else {
-
             $stmt = $pdo->prepare("
                 INSERT INTO lancamentos_financeiros (
                     tipo,
@@ -268,41 +230,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     valor,
                     parcelas,
                     status,
-                    observacoes,
+                    data_pagamento,
                     orcamento_id,
                     parcela_id,
                     procedimento_id
-                )
-
-                VALUES (
+                ) VALUES (
                     'receita',
-                    ?,
+                    'Procedimento',
                     ?,
                     ?,
                     ?,
                     ?,
                     1,
                     'pendente',
-                    ?,
-                    ?,
+                    NULL,
+                    NULL,
                     ?,
                     ?
                 )
             ");
-
             $stmt->execute([
-                $categoria,
                 $descricao,
                 $vencimento,
                 $forma_pagamento,
-                $cobranca['valor'],
-                !empty($cobranca['orcamento_id'])
-                    ? (int)$cobranca['orcamento_id']
-                    : null,
+                $parcela_locked['valor'],
                 $parcela_id,
-                !empty($cobranca['procedimento_id'])
-                    ? (int)$cobranca['procedimento_id']
-                    : null
+                (int)$parcela_locked['procedimento_id']
             ]);
         }
 
@@ -313,26 +266,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $parcela_id .
                 '&sucesso=edicao'
         );
-
         exit;
     } catch (Throwable $e) {
-
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
 
         $erro = $e->getMessage();
 
-        $cobranca = buscarParcela(
-            $pdo,
-            $parcela_id
-        );
+        $cobranca = buscarParcela($pdo, $parcela_id);
+
+        if (!$cobranca) {
+            http_response_code(404);
+            exit('Cobrança não encontrada.');
+        }
 
         $forma_pagamento_atual =
             trim((string)($cobranca['forma_pagamento'] ?? 'Não informado'));
 
-        $observacoes_atual =
-            (string)($cobranca['observacoes_financeiras'] ?? '');
+        if ($forma_pagamento_atual === '') {
+            $forma_pagamento_atual = 'Não informado';
+        }
     }
 }
 
@@ -343,9 +297,7 @@ function dataBR($data): string
         : '—';
 }
 
-$status_atual = strtolower(
-    trim((string)$cobranca['status'])
-);
+$status_atual = strtolower(trim((string)$cobranca['status']));
 
 $status_texto = match ($status_atual) {
     'paga' => 'Paga',
@@ -371,194 +323,11 @@ $status_texto = match ($status_atual) {
     <link rel="stylesheet" href="css/variables.css">
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/editar_cobranca.css">
 
     <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-
-    <style>
-        .edit-page {
-            max-width: 860px;
-            margin: 0 auto;
-            padding-bottom: 40px;
-        }
-
-        .breadcrumb {
-            color: #2563eb;
-            font-weight: 600;
-            margin-bottom: 6px;
-        }
-
-        .edit-page h1 {
-            margin-bottom: 6px;
-        }
-
-        .edit-page>p {
-            color: #64748b;
-        }
-
-        .card-edit {
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 14px;
-            padding: 26px;
-            box-shadow: 0 4px 16px rgba(15, 23, 42, .05);
-            margin-top: 20px;
-        }
-
-        .card-edit h2 {
-            margin: 0 0 18px;
-            font-size: 18px;
-        }
-
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 14px;
-            margin-bottom: 26px;
-        }
-
-        .info-box {
-            background: #f8fafc;
-            padding: 14px;
-            border-radius: 8px;
-            color: #475569;
-        }
-
-        .info-box label {
-            display: block;
-            color: #64748b;
-            font-size: 12px;
-            margin-bottom: 4px;
-        }
-
-        .info-box strong {
-            color: #172033;
-        }
-
-        .field {
-            margin: 20px 0;
-        }
-
-        .field label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #172033;
-        }
-
-        .field input,
-        .field select,
-        .field textarea {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 12px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            font: inherit;
-            background: #fff;
-        }
-
-        .field textarea {
-            min-height: 110px;
-            resize: vertical;
-        }
-
-        .field input:focus,
-        .field select:focus,
-        .field textarea:focus {
-            outline: none;
-            border-color: #2563eb;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, .10);
-        }
-
-        .field small {
-            display: block;
-            margin-top: 6px;
-            color: #64748b;
-        }
-
-        .status-box {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 7px 11px;
-            border-radius: 999px;
-            font-size: 13px;
-            font-weight: 700;
-        }
-
-        .status-pendente {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .status-atrasada {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .status-paga {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .alert {
-            padding: 12px 14px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-        }
-
-        .erro {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .acoes {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 26px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 10px 15px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            text-decoration: none;
-            background: #fff;
-            color: #172033;
-            cursor: pointer;
-            font: inherit;
-        }
-
-        .btn-primary {
-            background: #2563eb;
-            color: #fff;
-            border-color: #2563eb;
-        }
-
-        @media (max-width: 700px) {
-
-            .info-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .acoes {
-                flex-direction: column;
-            }
-
-            .acoes .btn {
-                width: 100%;
-            }
-
-        }
-    </style>
 
 </head>
 
@@ -613,31 +382,19 @@ $status_texto = match ($status_atual) {
                     <div class="info-box">
                         <label>Origem</label>
                         <strong>
-                            <?= !empty($cobranca['procedimento_id'])
-                                ? 'Procedimento'
-                                : 'Orçamento' ?>
+                            Procedimento
                         </strong>
                     </div>
 
                     <div class="info-box">
-                        <label>Procedimento / Orçamento</label>
+                        <label>Procedimento</label>
                         <strong>
+                            Procedimento #<?= (int)$cobranca['procedimento_id'] ?>
 
-                            <?php if (!empty($cobranca['procedimento_id'])): ?>
-
-                                Procedimento #<?= (int)$cobranca['procedimento_id'] ?>
-
-                                <?php if (!empty($cobranca['procedimento_titulo'])): ?>
-                                    —
-                                    <?= htmlspecialchars($cobranca['procedimento_titulo']) ?>
-                                <?php endif; ?>
-
-                            <?php else: ?>
-
-                                Orçamento #<?= (int)$cobranca['orcamento_id'] ?>
-
+                            <?php if (!empty($cobranca['procedimento_titulo'])): ?>
+                                —
+                                <?= htmlspecialchars($cobranca['procedimento_titulo']) ?>
                             <?php endif; ?>
-
                         </strong>
                     </div>
 
