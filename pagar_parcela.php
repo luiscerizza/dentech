@@ -151,10 +151,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 p.procedimento_id,
                 o.status AS status_orcamento
             FROM parcelas p
+
             LEFT JOIN orcamentos o
                 ON o.id = p.orcamento_id
+
             WHERE p.id = ?
+
             LIMIT 1
+
             FOR UPDATE
         ");
 
@@ -170,35 +174,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /*
         |--------------------------------------------------------------------------
-        | Validar origem financeira
+        | Validar origem
         |--------------------------------------------------------------------------
         |
-        | O orçamento é apenas uma proposta comercial.
-        | O pagamento financeiro somente pode ocorrer para uma parcela
-        | gerada a partir de uma cobrança real de procedimento.
+        | Procedimentos podem possuir cobrança própria e não dependem
+        | de orçamento aceito.
         |
-        | Fluxo:
-        | ORÇAMENTO → ACEITO → PROCEDIMENTO → COBRANÇA → PARCELAS
-        | → A RECEBER → PAGAMENTO → RECEITA
+        | Cobranças originadas de orçamento continuam dependendo de
+        | orçamento aceito.
         |--------------------------------------------------------------------------
         */
-        if (empty($parcela_locked['procedimento_id'])) {
+        if (
+            !empty($parcela_locked['orcamento_id']) &&
+            $parcela_locked['status_orcamento'] !== 'aceito'
+        ) {
             throw new Exception(
-                'Somente parcelas de cobranças de procedimentos podem ser pagas.'
+                'Somente parcelas de orçamentos aceitos podem ser pagas.'
+            );
+        }
+
+        if (
+            empty($parcela_locked['orcamento_id']) &&
+            empty($parcela_locked['procedimento_id'])
+        ) {
+            throw new Exception(
+                'Parcela sem origem financeira válida.'
             );
         }
 
         /*
         |--------------------------------------------------------------------------
-        | Impedir pagamento duplicado
+        | Validar status
         |--------------------------------------------------------------------------
         */
-        if ($parcela_locked['status'] === 'paga') {
-            throw new Exception(
-                'Esta parcela já está paga.'
-            );
-        }
-
         if (!in_array(
             $parcela_locked['status'],
             ['pendente', 'atrasada'],
@@ -258,19 +266,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         |--------------------------------------------------------------------------
         | Montar categoria e descrição
         |--------------------------------------------------------------------------
-        |
-        | Como o pagamento financeiro somente é permitido para cobranças
-        | de procedimentos, o lançamento sempre será classificado como
-        | receita de procedimento.
-        |--------------------------------------------------------------------------
         */
-        $categoria = 'Procedimento';
+        if (!empty($parcela_locked['procedimento_id'])) {
 
-        $descricao = sprintf(
-            'Procedimento #%d - Parcela %d',
-            (int)$parcela_locked['procedimento_id'],
-            (int)$parcela_locked['numero_parcela']
-        );
+            $categoria = 'Procedimento';
+
+            $descricao = sprintf(
+                'Procedimento #%d - Parcela %d',
+                (int)$parcela_locked['procedimento_id'],
+                (int)$parcela_locked['numero_parcela']
+            );
+        } else {
+
+            $categoria = 'Orçamento odontológico';
+
+            $descricao = sprintf(
+                'Orçamento #%d - Parcela %d',
+                (int)$parcela_locked['orcamento_id'],
+                (int)$parcela_locked['numero_parcela']
+            );
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -280,9 +295,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($lancamento_id) {
 
             /*
+            |--------------------------------------------------------------------------
             | Já existe um lançamento para a parcela.
-            | Apenas transformamos em receita paga e atualizamos
-            | a forma de pagamento/data.
+            |
+            | IMPORTANTE:
+            | - data permanece como a data original da cobrança;
+            | - data_pagamento registra a data efetiva do pagamento.
+            |--------------------------------------------------------------------------
             */
             $stmt = $pdo->prepare("
                 UPDATE lancamentos_financeiros
@@ -291,11 +310,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     tipo = 'receita',
                     categoria = ?,
                     descricao = ?,
-                    data = CURDATE(),
                     forma_pagamento = ?,
                     valor = ?,
                     parcelas = 1,
                     status = 'pago',
+                    data_pagamento = CURDATE(),
                     orcamento_id = ?,
                     procedimento_id = ?
 
@@ -307,18 +326,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $descricao,
                 $forma_pagamento,
                 $parcela_locked['valor'],
+
                 !empty($parcela_locked['orcamento_id'])
                     ? (int)$parcela_locked['orcamento_id']
                     : null,
+
                 !empty($parcela_locked['procedimento_id'])
                     ? (int)$parcela_locked['procedimento_id']
                     : null,
+
                 $lancamento_id
             ]);
         } else {
 
             /*
+            |--------------------------------------------------------------------------
             | Ainda não existe lançamento financeiro.
+            |
+            | data = vencimento da cobrança
+            | data_pagamento = data efetiva do pagamento
+            |--------------------------------------------------------------------------
             */
             $stmt = $pdo->prepare("
                 INSERT INTO lancamentos_financeiros (
@@ -330,6 +357,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     valor,
                     parcelas,
                     status,
+                    data_pagamento,
                     orcamento_id,
                     parcela_id,
                     procedimento_id
@@ -339,11 +367,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'receita',
                     ?,
                     ?,
-                    CURDATE(),
+                    ?,
                     ?,
                     ?,
                     1,
                     'pago',
+                    CURDATE(),
                     ?,
                     ?,
                     ?
@@ -353,12 +382,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([
                 $categoria,
                 $descricao,
+
+                /*
+                 * A data do lançamento representa a data da cobrança.
+                 */
+                $parcela_locked['vencimento'],
+
                 $forma_pagamento,
                 $parcela_locked['valor'],
+
                 !empty($parcela_locked['orcamento_id'])
                     ? (int)$parcela_locked['orcamento_id']
                     : null,
+
                 $parcela_id,
+
                 !empty($parcela_locked['procedimento_id'])
                     ? (int)$parcela_locked['procedimento_id']
                     : null
@@ -385,7 +423,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $erro = $e->getMessage();
 
         /*
+        |--------------------------------------------------------------------------
         | Recarregar os dados depois de um possível rollback.
+        |--------------------------------------------------------------------------
         */
         $parcela = buscarParcela(
             $pdo,
@@ -457,13 +497,13 @@ function dataBR($data): string
         rel="stylesheet"
         href="css/navbar.css">
 
-    <link rel="stylesheet"
+    <link
+        rel="stylesheet"
         href="css/pagar_parcela.css">
 
     <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-
 
 </head>
 
@@ -554,98 +594,127 @@ function dataBR($data): string
                         <label>Status</label>
 
                         <strong>
-
-                            <span class="status status-<?= htmlspecialchars($status) ?>">
-
-                                <?= htmlspecialchars($status_texto) ?>
-
-                            </span>
-
+                            <?= htmlspecialchars(
+                                $status_texto,
+                                ENT_QUOTES,
+                                'UTF-8'
+                            ) ?>
                         </strong>
 
                     </div>
 
                 </div>
 
-                <form method="POST">
+                <?php if (
+                    in_array(
+                        $status,
+                        ['pendente', 'atrasada'],
+                        true
+                    )
+                ): ?>
 
-                    <input
-                        type="hidden"
-                        name="csrf_token"
-                        value="<?= htmlspecialchars(
-                                    $_SESSION['csrf_token'] ?? '',
-                                    ENT_QUOTES,
-                                    'UTF-8'
-                                ) ?>">
+                    <form
+                        method="POST"
+                        class="form-pagamento">
 
-                    <input
-                        type="hidden"
-                        name="parcela_id"
-                        value="<?= (int)$parcela_id ?>">
+                        <input
+                            type="hidden"
+                            name="parcela_id"
+                            value="<?= (int)$parcela_id ?>">
 
-                    <div class="campo">
-
-                        <label for="forma_pagamento">
-                            Como o pagamento foi realizado?
-                        </label>
-
-                        <select
-                            id="forma_pagamento"
-                            name="forma_pagamento"
-                            required>
-
-                            <option value="">
-                                Selecione uma forma de pagamento
-                            </option>
-
-                            <?php foreach ($formas_pagamento as $forma): ?>
-
-                                <option
-                                    value="<?= htmlspecialchars(
-                                                $forma,
-                                                ENT_QUOTES,
-                                                'UTF-8'
-                                            ) ?>">
-
-                                    <?= htmlspecialchars(
-                                        $forma,
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="<?= htmlspecialchars(
+                                        $_SESSION['csrf_token'] ?? '',
                                         ENT_QUOTES,
                                         'UTF-8'
-                                    ) ?>
+                                    ) ?>">
 
+                        <div class="campo">
+
+                            <label for="forma_pagamento">
+                                Forma de pagamento
+                            </label>
+
+                            <select
+                                name="forma_pagamento"
+                                id="forma_pagamento"
+                                required>
+
+                                <option value="">
+                                    Selecione...
                                 </option>
 
-                            <?php endforeach; ?>
+                                <?php foreach (
+                                    $formas_pagamento
+                                    as $forma
+                                ): ?>
 
-                        </select>
+                                    <option
+                                        value="<?= htmlspecialchars(
+                                                    $forma,
+                                                    ENT_QUOTES,
+                                                    'UTF-8'
+                                                ) ?>">
 
-                    </div>
+                                        <?= htmlspecialchars(
+                                            $forma,
+                                            ENT_QUOTES,
+                                            'UTF-8'
+                                        ) ?>
+
+                                    </option>
+
+                                <?php endforeach; ?>
+
+                            </select>
+
+                        </div>
+
+                        <div class="acoes">
+
+                            <a
+                                href="financeiro.php"
+                                class="btn btn-secundario">
+
+                                <i class="fa-solid fa-arrow-left"></i>
+
+                                Voltar
+
+                            </a>
+
+                            <button
+                                type="submit"
+                                class="btn btn-confirmar">
+
+                                <i class="fa-solid fa-check"></i>
+
+                                Confirmar pagamento
+
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                <?php else: ?>
 
                     <div class="acoes">
 
                         <a
-                            class="btn"
-                            href="visualizar_cobranca.php?parcela_id=<?= (int)$parcela_id ?>">
+                            href="financeiro.php"
+                            class="btn btn-secundario">
 
                             <i class="fa-solid fa-arrow-left"></i>
 
-                            Cancelar
+                            Voltar
 
                         </a>
 
-                        <button
-                            type="submit"
-                            class="btn btn-success">
-
-                            <i class="fa-solid fa-check"></i>
-
-                            Confirmar pagamento
-
-                        </button>
-
                     </div>
 
-                </form>
+                <?php endif; ?>
 
             </section>
 
