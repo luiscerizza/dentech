@@ -164,7 +164,6 @@ function statusOrcamento(string $status): string
         <header class="topbar">
 
             <div class="page-heading">
-                <span class="eyebrow">Dentech</span>
                 <h1>Dashboard</h1>
                 <p>Visão geral da clínica</p>
             </div>
