@@ -38,6 +38,10 @@ $status = $_POST['status'] ?? 'pendente';
 $valor = $_POST['valor'] ?? '';
 $observacoes = trim($_POST['observacoes'] ?? '');
 
+$parcelado = isset($_POST['parcelado']) && $_POST['parcelado'] === '1';
+$quantidade_parcelas = (int) ($_POST['quantidade_parcelas'] ?? 2);
+$primeiro_vencimento = $_POST['primeiro_vencimento'] ?? date('Y-m-d');
+
 /*
 |--------------------------------------------------------------------------
 | Métodos de pagamento
@@ -54,6 +58,60 @@ $formas_validas = [
     'Cheque',
     'Outro'
 ];
+
+/*
+|--------------------------------------------------------------------------
+| Funções auxiliares
+|--------------------------------------------------------------------------
+*/
+
+function normalizarValorParaCentavos(string $valor): ?int
+{
+    $valor = trim($valor);
+
+    if ($valor === '') {
+        return null;
+    }
+
+    if (str_contains($valor, ',') && str_contains($valor, '.')) {
+        $valor = str_replace('.', '', $valor);
+        $valor = str_replace(',', '.', $valor);
+    } elseif (str_contains($valor, ',')) {
+        $valor = str_replace(',', '.', $valor);
+    }
+
+    if (!is_numeric($valor)) {
+        return null;
+    }
+
+    $valor = (float) $valor;
+
+    if ($valor <= 0) {
+        return null;
+    }
+
+    return (int) round($valor * 100);
+}
+
+function adicionarMesPreservandoDia(string $data, int $meses): string
+{
+    $dataObj = new DateTime($data);
+    $diaOriginal = (int) $dataObj->format('d');
+
+    $dataObj->modify('first day of this month');
+    $dataObj->modify('+' . $meses . ' month');
+
+    $ultimoDia = (int) $dataObj->format('t');
+    $diaFinal = min($diaOriginal, $ultimoDia);
+
+    $dataObj->setDate(
+        (int) $dataObj->format('Y'),
+        (int) $dataObj->format('m'),
+        $diaFinal
+    );
+
+    return $dataObj->format('Y-m-d');
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -137,6 +195,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $erros[] = 'Selecione uma forma de pagamento válida.';
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Status
+    |--------------------------------------------------------------------------
+    */
+
     if (!in_array($status, ['pago', 'pendente'], true)) {
         $erros[] = 'Selecione um status válido.';
     }
@@ -147,36 +211,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     |--------------------------------------------------------------------------
     */
 
+    $valor_centavos = normalizarValorParaCentavos((string) $valor);
+
     if ($valor === '') {
-
         $erros[] = 'Informe o valor.';
-    } else {
+    } elseif ($valor_centavos === null) {
+        $erros[] = 'Informe um valor válido maior que zero.';
+    }
 
-        /*
-        | Aceita:
-        | 1500.50
-        | 1.500,50
-        | 1500,50
-        */
+    /*
+    |--------------------------------------------------------------------------
+    | Parcelamento
+    |--------------------------------------------------------------------------
+    */
 
-        if (str_contains((string) $valor, ',') && str_contains((string) $valor, '.')) {
-            $valor_limpo = str_replace('.', '', (string) $valor);
-            $valor_limpo = str_replace(',', '.', $valor_limpo);
-        } elseif (str_contains((string) $valor, ',')) {
-            $valor_limpo = str_replace(',', '.', (string) $valor);
-        } else {
-            $valor_limpo = (string) $valor;
+    if ($parcelado) {
+
+        if ($quantidade_parcelas < 2 || $quantidade_parcelas > 60) {
+            $erros[] = 'A quantidade de parcelas deve estar entre 2 e 60.';
         }
 
-        if (!is_numeric($valor_limpo)) {
+        if ($status === 'pago') {
+            $erros[] = 'Lançamentos parcelados devem ser criados como pendentes. Cada parcela poderá ser paga individualmente.';
+        }
 
-            $erros[] = 'Informe um valor válido.';
+        if ($primeiro_vencimento === '') {
+
+            $erros[] = 'Informe o primeiro vencimento.';
         } else {
 
-            $valor_numero = (float) $valor_limpo;
+            $vencimentoObj = DateTime::createFromFormat('Y-m-d', $primeiro_vencimento);
 
-            if ($valor_numero <= 0) {
-                $erros[] = 'O valor deve ser maior que zero.';
+            if (
+                !$vencimentoObj ||
+                $vencimentoObj->format('Y-m-d') !== $primeiro_vencimento
+            ) {
+                $erros[] = 'Informe um primeiro vencimento válido.';
             }
         }
     }
@@ -191,45 +261,160 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         try {
 
-            $sql = "
-                INSERT INTO lancamentos_financeiros (
-                    tipo,
-                    categoria,
-                    descricao,
-                    data,
-                    data_pagamento,
-                    forma_pagamento,
-                    valor,
-                    status,
-                    observacoes
-                ) VALUES (
-                    :tipo,
-                    :categoria,
-                    :descricao,
-                    :data,
-                    :data_pagamento,
-                    :forma_pagamento,
-                    :valor,
-                    :status,
-                    :observacoes
-                )
-            ";
+            $pdo->beginTransaction();
 
-            $stmt = $pdo->prepare($sql);
+            /*
+            |--------------------------------------------------------------------------
+            | Lançamento à vista
+            |--------------------------------------------------------------------------
+            */
 
-            $stmt->execute([
-                ':tipo' => $tipo,
-                ':categoria' => $categoria,
-                ':descricao' => $descricao,
-                ':data' => $data,
-                ':data_pagamento' => $status === 'pago' ? $data : null,
-                ':forma_pagamento' => $forma_pagamento,
-                ':valor' => $valor_numero,
-                ':status' => $status,
-                ':observacoes' => $observacoes !== ''
-                    ? $observacoes
-                    : null
-            ]);
+            if (!$parcelado) {
+
+                $sql = "
+                    INSERT INTO lancamentos_financeiros (
+                        tipo,
+                        categoria,
+                        descricao,
+                        data,
+                        data_pagamento,
+                        forma_pagamento,
+                        valor,
+                        parcelas,
+                        status,
+                        observacoes
+                    ) VALUES (
+                        :tipo,
+                        :categoria,
+                        :descricao,
+                        :data,
+                        :data_pagamento,
+                        :forma_pagamento,
+                        :valor,
+                        1,
+                        :status,
+                        :observacoes
+                    )
+                ";
+
+                $stmt = $pdo->prepare($sql);
+
+                $stmt->execute([
+                    ':tipo' => $tipo,
+                    ':categoria' => $categoria,
+                    ':descricao' => $descricao,
+                    ':data' => $data,
+                    ':data_pagamento' => $status === 'pago' ? $data : null,
+                    ':forma_pagamento' => $forma_pagamento,
+                    ':valor' => $valor_centavos / 100,
+                    ':status' => $status,
+                    ':observacoes' => $observacoes !== ''
+                        ? $observacoes
+                        : null
+                ]);
+
+                /*
+            |--------------------------------------------------------------------------
+            | Lançamento parcelado
+            |--------------------------------------------------------------------------
+            */
+            } else {
+
+                $sql = "
+                    INSERT INTO lancamentos_financeiros (
+                        tipo,
+                        categoria,
+                        descricao,
+                        data,
+                        data_pagamento,
+                        forma_pagamento,
+                        valor,
+                        parcelas,
+                        status,
+                        observacoes
+                    ) VALUES (
+                        :tipo,
+                        :categoria,
+                        :descricao,
+                        :data,
+                        NULL,
+                        :forma_pagamento,
+                        :valor,
+                        :parcelas,
+                        'pendente',
+                        :observacoes
+                    )
+                ";
+
+                $stmt = $pdo->prepare($sql);
+
+                $stmt->execute([
+                    ':tipo' => $tipo,
+                    ':categoria' => $categoria,
+                    ':descricao' => $descricao,
+                    ':data' => $data,
+                    ':forma_pagamento' => $forma_pagamento,
+                    ':valor' => $valor_centavos / 100,
+                    ':parcelas' => $quantidade_parcelas,
+                    ':observacoes' => $observacoes !== ''
+                        ? $observacoes
+                        : null
+                ]);
+
+                $lancamento_id = (int) $pdo->lastInsertId();
+
+                /*
+                |--------------------------------------------------------------------------
+                | Distribuição das parcelas em centavos
+                |--------------------------------------------------------------------------
+                */
+
+                $valorBase = intdiv($valor_centavos, $quantidade_parcelas);
+                $resto = $valor_centavos % $quantidade_parcelas;
+
+                $sqlParcela = "
+                    INSERT INTO lancamentos_parcelas (
+                        lancamento_id,
+                        numero_parcela,
+                        valor,
+                        vencimento,
+                        status,
+                        data_pagamento
+                    ) VALUES (
+                        :lancamento_id,
+                        :numero_parcela,
+                        :valor,
+                        :vencimento,
+                        'pendente',
+                        NULL
+                    )
+                ";
+
+                $stmtParcela = $pdo->prepare($sqlParcela);
+
+                for ($i = 1; $i <= $quantidade_parcelas; $i++) {
+
+                    $valorParcelaCentavos = $valorBase;
+
+                    if ($i <= $resto) {
+                        $valorParcelaCentavos++;
+                    }
+
+                    $vencimento = adicionarMesPreservandoDia(
+                        $primeiro_vencimento,
+                        $i - 1
+                    );
+
+                    $stmtParcela->execute([
+                        ':lancamento_id' => $lancamento_id,
+                        ':numero_parcela' => $i,
+                        ':valor' => $valorParcelaCentavos / 100,
+                        ':vencimento' => $vencimento
+                    ]);
+                }
+            }
+
+            $pdo->commit();
 
             /*
             |--------------------------------------------------------------------------
@@ -239,15 +424,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
-            /*
-            |--------------------------------------------------------------------------
-            | Redirecionamento
-            |--------------------------------------------------------------------------
-            */
-
             header('Location: financeiro.php?sucesso=1');
             exit;
-        } catch (PDOException $e) {
+        } catch (Throwable $e) {
+
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
 
             $erros[] = 'Não foi possível salvar o lançamento. Tente novamente.';
         }
@@ -289,16 +472,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <main class="container">
 
-        <!-- =====================================================
-             CABEÇALHO
-        ====================================================== -->
-
         <div class="page-header">
 
             <div class="page-header-info">
 
                 <div class="breadcrumb">
-
                     <span>Financeiro</span>
 
                     <span class="breadcrumb-separator">
@@ -306,7 +484,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </span>
 
                     <span>Novo lançamento</span>
-
                 </div>
 
                 <h1>
@@ -321,19 +498,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         </div>
 
-
-        <!-- =====================================================
-             ERROS
-        ====================================================== -->
-
         <?php if (!empty($erros)): ?>
 
             <div class="alert alert-error">
 
                 <div class="alert-icon">
-
                     <i class="fa-solid fa-circle-exclamation"></i>
-
                 </div>
 
                 <div>
@@ -352,11 +522,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <?php endif; ?>
 
-
-        <!-- =====================================================
-             FORMULÁRIO
-        ====================================================== -->
-
         <form
             method="POST"
             class="form-card"
@@ -367,7 +532,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 name="csrf_token"
                 value="<?= htmlspecialchars($csrf_token) ?>">
 
-
             <!-- =================================================
                  TIPO
             ================================================== -->
@@ -377,9 +541,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="section-header">
 
                     <div class="section-icon">
-
                         <i class="fa-solid fa-arrow-right-arrow-left"></i>
-
                     </div>
 
                     <div>
@@ -396,10 +558,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 </div>
 
-
                 <div class="tipo-grid">
-
-                    <!-- RECEITA -->
 
                     <label class="tipo-option receita">
 
@@ -412,9 +571,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <span class="tipo-content">
 
                             <span class="tipo-icon">
-
                                 <i class="fa-solid fa-arrow-trend-up"></i>
-
                             </span>
 
                             <span>
@@ -433,9 +590,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     </label>
 
-
-                    <!-- DESPESA -->
-
                     <label class="tipo-option despesa">
 
                         <input
@@ -447,9 +601,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <span class="tipo-content">
 
                             <span class="tipo-icon">
-
                                 <i class="fa-solid fa-arrow-trend-down"></i>
-
                             </span>
 
                             <span>
@@ -472,7 +624,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             </div>
 
-
             <!-- =================================================
                  DADOS DO LANÇAMENTO
             ================================================== -->
@@ -482,9 +633,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="section-header">
 
                     <div class="section-icon">
-
                         <i class="fa-solid fa-file-invoice"></i>
-
                     </div>
 
                     <div>
@@ -501,11 +650,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 </div>
 
-
                 <div class="form-grid">
-
-
-                    <!-- CATEGORIA -->
 
                     <div class="form-group">
 
@@ -524,9 +669,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     </div>
 
-
-                    <!-- DATA -->
-
                     <div class="form-group">
 
                         <label for="data">
@@ -541,9 +683,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             required>
 
                     </div>
-
-
-                    <!-- DESCRIÇÃO -->
 
                     <div class="form-group form-group-full">
 
@@ -561,9 +700,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             required>
 
                     </div>
-
-
-                    <!-- FORMA DE PAGAMENTO -->
 
                     <div class="form-group">
 
@@ -596,9 +732,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     </div>
 
-
-                    <!-- VALOR -->
-
                     <div class="form-group">
 
                         <label for="valor">
@@ -624,9 +757,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     </div>
 
-
-                    <!-- STATUS -->
-
                     <div class="form-group">
 
                         <label for="status">
@@ -638,12 +768,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             name="status"
                             required>
 
-                            <option value="pendente" <?= $status === 'pendente' ? 'selected' : '' ?>>
+                            <option
+                                value="pendente"
+                                <?= $status === 'pendente' ? 'selected' : '' ?>>
+
                                 Pendente
+
                             </option>
 
-                            <option value="pago" <?= $status === 'pago' ? 'selected' : '' ?>>
+                            <option
+                                value="pago"
+                                <?= $status === 'pago' ? 'selected' : '' ?>>
+
                                 Pago
+
                             </option>
 
                         </select>
@@ -654,6 +792,122 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             </div>
 
+            <!-- =================================================
+                 PARCELAMENTO
+            ================================================== -->
+
+            <div class="form-section">
+
+                <div class="section-header">
+
+                    <div class="section-icon">
+                        <i class="fa-solid fa-layer-group"></i>
+                    </div>
+
+                    <div>
+
+                        <h2>
+                            Parcelamento
+                        </h2>
+
+                        <p>
+                            Opcional. Cada parcela terá vencimento e pagamento independentes.
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <label class="parcelamento-toggle">
+
+                    <input
+                        type="checkbox"
+                        id="parcelado"
+                        name="parcelado"
+                        value="1"
+                        <?= $parcelado ? 'checked' : '' ?>>
+
+                    <span class="parcelamento-toggle-content">
+
+                        <span class="parcelamento-toggle-icon">
+                            <i class="fa-solid fa-check"></i>
+                        </span>
+
+                        <span>
+
+                            <strong>
+                                Parcelar lançamento
+                            </strong>
+
+                            <small>
+                                Crie parcelas individuais para controlar os pagamentos.
+                            </small>
+
+                        </span>
+
+                    </span>
+
+                </label>
+
+                <div
+                    id="parcelamento-config"
+                    class="parcelamento-config <?= $parcelado ? 'is-visible' : '' ?>">
+
+                    <div class="form-grid">
+
+                        <div class="form-group">
+
+                            <label for="quantidade_parcelas">
+                                Quantidade de parcelas
+                            </label>
+
+                            <input
+                                type="number"
+                                id="quantidade_parcelas"
+                                name="quantidade_parcelas"
+                                min="2"
+                                max="60"
+                                step="1"
+                                value="<?= htmlspecialchars((string) $quantidade_parcelas) ?>">
+
+                        </div>
+
+                        <div class="form-group">
+
+                            <label for="primeiro_vencimento">
+                                Primeiro vencimento
+                            </label>
+
+                            <input
+                                type="date"
+                                id="primeiro_vencimento"
+                                name="primeiro_vencimento"
+                                value="<?= htmlspecialchars($primeiro_vencimento) ?>">
+
+                        </div>
+
+                    </div>
+
+                    <div class="parcelamento-aviso">
+
+                        <i class="fa-solid fa-circle-info"></i>
+
+                        <span>
+                            Lançamentos parcelados serão criados como pendentes.
+                            Cada parcela poderá ser paga individualmente.
+                        </span>
+
+                    </div>
+
+                    <div
+                        id="parcelas-preview"
+                        class="parcelas-preview"
+                        aria-live="polite">
+                    </div>
+
+                </div>
+
+            </div>
 
             <!-- =================================================
                  OBSERVAÇÕES
@@ -664,9 +918,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="section-header">
 
                     <div class="section-icon">
-
                         <i class="fa-solid fa-note-sticky"></i>
-
                     </div>
 
                     <div>
@@ -683,7 +935,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 </div>
 
-
                 <div class="form-group">
 
                     <textarea
@@ -696,7 +947,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
             </div>
-
 
             <!-- =================================================
                  AÇÕES
@@ -714,7 +964,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 </a>
 
-
                 <button
                     type="submit"
                     class="btn btn-salvar">
@@ -731,13 +980,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     </main>
 
-
-    <!-- =========================================================
-         MÁSCARA DE VALOR
-    ========================================================== -->
-
     <script>
+        /*
+        |--------------------------------------------------------------------------
+        | Elementos
+        |--------------------------------------------------------------------------
+        */
+
         const campoValor = document.getElementById('valor');
+        const campoParcelado = document.getElementById('parcelado');
+        const configParcelamento = document.getElementById('parcelamento-config');
+        const campoQuantidade = document.getElementById('quantidade_parcelas');
+        const campoPrimeiroVencimento = document.getElementById('primeiro_vencimento');
+        const campoStatus = document.getElementById('status');
+        const previewParcelas = document.getElementById('parcelas-preview');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Máscara de valor
+        |--------------------------------------------------------------------------
+        */
 
         campoValor.addEventListener('input', function() {
 
@@ -748,6 +1010,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!valor) {
 
                 this.value = '';
+
+                atualizarPreview();
 
                 return;
             }
@@ -763,7 +1027,253 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             this.value = valor;
 
+            atualizarPreview();
+
         });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Utilitários
+        |--------------------------------------------------------------------------
+        */
+
+        function obterValorEmCentavos(valor) {
+
+            let limpo = String(valor || '')
+                .replace(/\./g, '')
+                .replace(',', '.');
+
+            const numero = Number(limpo);
+
+            if (!Number.isFinite(numero) || numero <= 0) {
+                return 0;
+            }
+
+            return Math.round(numero * 100);
+        }
+
+        function formatarMoeda(centavos) {
+
+            return (centavos / 100).toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            });
+
+        }
+
+        function adicionarMesPreservandoDia(data, meses) {
+
+            const partes = data.split('-');
+
+            if (partes.length !== 3) {
+                return '';
+            }
+
+            const ano = Number(partes[0]);
+            const mes = Number(partes[1]);
+            const dia = Number(partes[2]);
+
+            if (!ano || !mes || !dia) {
+                return '';
+            }
+
+            const novaData = new Date(ano, mes - 1 + meses, 1);
+
+            const ultimoDia = new Date(
+                novaData.getFullYear(),
+                novaData.getMonth() + 1,
+                0
+            ).getDate();
+
+            const diaFinal = Math.min(dia, ultimoDia);
+
+            const anoFinal = novaData.getFullYear();
+            const mesFinal = String(novaData.getMonth() + 1).padStart(2, '0');
+            const diaFormatado = String(diaFinal).padStart(2, '0');
+
+            return `${anoFinal}-${mesFinal}-${diaFormatado}`;
+
+        }
+
+        function formatarData(data) {
+
+            if (!data) {
+                return '-';
+            }
+
+            const [ano, mes, dia] = data.split('-');
+
+            if (!ano || !mes || !dia) {
+                return '-';
+            }
+
+            return `${dia}/${mes}/${ano}`;
+
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Exibir / ocultar parcelamento
+        |--------------------------------------------------------------------------
+        */
+
+        function atualizarEstadoParcelamento() {
+
+            if (campoParcelado.checked) {
+
+                configParcelamento.classList.add('is-visible');
+
+                campoQuantidade.required = true;
+                campoPrimeiroVencimento.required = true;
+
+                /*
+                | Parcelado não pode ser criado diretamente como pago.
+                */
+
+                campoStatus.value = 'pendente';
+                campoStatus.disabled = true;
+
+            } else {
+
+                configParcelamento.classList.remove('is-visible');
+
+                campoQuantidade.required = false;
+                campoPrimeiroVencimento.required = false;
+
+                campoStatus.disabled = false;
+
+            }
+
+            atualizarPreview();
+
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Prévia das parcelas
+        |--------------------------------------------------------------------------
+        */
+
+        function atualizarPreview() {
+
+            if (!campoParcelado.checked) {
+
+                previewParcelas.innerHTML = '';
+
+                return;
+
+            }
+
+            const valorCentavos = obterValorEmCentavos(campoValor.value);
+            const quantidade = Number(campoQuantidade.value);
+            const primeiroVencimento = campoPrimeiroVencimento.value;
+
+            if (
+                valorCentavos <= 0 ||
+                !Number.isInteger(quantidade) ||
+                quantidade < 2 ||
+                quantidade > 60 ||
+                !primeiroVencimento
+            ) {
+
+                previewParcelas.innerHTML = `
+                    <div class="parcelas-preview-empty">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <span>Informe o valor, a quantidade de parcelas e o primeiro vencimento para visualizar a prévia.</span>
+                    </div>
+                `;
+
+                return;
+
+            }
+
+            const valorBase = Math.floor(valorCentavos / quantidade);
+            const resto = valorCentavos % quantidade;
+
+            let linhas = '';
+
+            for (let i = 1; i <= quantidade; i++) {
+
+                let valorParcela = valorBase;
+
+                if (i <= resto) {
+                    valorParcela++;
+                }
+
+                const vencimento = adicionarMesPreservandoDia(
+                    primeiroVencimento,
+                    i - 1
+                );
+
+                linhas += `
+                    <tr>
+                        <td>${i}/${quantidade}</td>
+                        <td>${formatarData(vencimento)}</td>
+                        <td>${formatarMoeda(valorParcela)}</td>
+                    </tr>
+                `;
+
+            }
+
+            previewParcelas.innerHTML = `
+                <div class="parcelas-preview-header">
+                    <div>
+                        <strong>Prévia das parcelas</strong>
+                        <span>${quantidade} parcelas · Total ${formatarMoeda(valorCentavos)}</span>
+                    </div>
+                </div>
+
+                <div class="parcelas-table-wrapper">
+
+                    <table class="parcelas-preview-table">
+
+                        <thead>
+                            <tr>
+                                <th>Parcela</th>
+                                <th>Vencimento</th>
+                                <th>Valor</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            ${linhas}
+                        </tbody>
+
+                    </table>
+
+                </div>
+            `;
+
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Eventos
+        |--------------------------------------------------------------------------
+        */
+
+        campoParcelado.addEventListener(
+            'change',
+            atualizarEstadoParcelamento
+        );
+
+        campoQuantidade.addEventListener(
+            'input',
+            atualizarPreview
+        );
+
+        campoPrimeiroVencimento.addEventListener(
+            'change',
+            atualizarPreview
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Estado inicial
+        |--------------------------------------------------------------------------
+        */
+
+        atualizarEstadoParcelamento();
     </script>
 
 </body>
