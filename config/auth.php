@@ -1,6 +1,6 @@
 <?php
 // config/auth.php - Configuração do LOGIN NORMAL (sistema principal)
-
+require_once __DIR__ . '/env.php';
 // ============================================================
 // CONFIGURAÇÃO DA SESSÃO
 // ============================================================

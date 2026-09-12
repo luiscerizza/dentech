@@ -1,7 +1,7 @@
 <?php
 // config/auth.config_area_restrita.php
 // 🔐 Configuração EXCLUSIVA da Área Restrita (não interfere no login normal)
-
+require_once __DIR__ . '/env.php';
 // Inicia sessão de forma segura (adaptada para localhost)
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_httponly', 1);
