@@ -1,2 +1,5 @@
 documentacao/
 bd/*.sql
+con_oracle/*.key
+dry-run.json
+dry-sem-dompdf.json
