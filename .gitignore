@@ -1,6 +1,8 @@
 con_oracle/*.key
 documentacao/
-img/novo
 img/logo.png
 .vercel
 .env*
+dry-run.json
+dry-sem-dompdf.json
+dry-final.json
