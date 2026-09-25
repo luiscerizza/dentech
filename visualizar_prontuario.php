@@ -38,6 +38,7 @@ $procedimentos = $stmtProc->fetchAll();
     <title>Prontuário - <?= htmlspecialchars($prontuario['paciente']) ?> | Dentech</title>
     <link rel="stylesheet" href="css/navbar.css">
     <link rel="stylesheet" href="css/vis_prontuario.css">
+    <link rel="icon" type="image/png" href="img/icon.PNG">
 </head>
 
 <body>

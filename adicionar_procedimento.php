@@ -25,6 +25,7 @@ if (!$paciente) {
     <title>Novo Procedimento - <?= htmlspecialchars($paciente) ?> | Dentech</title>
     <link rel="stylesheet" href="css/navbar.css">
     <link rel="stylesheet" href="css/add_procedimento.css">
+    <link rel="icon" type="image/png" href="img/icon.PNG">
 </head>
 
 <body>
@@ -76,7 +77,6 @@ if (!$paciente) {
             formData.append('prontuario_id', document.getElementById('prontuarioId').value);
             formData.append('titulo', document.getElementById('titulo').value);
             formData.append('data_procedimento', document.getElementById('data_procedimento').value);
-            formData.append('descricao', document.getElementById('descricao').value);
             formData.append('descricao', document.getElementById('descricao').value);
             formData.append('medicamentos', document.getElementById('medicamentos').value);
 

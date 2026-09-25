@@ -102,6 +102,7 @@ if ($_POST) {
     <title>Registrar Atendimento - Dentech</title>
     <link rel="stylesheet" href="css/navbar.css">
     <link rel="stylesheet" href="css/re_atendimento.css">
+    <link rel="icon" type="image/png" href="img/icon.PNG">
 </head>
 
 <body>

@@ -31,6 +31,7 @@ if ($_POST) {
     <title>Novo Material - Dentech</title>
     <link rel="stylesheet" href="css/navbar.css">
     <link rel="stylesheet" href="css/add_material.css">
+    <link rel="icon" type="image/png" href="img/icon.PNG">
 </head>
 <body>
     <?php include 'navbar.php'; ?>
@@ -63,7 +64,7 @@ if ($_POST) {
                 <input type="number" step="0.01" name="estoque_minimo" value="5" min="0">
             </div>
             <button type="submit">Cadastrar Material</button>
-            <a href="inventario.php" style="display:inline-block; margin-left:12px; color:#8a5ebf;">Cancelar</a>
+            <a href="inventario" style="display:inline-block; margin-left:12px; color:#8a5ebf;">Cancelar</a>
         </form>
     </div>
 </body>

@@ -1,65 +1,79 @@
+<?php
+// login.php - Tela de login do SISTEMA NORMAL
+require_once 'config/auth.php';
+
+// Se já está logado, vai direto para o dashboard
+if (estaLogado()) {
+    header('Location: index.php');
+    exit;
+}
+
+$erro = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $usuario = trim($_POST['usuario'] ?? '');
+    $senha   = $_POST['senha'] ?? '';
+
+    if ($usuario === NORMAL_USER && password_verify($senha, NORMAL_HASH)) {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
+        $_SESSION['user_logado'] = true;
+        $_SESSION['id_usuario'] = 1;
+        $_SESSION['login_time'] = time();
+
+        header('Location: index.php');
+        exit;
+    } if ($usuario === USER_MASTER && password_verify($senha, MASTER_HASH)) {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
+        $_SESSION['user_logado'] = true;
+        $_SESSION['id_usuario'] = 1; 
+        $_SESSION['login_time'] = time();
+
+        header('Location: index.php');
+        exit;
+    }
+}
+
+// Mensagem de timeout (opcional)
+if (isset($_GET['timeout'])) {
+    $erro = 'Sessão expirada. Faça login novamente.';
+}
+?>
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
-  <meta charset="UTF-8">
-  <title>Dentech Login</title>
-
-  <!-- Tailwind -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <style>
-    .fade {
-      animation: up 0.5s ease-out;
-    }
-    @keyframes up {
-      from { opacity: 0; transform: translateY(12px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="img/icon.PNG">
+    <link rel="stylesheet" href="css/login.css">
+    <title>Login - Dentech</title>
+    <style>
+        
+    </style>
 </head>
 
-<body class="bg-gray-100 min-h-screen flex justify-center items-center">
-
-  <!-- Container -->
-  <div class="bg-white border border-gray-200 shadow-sm w-full max-w-sm p-10 rounded-xl fade">
-
-    <!-- Logo -->
-    <h1 class="text-3xl font-semibold text-center mb-8 text-gray-800">
-      Dentech
-    </h1>
-
-    <!-- Form -->
-    <form action="#" method="POST" class="space-y-6">
-
-      <!-- Usuário -->
-      <div>
-        <label class="text-gray-700 text-sm">Usuário</label>
-        <input type="text" 
-               class="w-full mt-1 p-3 rounded-lg bg-gray-100 border border-gray-300 outline-none focus:ring-2 focus:ring-gray-600 transition"
-               placeholder="Digite seu usuário">
-      </div>
-
-      <!-- Senha -->
-      <div>
-        <label class="text-gray-700 text-sm">Senha</label>
-        <input type="password" 
-               class="w-full mt-1 p-3 rounded-lg bg-gray-100 border border-gray-300 outline-none focus:ring-2 focus:ring-gray-600 transition"
-               placeholder="Digite sua senha">
-      </div>
-
-      <!-- Botão -->
-      <button 
-        class="w-full p-3 bg-gray-900 hover:bg-gray-700 text-white rounded-lg font-medium transition">
-        Entrar
-      </button>
-
-      <!-- Link -->
-      <p class="text-center text-gray-500 text-sm hover:text-gray-700 cursor-pointer transition">
-        Esqueceu a senha?
-      </p>
-
-    </form>
-  </div>
-
+<body>
+    <div class="login-card">
+        <h2>🦷 Dentech</h2>
+        <p class="subtitle">Acesso ao sistema de gestão</p>
+        <?php if ($erro): ?>
+            <div class="error"><?= htmlspecialchars($erro) ?></div>
+        <?php endif; ?>
+        <form method="POST">
+            <div class="form-group">
+                <label>Usuário</label>
+                <input type="text" name="usuario" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label>Senha</label>
+                <input type="password" name="senha" required autocomplete="current-password">
+            </div>
+            <button type="submit">Entrar</button>
+        </form>
+    </div>
 </body>
+
 </html>

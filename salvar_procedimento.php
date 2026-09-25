@@ -8,6 +8,7 @@ try {
     $titulo = trim($_POST['titulo'] ?? '');
     $data_procedimento = $_POST['data_procedimento'] ?? '';
     $descricao = trim($_POST['descricao'] ?? '');
+    $medicamentos = trim($_POST['medicamentos'] ?? '');
 
     if (!$prontuario_id) {
         throw new Exception("Prontuário inválido.");

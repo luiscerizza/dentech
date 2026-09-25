@@ -110,8 +110,13 @@
         }
 
         .btn-saida {
-            background: var(--roxo-claro);
-            color: var(--roxo-escuro);
+            background: rgb(223, 73, 73);
+            color: white;
+        }
+
+        .btn-editar {
+            background-color: rgb(233, 233, 101);
+            color: white
         }
 
         .empty {

@@ -119,28 +119,43 @@ main h1 {
 
 /* Botão de exclusão em prontuários */
 .delete {
-    background: #ff6b6b; /* Vermelho suave (não agressivo) */
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-    text-decoration: none;
-    display: inline-block;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(255, 107, 107, 0.2);
+  background: #ff6b6b; /* Vermelho suave (não agressivo) */
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(255, 107, 107, 0.2);
 }
 
 .delete:hover {
-    background: #e55a5a; /* Vermelho mais escuro no hover */
-    transform: translateY(-1px);
-    box-shadow: 0 3px 6px rgba(255, 107, 107, 0.3);
+  background: #e55a5a; /* Vermelho mais escuro no hover */
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(255, 107, 107, 0.3);
 }
 
 .delete:active {
-    transform: translateY(0);
+  transform: translateY(0);
+}
+
+.btn-exportar {
+  display: inline-block;
+  background: var(--roxo-medio);
+  color: white;
+  text-decoration: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  margin-bottom: 28px;
+  transition: background 0.2s;
+}
+.btn-exportar:hover {
+  background: var(--roxo-escuro);
 }
 
 /* Responsivo */
